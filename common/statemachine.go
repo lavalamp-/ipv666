@@ -88,7 +88,7 @@ func RunStateMachine(config *config.Configuration) () {
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Completed state %d (took %ss).", state, elapsed)
+		log.Printf("Completed state %d (took %s).", state, elapsed)
 
 		state = (state + 1) % (CLEAN_UP + 1)
 		err := updateStateFile(config.GetStateFilePath(), state)

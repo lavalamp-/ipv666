@@ -8,5 +8,10 @@
   "StateFileName": "state.txt",
   "GenerateAddressCount": 10000000,
   "NetworkGroupingSize": 64,
-  "NetworkPingCount": 5
+  "NetworkPingCount": 5,
+  "LogFilePath": "ipv666.log",
+  "LogFileMBSize": 10,
+  "LogFileMaxBackups": 10,
+  "LogFileMaxAge": 120,
+  "CompressLogFiles": false
 }
