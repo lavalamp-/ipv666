@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/addresses"
 )
 
 
@@ -105,6 +106,10 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		case UPDATE_MODEL:
 			// Chris
 			// Update the statistical model with the valid IPv6 results we have left over
+			err := updateModelWithSuccessfulHosts(conf)
+			if err != nil {
+				return err
+			}
 		case PUSH_S3:
 			// Chris
 			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
@@ -166,7 +171,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 }
 
 func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
-	inputPath, err := data.GetMostRecentCandidateFilePath(conf.GetCandidateAddressDirPath())
+	inputPath, err := data.GetMostRecentFilePathFromDir(conf.GetCandidateAddressDirPath())
 	if err != nil {
 		return err
 	}
@@ -186,6 +191,29 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 		return err
 	}
 	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+	return nil
+}
+
+func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
+	// TODO what happens if Zmap fails silently and we keep adding the same file to our model
+	resultsPath, err := data.GetMostRecentFilePathFromDir(conf.GetCleanPingDirPath())
+	if err != nil {
+		return err
+	}
+	// TODO read addresses from results file
+	results, err := addresses.GetAddressListFromAddressesFile(resultsPath)
+	if err != nil {
+		return err
+	}
+	model, err := data.GetProbabilisticAddressModel(conf.GetGeneratedModelDirPath())
+	if err != nil {
+		return err
+	}
+	model.UpdateMulti(results)
+	outputPath := getTimedFilePath(conf.GetGeneratedModelDirPath())
+	log.Printf("Now saving updated model '%s' (%d digest count) to file at path '%s'.", model.Name, model.DigestCount, outputPath)
+	model.Save(outputPath)
+	log.Printf("Model '%s' was saved to file at path '%s' successfully.", model.Name, outputPath)
 	return nil
 }
 

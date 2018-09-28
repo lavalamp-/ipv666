@@ -182,6 +182,10 @@ func GetAddressListFromBytes(bytes []byte) (IPv6AddressList, error) {
 
 }
 
+func GetAddressListFromAddressesFile(filePath string) (IPv6AddressList, error) {
+	return IPv6AddressList{}, nil
+}
+
 func GetAddressListFromBitStringsFile(filePath string) (IPv6AddressList, error) {
 
 	log.Printf("Checking that file exists at %s.", filePath)
