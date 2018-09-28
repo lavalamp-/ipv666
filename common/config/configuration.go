@@ -29,6 +29,14 @@ type Configuration struct {
 	NetworkGroupingSize			int		// The bit-length of network size to use when checking for many-to-one
 	NetworkPingCount			int		// The number of addresses to try pinging when testing for many-to-one
 
+	// Logging
+
+	LogFilePath					string	// The local file path to where log files should be written
+	LogFileMBSize				int		// The max size of each log file in MB
+	LogFileMaxBackups			int		// The maximum number of backups to have in rotating log files
+	LogFileMaxAge				int		// The maximum number of days to store log files
+	CompressLogFiles			bool	// Whether or not to compress log files
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {
