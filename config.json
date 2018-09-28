@@ -17,5 +17,7 @@
   "LogFileMBSize": 10,
   "LogFileMaxBackups": 10,
   "LogFileMaxAge": 120,
-  "CompressLogFiles": false
+  "CompressLogFiles": false,
+  "ZmapExecPath": "/usr/local/sbin/zmap",
+  "ZmapBandwidth": "5M"
 }

@@ -41,6 +41,11 @@ type Configuration struct {
 	LogFileMaxAge				int		// The maximum number of days to store log files
 	CompressLogFiles			bool	// Whether or not to compress log files
 
+	// Scanning
+
+	ZmapExecPath				string  // Local file path to the Zmap executable
+	ZmapBandwidth				string  // Bandwidth cap for Zmap
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {

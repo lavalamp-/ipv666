@@ -32,3 +32,17 @@ func GetProbabilisticAddressModel(modelDir string) (modeling.ProbabilisticAddres
 		return modeling.GetProbabilisticModelFromFile(filePath)
 	}
 }
+
+func GetMostRecentCandidateFilePath(candidateDir string) (string, error) {
+	log.Printf("Attempting to find most recent candidate file path in directory '%s'.", candidateDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(candidateDir)
+	if err != nil {
+		log.Printf("Error thrown when finding most recent candidate file path in directory '%s': %s", candidateDir, err)
+		return "", err
+	} else {
+		log.Printf("Most recent file path in directory '%s' is '%s'.", candidateDir, fileName)
+		filePath := filepath.Join(candidateDir, fileName)
+		return filePath, nil
+	}
+}
+

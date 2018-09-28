@@ -10,6 +10,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/data"
 	"strconv"
 	"path/filepath"
+	"github.com/lavalamp-/ipv666/common/shell"
 )
 
 
@@ -21,6 +22,7 @@ const (
 	REM_BAD_ADDR
 	UPDATE_MODEL
 	PUSH_S3
+	EMIT_METRICS
 	CLEAN_UP
 )
 
@@ -73,24 +75,41 @@ func RunStateMachine(conf *config.Configuration) (error) {
 
 		switch state {
 		case GEN_ADDRESSES:
+			// Chris
+			// Generate the candidate addresses to scan from the most recent model
 			err := generateCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
 			// Chris
+			// Perform a Zmap scan of the candidate addresses that were generated
+			err := zmapScanCandidateAddresses(conf)
+			if err != nil {
+				return err
+			}
 		case NETWORK_GROUP:
 			// Marc
+			// Process results of Zmap scan into a set of network ranges
 		case PING_SCAN_NET:
 			// Marc
+			// Test each of the network ranges to see if the range responds to every IP address
 		case REM_BAD_ADDR:
 			// Marc
+			// Remove all the addresses from the Zmap results that are in ranges that failed
+			// the test in the previous step
 		case UPDATE_MODEL:
 			// Chris
+			// Update the statistical model with the valid IPv6 results we have left over
 		case PUSH_S3:
 			// Chris
+			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
+		case EMIT_METRICS:
+			// Chris
+			// Push the metrics to wherever they need to go
 		case CLEAN_UP:
 			// Chris
+			// Remove all but the most recent files in each of the directories
 		}
 
 		elapsed := time.Since(start)
@@ -131,5 +150,29 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	log.Printf("Writing results of candidate address generation to file at '%s'.", outputPath)
 	addresses.ToAddressesFile(outputPath, conf.GenWriteUpdateFreq)
 	log.Printf("Successfully wrote %d candidate addresses to file at '%s'.", conf.GenerateAddressCount, outputPath)
+	return nil
+}
+
+func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
+	inputPath, err := data.GetMostRecentCandidateFilePath(conf.GetCandidateAddressDirPath())
+	if err != nil {
+		return err
+	}
+	outputPath := getTimedFilePath(conf.GetPingResultDirPath())
+	log.Printf(
+		"Now Zmap scanning IPv6 addresses found in file at path '%s'. Results will be written to '%s'.",
+		inputPath,
+		outputPath,
+	)
+	start := time.Now()
+	_, err = shell.ZmapScanFromConfig(conf, inputPath, outputPath)
+	elapsed := time.Since(start)
+	//  TODO do something with result
+	if err != nil {
+		log.Printf("An error was thrown when trying to run zmap: %s", err)
+		log.Printf("Zmap elapsed time was %s.", elapsed)
+		return err
+	}
+	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
 	return nil
 }
