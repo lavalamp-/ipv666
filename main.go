@@ -4,7 +4,31 @@ import (
 	"log"
 	"flag"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common"
+	"os"
 )
+
+func initialize(conf *config.Configuration) (error) {
+	log.Print("Now initializing filesystem for IPv6 address discovery process...")
+	for _, dirPath := range conf.GetAllDirectories() {
+		err := common.CreateDirectoryIfNotExist(dirPath)
+		if err != nil {
+			return err
+		}
+	}
+	log.Printf("Initializing state file at '%s'.", conf.GetStateFilePath())
+	if _, err := os.Stat(conf.GetStateFilePath()); os.IsNotExist(err) {
+		log.Printf("State file does not exist at path '%s'. Creating now.", conf.GetStateFilePath())
+		err = common.InitStateFile(conf.GetStateFilePath())
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Printf("State file already exists at path '%s'.", conf.GetStateFilePath())
+	}
+	log.Print("Local filesystem initialized for IPv6 address discovery process.")
+	return nil
+}
 
 func main() {
 
@@ -18,7 +42,15 @@ func main() {
 		log.Fatal("Can't proceed without loading valid configuration file.")
 	}
 
-	conf.Print()
+	err = initialize(&conf)
+
+	if err != nil {
+		log.Fatal("Error thrown during initialization: ", err)
+	}
+
+	log.Print("All systems are green. Entering state machine.")
+
+	common.RunStateMachine(&conf)
 
 	//fmt.Printf("Hello world\n")
 	//addresses, err := common.GetAddressListFromBitStringsFile("/Users/lavalamp/Documents/Projects/IPv6/modeling/files/filtered_ipv6_addrs.dat")
