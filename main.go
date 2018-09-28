@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/ping"
 	"github.com/natefinch/lumberjack"
 )
 
@@ -22,6 +24,10 @@ func setupLogging() {
 func main() {
 
 	setupLogging()
+
+	// Ping the router LAN IP address
+	count, err := ping.Ping("2606:6000:6008:AF00:921A:CAFF:FE59:437", time.Duration(100)*time.Millisecond, time.Duration(100)*time.Millisecond, 1, true, false)
+	log.Printf("Ping response count: %d\n", count)
 
 	var configPath string
 
