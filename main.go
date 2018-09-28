@@ -1,13 +1,28 @@
 package main
 
 import (
-	"log"
 	"flag"
+	"log"
+	"time"
 	"github.com/lavalamp-/ipv666/common/config"
-	"github.com/lavalamp-/ipv666/common"
+  "github.com/lavalamp-/ipv666/common"
 	"os"
+  "github.com/lavalamp-/ipv666/common/ping"
+	"github.com/natefinch/lumberjack"
 )
 
+func setupLogging() {
+  log.SetFlags(log.Flags() & (log.Ldate | log.Ltime))
+
+  log.SetOutput(&lumberjack.Logger{
+      Filename:   "/var/log/ipv666.log",
+      MaxSize:    10,   // megabytes
+      MaxBackups: 10,
+      MaxAge:     120,  // days
+      Compress:   false,
+  })
+}
+  
 func initialize(conf *config.Configuration) (error) {
 	log.Print("Now initializing filesystem for IPv6 address discovery process...")
 	for _, dirPath := range conf.GetAllDirectories() {
@@ -29,8 +44,14 @@ func initialize(conf *config.Configuration) (error) {
 	log.Print("Local filesystem initialized for IPv6 address discovery process.")
 	return nil
 }
-
+  
 func main() {
+
+	setupLogging()
+
+	// Ping the router LAN IP address
+	count, err := ping.Ping("2606:6000:6008:AF00:921A:CAFF:FE59:437", time.Duration(100)*time.Millisecond, time.Duration(100)*time.Millisecond, 1, true, false)
+	log.Printf("Ping response count: %d\n", count)
 
 	var configPath string
 
