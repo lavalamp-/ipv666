@@ -1,0 +1,11 @@
+{
+  "BaseOutputDirectory": "ipv6results",
+  "GeneratedModelDirectory": "models",
+  "PingResultDirectory": "pingresult",
+  "NetworkGroupDirectory": "networkgroups",
+  "NetworkBlacklistDirectory": "networkblacklist",
+  "CleanPingResultDirectory": "cleanpings",
+  "GenerateAddressCount": 10000000,
+  "NetworkGroupingSize": 64,
+  "NetworkPingCount": 5
+}
