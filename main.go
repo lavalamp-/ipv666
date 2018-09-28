@@ -1,12 +1,27 @@
 package main
 
 import (
-	"log"
 	"flag"
+	"log"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/natefinch/lumberjack"
 )
 
+func setupLogging() {
+  log.SetFlags(log.Flags() & (log.Ldate | log.Ltime))
+
+  log.SetOutput(&lumberjack.Logger{
+      Filename:   "/var/log/ipv666.log",
+      MaxSize:    10,   // megabytes
+      MaxBackups: 10,
+      MaxAge:     120,  // days
+      Compress:   false,
+  })
+}
+
 func main() {
+
+	setupLogging()
 
 	var configPath string
 
