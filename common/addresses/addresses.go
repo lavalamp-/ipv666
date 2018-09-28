@@ -1,4 +1,4 @@
-package common
+package addresses
 
 import (
 	"os"
@@ -63,7 +63,7 @@ func (address *IPv6Address) String() (string) {
 	return address.GetIP().String()
 }
 
-func (list IPv6AddressList) ToAddressesFile(filePath string) (error) {
+func (list IPv6AddressList) ToAddressesFile(filePath string, updateFreq int) (error) {
 
 	_, err := os.Stat(filePath)
 	if err == nil {
@@ -78,7 +78,12 @@ func (list IPv6AddressList) ToAddressesFile(filePath string) (error) {
 
 	log.Printf("Now writing %d IPv6 addresses to file at %s.", len(list.Addresses), filePath)
 
-	for _, address := range(list.Addresses) {
+	for i, address := range(list.Addresses) {  // TODO optimize this?
+
+		if i % updateFreq == 0 {
+			log.Printf("Writing address %d out of %d.", i, len(list.Addresses))
+		}
+
 		f.WriteString(fmt.Sprintf("%s\n", address.String()))
 	}
 
@@ -90,7 +95,7 @@ func (list IPv6AddressList) ToAddressesFile(filePath string) (error) {
 
 }
 
-func (list IPv6AddressList) ToBinaryFile(filePath string) (error) {
+func (list IPv6AddressList) ToBinaryFile(filePath string, updateFreq int) (error) {
 
 	_, err := os.Stat(filePath)
 	if err == nil {
@@ -105,7 +110,12 @@ func (list IPv6AddressList) ToBinaryFile(filePath string) (error) {
 
 	log.Printf("Now writing %d binary addresses to file at %s.", len(list.Addresses), filePath)
 
-	for _, address := range(list.Addresses) {
+	for i, address := range(list.Addresses) {  // TODO optimize this?
+
+		if i % updateFreq == 0 {
+			log.Printf("Writing address %d out of %d.", i, len(list.Addresses))
+		}
+
 		f.Write(address.Content[:])
 	}
 

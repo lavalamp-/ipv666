@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"github.com/lavalamp-/ipv666/common/data"
+	"strconv"
+	"path/filepath"
 )
 
 
@@ -49,14 +52,14 @@ func InitStateFile(filePath string) (error) {
 	return updateStateFile(filePath, GEN_ADDRESSES)
 }
 
-func RunStateMachine(config *config.Configuration) () {
+func RunStateMachine(conf *config.Configuration) (error) {
 
 	log.Print("Now starting to run the state machine... Hold on to your butts.")
 
-	state, err := fetchStateFromFile(config.GetStateFilePath())
+	state, err := fetchStateFromFile(conf.GetStateFilePath())
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Printf("Starting at state %d.", state)
@@ -70,7 +73,10 @@ func RunStateMachine(config *config.Configuration) () {
 
 		switch state {
 		case GEN_ADDRESSES:
-			// Chris
+			err := generateCandidateAddresses(conf)
+			if err != nil {
+				return err
+			}
 		case PING_SCAN_ADDR:
 			// Chris
 		case NETWORK_GROUP:
@@ -91,11 +97,39 @@ func RunStateMachine(config *config.Configuration) () {
 		log.Printf("Completed state %d (took %s).", state, elapsed)
 
 		state = (state + 1) % (CLEAN_UP + 1)
-		err := updateStateFile(config.GetStateFilePath(), state)
+		err := updateStateFile(conf.GetStateFilePath(), state)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 	}
 
+}
+
+func getTimedFilePath(baseDir string) (string) {
+	curTime := strconv.FormatInt(time.Now().Unix(), 10)
+	return filepath.Join(baseDir, curTime)
+}
+
+func generateCandidateAddresses(conf *config.Configuration) (error) {
+	model, err := data.GetProbabilisticAddressModel(conf.GetGeneratedModelDirPath())
+	if err != nil {
+		return err
+	}
+	log.Printf(
+		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Starting nybble is %d.",
+		conf.GenerateAddressCount,
+		model.Name,
+		model.DigestCount,
+		conf.GenerateFirstNybble,
+	)
+	start := time.Now()
+	addresses := model.GenerateMulti(conf.GenerateFirstNybble, conf.GenerateAddressCount, conf.GenerateUpdateFreq)  // TODO: filter out from blacklist
+	elapsed := time.Since(start)
+	log.Printf("Took a total of %s to generate %d candidate addresses", elapsed, conf.GenerateAddressCount)
+	outputPath := getTimedFilePath(conf.GetCandidateAddressDirPath())
+	log.Printf("Writing results of candidate address generation to file at '%s'.", outputPath)
+	addresses.ToAddressesFile(outputPath, conf.GenWriteUpdateFreq)
+	log.Printf("Successfully wrote %d candidate addresses to file at '%s'.", conf.GenerateAddressCount, outputPath)
+	return nil
 }
