@@ -23,9 +23,12 @@ const (
 	REM_BAD_ADDR
 	UPDATE_MODEL
 	PUSH_S3
-	EMIT_METRICS
 	CLEAN_UP
+	EMIT_METRICS
 )
+
+var FIRST_STATE = GEN_ADDRESSES
+var LAST_STATE = EMIT_METRICS
 
 type State int8
 
@@ -38,8 +41,8 @@ func fetchStateFromFile(filePath string) (State, error) {
 		return -1, errors.New(fmt.Sprintf("Content of file at '%s' was of unexpected length (%d).", filePath, len(content)))
 	}
 	state := int(content[0])
-	if state < int(GEN_ADDRESSES) || state > int(CLEAN_UP) {
-		return -1, errors.New(fmt.Sprintf("State with value %d was unexpected (expected between %d and %d, inclusive).", state, GEN_ADDRESSES, CLEAN_UP))
+	if state < int(FIRST_STATE) || state > int(LAST_STATE) {
+		return -1, errors.New(fmt.Sprintf("State with value %d was unexpected (expected between %d and %d, inclusive).", state, FIRST_STATE, LAST_STATE))
 	}
 	return State(state), nil
 }
@@ -52,7 +55,7 @@ func updateStateFile(filePath string, curState State) (error) {
 }
 
 func InitStateFile(filePath string) (error) {
-	return updateStateFile(filePath, GEN_ADDRESSES)
+	return updateStateFile(filePath, FIRST_STATE)
 }
 
 func RunStateMachine(conf *config.Configuration) (error) {
@@ -113,18 +116,18 @@ func RunStateMachine(conf *config.Configuration) (error) {
 					return err
 				}
 			}
-		case EMIT_METRICS:
-			// Chris
-			// Push the metrics to wherever they need to go
 		case CLEAN_UP:
 			// Chris
 			// Remove all but the most recent files in each of the directories
+		case EMIT_METRICS:
+			// Chris
+			// Push the metrics to wherever they need to go
 		}
 
 		elapsed := time.Since(start)
 		log.Printf("Completed state %d (took %s).", state, elapsed)
 
-		state = (state + 1) % (CLEAN_UP + 1)
+		state = (state + 1) % (LAST_STATE + 1)
 		err := updateStateFile(conf.GetStateFilePath(), state)
 		if err != nil {
 			return err
