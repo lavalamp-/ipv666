@@ -39,6 +39,8 @@ func GetMostRecentCandidateFilePath(candidateDir string) (string, error) {
 	if err != nil {
 		log.Printf("Error thrown when finding most recent candidate file path in directory '%s': %s", candidateDir, err)
 		return "", err
+	} else if fileName == "" {
+		return "", errors.New(fmt.Sprintf("No candidate file was found in directory '%s'.", candidateDir))
 	} else {
 		log.Printf("Most recent file path in directory '%s' is '%s'.", candidateDir, fileName)
 		filePath := filepath.Join(candidateDir, fileName)

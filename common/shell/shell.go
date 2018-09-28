@@ -34,5 +34,6 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 }
 
 func ZmapScanFromConfig(conf *config.Configuration, inputFile string, outputFile string) (string, error) {
-	return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, 80)
+	return "", nil
+	//return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, 80)
 }

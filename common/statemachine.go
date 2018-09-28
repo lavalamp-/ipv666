@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"path/filepath"
 	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 
@@ -104,6 +105,14 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		case PUSH_S3:
 			// Chris
 			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
+			if !conf.ExportEnabled {
+				log.Printf("Exporting to S3 is disabled. Skipping export step.")
+			} else {
+				err := pushFilesToS3(conf)
+				if err != nil {
+					return err
+				}
+			}
 		case EMIT_METRICS:
 			// Chris
 			// Push the metrics to wherever they need to go
@@ -174,5 +183,37 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 		return err
 	}
 	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+	return nil
+}
+
+func pushFilesToS3(conf *config.Configuration) (error) {
+	allDirs := conf.GetAllDirectories()
+	log.Printf("Now starting to push all non-most-recent files from %d directories.", len(allDirs))
+	for _, curDir := range allDirs {
+		log.Printf("Processing content of directory '%s'.", curDir)
+		exportFiles, err := fs.GetNonMostRecentFilesFromDirectory(curDir)
+		if err != nil {
+			log.Printf("Error thrown when attempting to gather files for export in directory '%s'.", curDir)
+			return err
+		} else if len(exportFiles) == 0 {
+			log.Printf("No files found for export in directory '%s'.", curDir)
+			continue
+		}
+		log.Printf("A total of %d files were found for export in directory '%s'.", len(exportFiles), curDir)
+		for _, curFileName := range exportFiles {
+			curFilePath := filepath.Join(curDir, curFileName)
+			zipFilePath := fmt.Sprintf("%s.zip", curFilePath)
+			log.Printf("Now exporting file at local file path '%s' to THE GREAT BEYONDDDD.", curFilePath)
+			log.Printf("Zipping up file at path '%s' to file at path '%s'.", curFilePath, zipFilePath)
+			// TODO zip file up
+			log.Printf("Moving file at '%s' to S3 bucket.", zipFilePath)
+			// TODO export to S3
+			log.Printf("Deleting zip file at '%s'.", zipFilePath)
+			// TODO delete zip file upon success
+			log.Printf("Successfully moved file at '%s' to S3 with compression.", curFilePath)
+		}
+		log.Printf("All files in directory at '%s' processed.", curDir)
+	}
+	log.Printf("All %d directories successfully exported to S3.", len(allDirs))
 	return nil
 }

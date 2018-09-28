@@ -46,6 +46,10 @@ type Configuration struct {
 	ZmapExecPath				string  // Local file path to the Zmap executable
 	ZmapBandwidth				string  // Bandwidth cap for Zmap
 
+	// Exportation
+
+	ExportEnabled				bool	// Whether or not to export data to S3
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {
@@ -97,6 +101,17 @@ func (config *Configuration) GetCleanPingDirPath() (string) {
 func (config *Configuration) GetAllDirectories() ([]string) {
 	return []string{
 		config.BaseOutputDirectory,
+		config.GetGeneratedModelDirPath(),
+		config.GetCandidateAddressDirPath(),
+		config.GetPingResultDirPath(),
+		config.GetNetworkGroupDirPath(),
+		config.GetNetworkBlacklistDirPath(),
+		config.GetCleanPingDirPath(),
+	}
+}
+
+func (config *Configuration) GetAllExportDirectories() ([]string) {
+	return []string{
 		config.GetGeneratedModelDirPath(),
 		config.GetCandidateAddressDirPath(),
 		config.GetPingResultDirPath(),

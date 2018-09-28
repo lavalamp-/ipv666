@@ -19,5 +19,6 @@
   "LogFileMaxAge": 120,
   "CompressLogFiles": false,
   "ZmapExecPath": "/usr/local/sbin/zmap",
-  "ZmapBandwidth": "5M"
+  "ZmapBandwidth": "5M",
+  "ExportEnabled": false
 }

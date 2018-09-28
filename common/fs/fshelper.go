@@ -39,3 +39,25 @@ func GetMostRecentFileFromDirectory(dirPath string) (string, error) {
 	}
 	return newestFile, nil
 }
+
+func GetNonMostRecentFilesFromDirectory(dirPath string) ([]string, error) {
+	var toReturn []string
+	recentFile, err := GetMostRecentFileFromDirectory(dirPath)
+	if err != nil || recentFile == ""{
+		return toReturn, err
+	}
+	log.Printf("Most recent file in directory '%s' is '%s'.", dirPath, recentFile)
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		log.Printf("Error thrown when trying to read files from directory '%s': '%s", dirPath, err)
+		return toReturn, err
+	}
+	for _, fi := range files {
+		name := fi.Name()
+		if name != recentFile {
+			toReturn = append(toReturn, name)
+		}
+	}
+	log.Printf("Found %d files older than the most recent '%s' in directory '%s'.", len(toReturn), recentFile, dirPath)
+	return toReturn, nil
+}
