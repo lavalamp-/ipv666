@@ -5,6 +5,7 @@
   "NetworkGroupDirectory": "networkgroups",
   "NetworkBlacklistDirectory": "networkblacklist",
   "CleanPingResultDirectory": "cleanpings",
+  "StateFileName": "state.txt",
   "GenerateAddressCount": 10000000,
   "NetworkGroupingSize": 64,
   "NetworkPingCount": 5

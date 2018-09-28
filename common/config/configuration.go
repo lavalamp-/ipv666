@@ -5,6 +5,7 @@ import (
 	"github.com/tkanos/gonfig"
 	"fmt"
 	"github.com/kr/pretty"
+	"path/filepath"
 )
 
 type Configuration struct {
@@ -17,6 +18,7 @@ type Configuration struct {
 	NetworkGroupDirectory		string	// Subdirectory where results of grouping live hosts are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
 	CleanPingResultDirectory	string	// Subdirectory where cleaned ping results are kept
+	StateFileName				string	// The file name for the file that contains the current state
 
 	// Candidate address generation
 
@@ -45,4 +47,39 @@ func LoadFromFile(filePath string) (Configuration, error) {
 func (config *Configuration) Print() () {
 	fmt.Print("\n-= Configuration Values =-\n\n")
 	fmt.Printf("%# v", pretty.Formatter(config))
+}
+
+func (config *Configuration) GetStateFilePath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.StateFileName)
+}
+
+func (config *Configuration) GetGeneratedModelDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.GeneratedModelDirectory)
+}
+
+func (config *Configuration) GetPingResultDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.PingResultDirectory)
+}
+
+func (config *Configuration) GetNetworkGroupDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.NetworkGroupDirectory)
+}
+
+func (config *Configuration) GetNetworkBlacklistDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.NetworkBlacklistDirectory)
+}
+
+func (config *Configuration) GetCleanPingDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.CleanPingResultDirectory)
+}
+
+func (config *Configuration) GetAllDirectories() ([]string) {
+	return []string{
+		config.BaseOutputDirectory,
+		config.GetGeneratedModelDirPath(),
+		config.GetPingResultDirPath(),
+		config.GetNetworkGroupDirPath(),
+		config.GetNetworkBlacklistDirPath(),
+		config.GetCleanPingDirPath(),
+	}
 }
