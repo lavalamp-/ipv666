@@ -1,17 +1,24 @@
 {
   "BaseOutputDirectory": "ipv6results",
   "GeneratedModelDirectory": "models",
+  "CandidateAddressDirectory": "candidates",
   "PingResultDirectory": "pingresult",
   "NetworkGroupDirectory": "networkgroups",
   "NetworkBlacklistDirectory": "networkblacklist",
   "CleanPingResultDirectory": "cleanpings",
   "StateFileName": "state.txt",
   "GenerateAddressCount": 10000000,
+  "GenerateFirstNybble": 2,
+  "GenerateUpdateFreq": 500000,
+  "GenWriteUpdateFreq": 500000,
   "NetworkGroupingSize": 64,
   "NetworkPingCount": 5,
   "LogFilePath": "ipv666.log",
   "LogFileMBSize": 10,
   "LogFileMaxBackups": 10,
   "LogFileMaxAge": 120,
-  "CompressLogFiles": false
+  "CompressLogFiles": false,
+  "ZmapExecPath": "/usr/local/sbin/zmap",
+  "ZmapBandwidth": "5M",
+  "ExportEnabled": false
 }

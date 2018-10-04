@@ -14,6 +14,7 @@ type Configuration struct {
 
 	BaseOutputDirectory			string	// Base directory where transient files are kept
 	GeneratedModelDirectory		string	// Subdirectory where statistical models are kept
+	CandidateAddressDirectory	string	// Subdirectory where generated candidate addresses are kept
 	PingResultDirectory			string	// Subdirectory where results of ping scans are kept
 	NetworkGroupDirectory		string	// Subdirectory where results of grouping live hosts are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
@@ -23,6 +24,9 @@ type Configuration struct {
 	// Candidate address generation
 
 	GenerateAddressCount		int		// How many addresses to generate in a given iteration
+	GenerateFirstNybble			uint8	// The first nybble of IPv6 addresses to generate
+	GenerateUpdateFreq			int		// The interval upon which to emit to a log file during address generation
+	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
 
 	// Network grouping and validation
 
@@ -36,6 +40,15 @@ type Configuration struct {
 	LogFileMaxBackups			int		// The maximum number of backups to have in rotating log files
 	LogFileMaxAge				int		// The maximum number of days to store log files
 	CompressLogFiles			bool	// Whether or not to compress log files
+
+	// Scanning
+
+	ZmapExecPath				string  // Local file path to the Zmap executable
+	ZmapBandwidth				string  // Bandwidth cap for Zmap
+
+	// Exportation
+
+	ExportEnabled				bool	// Whether or not to export data to S3
 
 }
 
@@ -65,6 +78,10 @@ func (config *Configuration) GetGeneratedModelDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.GeneratedModelDirectory)
 }
 
+func (config *Configuration) GetCandidateAddressDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.CandidateAddressDirectory)
+}
+
 func (config *Configuration) GetPingResultDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.PingResultDirectory)
 }
@@ -85,6 +102,18 @@ func (config *Configuration) GetAllDirectories() ([]string) {
 	return []string{
 		config.BaseOutputDirectory,
 		config.GetGeneratedModelDirPath(),
+		config.GetCandidateAddressDirPath(),
+		config.GetPingResultDirPath(),
+		config.GetNetworkGroupDirPath(),
+		config.GetNetworkBlacklistDirPath(),
+		config.GetCleanPingDirPath(),
+	}
+}
+
+func (config *Configuration) GetAllExportDirectories() ([]string) {
+	return []string{
+		config.GetGeneratedModelDirPath(),
+		config.GetCandidateAddressDirPath(),
 		config.GetPingResultDirPath(),
 		config.GetNetworkGroupDirPath(),
 		config.GetNetworkBlacklistDirPath(),
