@@ -64,6 +64,13 @@ type Configuration struct {
 
 	CleanUpEnabled				bool	// Whether or not to delete non-recent files after a run
 
+	// Metrics
+
+	MetricsStateLoopPrefix		string	// The prefix for the state loop metric
+	ExitOnFailedMetrics			bool	// Whether or not to exit the program when a metrics operation fails
+	MetricsToStdout				bool	// Whether or not to print metrics to Stdout
+	MetricsStdoutFreq			int64	// The frequency in seconds of how often to print metrics to Stdout
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {

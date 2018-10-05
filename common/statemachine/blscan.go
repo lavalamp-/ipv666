@@ -12,7 +12,19 @@ import (
 	"path/filepath"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"os"
+	"github.com/rcrowley/go-metrics"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
+
+var addrNetsGenerationTimer = metrics.NewTimer()
+var liveAddrNetsGauge = metrics.NewGauge()
+var zmapNetsDurationTimer = metrics.NewTimer()
+
+func init() {
+	metrics.Register("zmap_nets_addr_live", liveAddrNetsGauge)
+	metrics.Register("zmap_nets_scan_duration", zmapNetsDurationTimer)
+	metrics.Register("addr_nets_generation_duration", addrNetsGenerationTimer)
+}
 
 func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 
@@ -29,6 +41,7 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 		return err
 	}
 
+	start := time.Now()
 	// Generate random addresses in each network
 	log.Printf("Generating %d addresses in each network range", conf.NetworkPingCount)
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -53,6 +66,8 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 		netRanges = append(netRanges, netRange)
 	}
 	file.Close()
+	elapsed := time.Since(start)
+	addrNetsGenerationTimer.Update(elapsed)
 
 	// Scan the addresses
 	inputPath, err := filepath.Abs(file.Name())
@@ -72,14 +87,23 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 		inputPath,
 		outputPath,
 	)
-	start := time.Now()
+	start = time.Now()
 	_, err = shell.ZmapScanFromConfig(conf, inputPath, outputPath)
-	elapsed := time.Since(start)
+	elapsed = time.Since(start)
 	if err != nil {
 		log.Printf("An error was thrown when trying to run zmap: %s", err)
 		log.Printf("Zmap elapsed time was %s.", elapsed)
 		return err
 	}
+	zmapNetsDurationTimer.Update(elapsed)
+	liveCount, err := fs.CountLinesInFile(outputPath)
+	if err != nil {
+		log.Printf("Error when counting lines in file '%s': %e", outputPath, err)
+		if conf.ExitOnFailedMetrics {
+			return err
+		}
+	}
+	liveAddrNetsGauge.Update(int64(liveCount))
 	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
 
 	// Blacklist networks with 100% response rate

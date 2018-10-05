@@ -21,6 +21,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	)
 	start := time.Now()
 	// TODO: filter out from blacklist
+	// TODO: add metrics to how many are filtered out
 	addresses := model.GenerateMulti(conf.GenerateFirstNybble, conf.GenerateAddressCount, conf.GenerateUpdateFreq)
 	elapsed := time.Since(start)
 	log.Printf("Took a total of %s to generate %d candidate addresses", elapsed, conf.GenerateAddressCount)

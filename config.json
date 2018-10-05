@@ -28,5 +28,8 @@
   "AWSBucketName": "ipv666",
   "AWSAccessKey": "Nahbruh",
   "AWSSecretKey": "Nahbruh",
-  "CleanUpEnabled": true
+  "CleanUpEnabled": false,
+  "MetricsStateLoopPrefix": "stateloop",
+  "MetricsToStdout": true,
+  "MetricsStdoutFreq": 300
 }

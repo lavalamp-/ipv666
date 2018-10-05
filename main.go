@@ -9,6 +9,8 @@ import (
 	"flag"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/statemachine"
+	"github.com/rcrowley/go-metrics"
+	"time"
 )
 
 func setupLogging(conf *config.Configuration) {
@@ -24,7 +26,7 @@ func setupLogging(conf *config.Configuration) {
 	log.Print("Logging set up successfully.")
 }
   
-func initializeFilesystem(conf *config.Configuration) (error) {
+func initFilesystem(conf *config.Configuration) (error) {
 	log.Print("Now initializing filesystem for IPv6 address discovery process...")
 	for _, dirPath := range conf.GetAllDirectories() {
 		err := fs.CreateDirectoryIfNotExist(dirPath)
@@ -45,6 +47,15 @@ func initializeFilesystem(conf *config.Configuration) (error) {
 	log.Print("Local filesystem initialized for IPv6 address discovery process.")
 	return nil
 }
+
+func initMetrics(conf *config.Configuration) () {
+	if conf.MetricsToStdout {
+		log.Printf("Setting up metrics to print to stdout every %d seconds.", conf.MetricsStdoutFreq)
+		go metrics.Log(metrics.DefaultRegistry, time.Duration(conf.MetricsStdoutFreq) * time.Second, log.New(os.Stdout, "metrics: ", log.Lmicroseconds))
+	} else {
+		log.Printf("Not printing metrics to stdout.")
+	}
+}
   
 func main() {
 
@@ -64,7 +75,7 @@ func main() {
 		setupLogging(&conf)
 	}
 
-	err = initializeFilesystem(&conf)
+	err = initFilesystem(&conf)
 
 	if err != nil {
 		log.Fatal("Error thrown during initialization: ", err)
@@ -79,6 +90,8 @@ func main() {
 	}
 
 	log.Printf("Zmap found and working at path '%s'.", conf.ZmapExecPath)
+
+	initMetrics(&conf)
 
 	log.Print("All systems are green. Entering state machine.")
 
