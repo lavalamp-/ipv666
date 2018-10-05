@@ -51,6 +51,13 @@ type Configuration struct {
 
 	ExportEnabled				bool	// Whether or not to export data to S3
 
+	// AWS
+
+	AWSBucketRegion				string	// The region where the AWS S3 bucket resides
+	AWSBucketName				string	// The name of the bucket to push to
+	AWSAccessKey				string	// The AWS access key to use
+	AWSSecretKey				string	// The AWS secret key to use
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {

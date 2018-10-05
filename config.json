@@ -20,5 +20,9 @@
   "CompressLogFiles": false,
   "ZmapExecPath": "/usr/local/sbin/zmap",
   "ZmapBandwidth": "5M",
-  "ExportEnabled": false
+  "ExportEnabled": false,
+  "AWSBucketRegion": "us-west-1",
+  "AWSBucketName": "ipv666",
+  "AWSAccessKey": "Nahbruh",
+  "AWSSecretKey": "Nahbruh"
 }
