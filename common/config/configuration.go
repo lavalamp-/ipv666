@@ -35,6 +35,7 @@ type Configuration struct {
 
 	// Logging
 
+	LogToFile					bool	// Whether or not to write log results to a file instead of stdout
 	LogFilePath					string	// The local file path to where log files should be written
 	LogFileMBSize				int		// The max size of each log file in MB
 	LogFileMaxBackups			int		// The maximum number of backups to have in rotating log files

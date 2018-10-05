@@ -13,6 +13,7 @@
   "GenWriteUpdateFreq": 500000,
   "NetworkGroupingSize": 64,
   "NetworkPingCount": 5,
+  "LogToFile": false,
   "LogFilePath": "ipv666.log",
   "LogFileMBSize": 10,
   "LogFileMaxBackups": 10,

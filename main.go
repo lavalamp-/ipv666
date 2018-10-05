@@ -58,7 +58,11 @@ func main() {
 		log.Fatal("Can't proceed without loading valid configuration file.")
 	}
 
-	setupLogging(&conf)
+	if !conf.LogToFile {
+		log.Printf("Not configured to log to file. Logging to stdout instead.")
+	} else {
+		setupLogging(&conf)
+	}
 
 	err = initializeFilesystem(&conf)
 
