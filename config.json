@@ -23,6 +23,7 @@
   "ZmapBandwidth": "10M",
   "ZmapSourceAddress": "nahhh",
   "ExportEnabled": false,
+  "ExitOnFailedSync": false,
   "AWSBucketRegion": "us-west-1",
   "AWSBucketName": "ipv666",
   "AWSAccessKey": "Nahbruh",

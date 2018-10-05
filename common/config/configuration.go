@@ -51,6 +51,7 @@ type Configuration struct {
 	// Exportation
 
 	ExportEnabled				bool	// Whether or not to export data to S3
+	ExitOnFailedSync			bool	// Whether or not to exit the program if an S3 sync fails
 
 	// AWS
 

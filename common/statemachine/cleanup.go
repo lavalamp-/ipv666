@@ -9,7 +9,6 @@ import (
 )
 
 func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
-	// TODO break this down into multiple functions
 	allDirs := conf.GetAllExportDirectories()
 	log.Printf("Now starting to delete all non-recent files from %d directories.", len(allDirs))
 	for _, curDir := range allDirs {
