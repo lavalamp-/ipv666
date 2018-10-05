@@ -9,6 +9,8 @@ import (
 	"time"
 	"github.com/lavalamp-/ipv666/common/data"
 	"strconv"
+	"os"
+	"math/rand"
 	"path/filepath"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/fs"
@@ -96,13 +98,25 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		case NETWORK_GROUP:
 			// Marc
 			// Process results of Zmap scan into a set of network ranges
+			err := getScanResultsNetworkRanges(conf)
+			if err != nil {
+				return err
+			}
 		case PING_SCAN_NET:
 			// Marc
 			// Test each of the network ranges to see if the range responds to every IP address
+			err := zmapScanNetworkRanges(conf)
+			if err != nil {
+				return err
+			}
 		case REM_BAD_ADDR:
 			// Marc
 			// Remove all the addresses from the Zmap results that are in ranges that failed
 			// the test in the previous step
+			err := cleanBlacklistedAddresses(conf)
+			if err != nil {
+				return err
+			}
 		case UPDATE_MODEL:
 			// Chris
 			// Update the statistical model with the valid IPv6 results we have left over
@@ -140,6 +154,231 @@ func RunStateMachine(conf *config.Configuration) (error) {
 
 	}
 
+}
+
+func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
+
+	// Find the blacklist file path
+	blacklistPath, err := data.GetMostRecentFilePathFromDir(conf.GetNetworkBlacklistDirPath())
+	if err != nil {
+		return err
+	}
+
+	// Load the blacklist network addresses
+	log.Printf("Loading blacklist network addresses")
+	nets, err := addresses.GetAddressListFromHexStringsFile(blacklistPath)
+	if err != nil {
+		return err
+	}
+
+	// Find the ping results file path
+	addrsPath, err := data.GetMostRecentFilePathFromDir(conf.GetPingResultDirPath())
+	if err != nil {
+		return err
+	}
+
+	// Load the ping results
+	log.Printf("Loading ping scan result addresses")
+	addrs, err := addresses.GetAddressListFromHexStringsFile(addrsPath)
+	if err != nil {
+		return err
+	}
+
+	// Remove addresses from blacklisted networks
+	log.Printf("Removing addresses from blacklisted networks")
+	var cleanAddrs []addresses.IPv6Address
+	for _, addr := range(addrs.Addresses) {
+		found := false
+		for _, net := range(nets.Addresses) {
+			match := true
+			for x := 0; x < conf.NetworkGroupingSize; x++ {
+				byteOff := (int)(x/8)
+				bitOff := (uint)(x-(byteOff*8))
+				byteMask := (byte)(1 << bitOff)
+				if (addr.Content[byteOff] & byteMask) != (net.Content[byteOff] & byteMask) {
+					match = false
+					break
+				}
+			}	
+			if match == true {
+				found = true
+				break
+			}		
+		}
+		if found == false {
+			cleanAddrs = append(cleanAddrs, addr)
+		}		
+	}
+
+	// Write the clean ping response addresses to disk
+	cleanPath := getTimedFilePath(conf.GetCleanPingDirPath())
+	log.Printf("Writing clean addresses to %s.", cleanPath)
+	file, err := os.OpenFile(cleanPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	for _, addr := range(cleanAddrs) {
+		file.WriteString(fmt.Sprintf("%s\n", addr.String()))
+	}
+	file.Close()
+	return nil	
+}
+
+func zmapScanNetworkRanges(conf *config.Configuration) (error) {
+
+	// Find the target network groups file
+	netsPath, err := data.GetMostRecentFilePathFromDir(conf.GetNetworkGroupDirPath())
+	if err != nil {
+		return err
+	}
+	
+	// Load the network groups
+	log.Printf("Loading network groups")
+	nets, err := addresses.GetAddressListFromHexStringsFile(netsPath)
+	if err != nil {
+		return err
+	}
+
+	// Generate random addresses in each network
+	log.Printf("Generating %d addresses in each network range", conf.NetworkPingCount)
+	rand.Seed(time.Now().UTC().UnixNano())
+	file, err := ioutil.TempFile("/tmp", "addrs")
+	if err != nil {
+		return err
+	}
+	var netRanges [][]addresses.IPv6Address
+	for _, net := range(nets.Addresses) {
+		var netRange []addresses.IPv6Address
+		for x := 0; x < conf.NetworkPingCount; x++ {
+			addr := addresses.IPv6Address{net.Content}
+			for x := conf.NetworkGroupingSize; x < 128; x++ {
+				byteOff := (int)(x/8)
+				bitOff := (uint)(x-(byteOff*8))
+				byteMask := (byte)(^(rand.Intn(2) << bitOff))
+				addr.Content[byteOff] |= (byte)(^byteMask)
+			}
+			netRange = append(netRange, addr)
+			file.WriteString(fmt.Sprintf("%s\n", addr.String()))
+		}
+		netRanges = append(netRanges, netRange)
+	}
+	file.Close()
+
+	// Scan the addresses
+	inputPath, err := filepath.Abs(file.Name())
+	if err != nil {
+		return err
+	}
+	file, err = ioutil.TempFile("/tmp", "addrs-scanned")
+	if err != nil {
+		return err
+	}
+	outputPath, err := filepath.Abs(file.Name())
+	if err != nil {
+		return err
+	}
+	log.Printf(
+		"Now Zmap scanning IPv6 addresses found in file at path '%s'. Results will be written to '%s'.",
+		inputPath,
+		outputPath,
+	)
+	start := time.Now()
+	_, err = shell.ZmapScanFromConfig(conf, inputPath, outputPath)
+	elapsed := time.Since(start)
+	if err != nil {
+		log.Printf("An error was thrown when trying to run zmap: %s", err)
+		log.Printf("Zmap elapsed time was %s.", elapsed)
+		return err
+	}
+	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+
+	// Blacklist networks with 100% response rate
+	blacklistPath := getTimedFilePath(conf.GetNetworkBlacklistDirPath())
+	log.Printf("Writing network blacklist to %s.", blacklistPath)
+	file, err = os.OpenFile(blacklistPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}	
+	addrs, err := addresses.GetAddressListFromHexStringsFile(outputPath)
+	if err != nil {
+		return err
+	}	
+	for pos, netRange := range(netRanges) {
+		addrMiss := false
+		for _, netAddr := range(netRange) {
+			found := false
+			for _, addr := range(addrs.Addresses) {
+				if netAddr.Content == addr.Content {
+					found = true
+					break
+				}
+			}
+			if found == false {
+				addrMiss = true
+				break
+			}			
+		}
+
+		// If there were no response misses blacklist this network range
+		if addrMiss == false {
+			file.WriteString(fmt.Sprintf("%s\n", nets.Addresses[pos].String()))
+		}
+	}
+	file.Close()
+
+	return nil
+}
+
+func getScanResultsNetworkRanges(conf *config.Configuration) (error) {
+	
+	// Find the target ping results file
+	pingResultsPath, err := data.GetMostRecentFilePathFromDir(conf.GetPingResultDirPath())
+	if err != nil {
+		return err
+	}
+	
+	// Load the ping results
+	log.Printf("Loading ping scan results")
+	addrs, err := addresses.GetAddressListFromHexStringsFile(pingResultsPath)
+	if err != nil {
+		return err
+	}
+
+	// Clear the host bits and enumerate unique networks
+	outputPath := getTimedFilePath(conf.GetNetworkGroupDirPath())
+	log.Printf("Writing network addresses to %s.", outputPath)
+	file, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	var nets []addresses.IPv6Address
+	for _, s := range(addrs.Addresses) {
+		addr := addresses.IPv6Address{s.Content}
+		for x := conf.NetworkGroupingSize; x < 128; x++ {
+			byteOff := (int)(x/8)
+			bitOff := (uint)(x-(byteOff*8))
+			byteMask := (byte)(^(1 << bitOff))
+			addr.Content[byteOff] &= byteMask
+		}
+		found := false
+		for _, net := range(nets) {
+			if net.Content == addr.Content {
+				found = true
+				break
+			}
+		}
+		if found == false {
+			nets = append(nets, addr)
+		}		
+	}
+
+	// Persist the networks to disk
+	for _, addr := range(nets) {
+		file.WriteString(fmt.Sprintf("%s\n", addr.String()));
+	}
+
+	return nil
 }
 
 func getTimedFilePath(baseDir string) (string) {
@@ -201,7 +440,7 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 		return err
 	}
 	// TODO read addresses from results file
-	results, err := addresses.GetAddressListFromAddressesFile(resultsPath)
+	results, err := addresses.GetAddressListFromHexStringsFile(resultsPath)
 	if err != nil {
 		return err
 	}

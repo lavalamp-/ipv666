@@ -19,13 +19,15 @@ func IsZmapAvailable(conf *config.Configuration) (bool, error) {
 	return IsCommandAvailable(conf.ZmapExecPath, "-h")
 }
 
-func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, bandwidth string, port int) (string, error) {
+func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, bandwidth string, sourceAddress string) (string, error) {
 	var args []string
-	args = append(args, fmt.Sprint("--bandwidth=%s", bandwidth))
+	args = append(args, fmt.Sprintf("--bandwidth=%s", bandwidth))
 	args = append(args, fmt.Sprintf("--output-file=%s", outputFile))
-	args = append(args, fmt.Sprintf("--whitelist-file=%s", inputFile))
-	args = append(args, fmt.Sprintf("--target-port=%d", port))
+	args = append(args, fmt.Sprintf("--ipv6-target-file=%s", inputFile))
+	args = append(args, fmt.Sprintf("--ipv6-source-ip=%s", sourceAddress))
+	args = append(args, "--probe-module=icmp6_echoscan")
 	cmd := exec.Command(conf.ZmapExecPath, args...)
+	fmt.Print(cmd)
 	if err := cmd.Run(); err != nil {
 		return "", err
 	} else {
@@ -34,6 +36,6 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 }
 
 func ZmapScanFromConfig(conf *config.Configuration, inputFile string, outputFile string) (string, error) {
-	return "", nil
-	//return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, 80)
+	// return "", nil
+	return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, conf.ZmapSourceAddress)
 }
