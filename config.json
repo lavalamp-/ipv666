@@ -24,5 +24,6 @@
   "AWSBucketRegion": "us-west-1",
   "AWSBucketName": "ipv666",
   "AWSAccessKey": "Nahbruh",
-  "AWSSecretKey": "Nahbruh"
+  "AWSSecretKey": "Nahbruh",
+  "CleanUpEnabled": true
 }
