@@ -12,6 +12,11 @@ import (
 	"net"
 )
 
+type IPv6Range struct {
+	Low IPv6Address
+	High IPv6Address
+}
+
 type IPv6Address struct {
 	Content [16]byte
 }
@@ -60,7 +65,7 @@ func (address *IPv6Address) GetIP() (*net.IP) {
 	}
 }
 
-func (address *IPv6Address) String() (string) {
+func (address *IPv6Address) String() string {
 	return address.GetIP().String()
 }
 
