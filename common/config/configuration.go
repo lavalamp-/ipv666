@@ -46,7 +46,7 @@ type Configuration struct {
 
 	ZmapExecPath				string  // Local file path to the Zmap executable
 	ZmapBandwidth				string  // Bandwidth cap for Zmap
-	ZmapSourceAddress   string  // Source IPv6 address for Zmap
+	ZmapSourceAddress   		string  // Source IPv6 address for Zmap
 
 	// Exportation
 
@@ -58,6 +58,10 @@ type Configuration struct {
 	AWSBucketName				string	// The name of the bucket to push to
 	AWSAccessKey				string	// The AWS access key to use
 	AWSSecretKey				string	// The AWS secret key to use
+
+	// Clean Up
+
+	CleanUpEnabled				bool	// Whether or not to delete non-recent files after a run
 
 }
 

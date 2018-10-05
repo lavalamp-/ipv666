@@ -15,7 +15,6 @@ import (
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/addresses"
-	"os"
 )
 
 
@@ -26,6 +25,7 @@ const (
 	PING_SCAN_NET
 	REM_BAD_ADDR
 	UPDATE_MODEL
+	AGGREGATE_BLACKLIST
 	PUSH_S3
 	CLEAN_UP
 	EMIT_METRICS
@@ -83,35 +83,30 @@ func RunStateMachine(conf *config.Configuration) (error) {
 
 		switch state {
 		case GEN_ADDRESSES:
-			// Chris
 			// Generate the candidate addresses to scan from the most recent model
 			err := generateCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
-			// Chris
 			// Perform a Zmap scan of the candidate addresses that were generated
 			err := zmapScanCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case NETWORK_GROUP:
-			// Marc
 			// Process results of Zmap scan into a set of network ranges
 			err := getScanResultsNetworkRanges(conf)
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_NET:
-			// Marc
 			// Test each of the network ranges to see if the range responds to every IP address
 			err := zmapScanNetworkRanges(conf)
 			if err != nil {
 				return err
 			}
 		case REM_BAD_ADDR:
-			// Marc
 			// Remove all the addresses from the Zmap results that are in ranges that failed
 			// the test in the previous step
 			err := cleanBlacklistedAddresses(conf)
@@ -119,14 +114,14 @@ func RunStateMachine(conf *config.Configuration) (error) {
 				return err
 			}
 		case UPDATE_MODEL:
-			// Chris
 			// Update the statistical model with the valid IPv6 results we have left over
 			err := updateModelWithSuccessfulHosts(conf)
 			if err != nil {
 				return err
 			}
+		case AGGREGATE_BLACKLIST:
+			// Aggregate all of the blacklists into a single blacklist
 		case PUSH_S3:
-			// Chris
 			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
 			if !conf.ExportEnabled {
 				log.Printf("Exporting to S3 is disabled. Skipping export step.")
@@ -137,10 +132,16 @@ func RunStateMachine(conf *config.Configuration) (error) {
 				}
 			}
 		case CLEAN_UP:
-			// Chris
 			// Remove all but the most recent files in each of the directories
+			if !conf.CleanUpEnabled {
+				log.Printf("Clean up disabled. Skipping clean up step.")
+			} else {
+				err := cleanUpNonRecentFiles(conf)
+				if err != nil {
+					return err
+				}
+			}
 		case EMIT_METRICS:
-			// Chris
 			// Push the metrics to wherever they need to go
 		}
 
@@ -304,11 +305,11 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}	
-	for pos, netRange := range(netRanges) {
+	for pos, netRange := range netRanges {
 		addrMiss := false
-		for _, netAddr := range(netRange) {
+		for _, netAddr := range netRange {
 			found := false
-			for _, addr := range(addrs.Addresses) {
+			for _, addr := range addrs.Addresses {
 				if netAddr.Content == addr.Content {
 					found = true
 					break
@@ -400,7 +401,8 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 		conf.GenerateFirstNybble,
 	)
 	start := time.Now()
-	addresses := model.GenerateMulti(conf.GenerateFirstNybble, conf.GenerateAddressCount, conf.GenerateUpdateFreq)  // TODO: filter out from blacklist
+	// TODO: filter out from blacklist
+	addresses := model.GenerateMulti(conf.GenerateFirstNybble, conf.GenerateAddressCount, conf.GenerateUpdateFreq)
 	elapsed := time.Since(start)
 	log.Printf("Took a total of %s to generate %d candidate addresses", elapsed, conf.GenerateAddressCount)
 	outputPath := getTimedFilePath(conf.GetCandidateAddressDirPath())
@@ -440,7 +442,6 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	// TODO read addresses from results file
 	results, err := addresses.GetAddressListFromHexStringsFile(resultsPath)
 	if err != nil {
 		return err
@@ -508,5 +509,35 @@ func pushFilesToS3(conf *config.Configuration) (error) {
 		log.Printf("All files in directory at '%s' processed.", curDir)
 	}
 	log.Printf("All %d directories successfully exported to S3.", len(allDirs))
+	return nil
+}
+
+func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
+	// TODO break this down into multiple functions
+	allDirs := conf.GetAllDirectories()
+	log.Printf("Now starting to delete all non-recent files from %d directories.", len(allDirs))
+	for _, curDir := range allDirs {
+		log.Printf("Processing content of directory '%s'.", curDir)
+		exportFiles, err := fs.GetNonMostRecentFilesFromDirectory(curDir)
+		if err != nil {
+			log.Printf("Error thrown when attempting to gather files for deletion in directory '%s'.", curDir)
+			return err
+		} else if len(exportFiles) == 0 {
+			log.Printf("No files found for export in directory '%s'.", curDir)
+			continue
+		}
+		for _, curFileName := range exportFiles {
+			curFilePath := filepath.Join(curDir, curFileName)
+			log.Printf("Deleting file at path '%s'.", curFilePath)
+			err := os.Remove(curFilePath)
+			if err != nil {
+				log.Printf("Error thrown when attempting to delete file at path '%s': %e", curFilePath, err)
+				return err
+			}
+			log.Printf("Successfully deleted file at path '%s'.", curFilePath)
+		}
+		log.Printf("Deleted all files in directory '%s'.", curDir)
+	}
+	log.Printf("Successfully deleted all non-recent files from %d directories.", len(allDirs))
 	return nil
 }
