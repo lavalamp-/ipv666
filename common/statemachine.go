@@ -79,8 +79,6 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		log.Printf("Now entering state %d.", state)
 		start := time.Now()
 
-		time.Sleep(1000 * time.Millisecond)
-
 		switch state {
 		case GEN_ADDRESSES:
 			// Generate the candidate addresses to scan from the most recent model
@@ -460,7 +458,7 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 
 func pushFilesToS3(conf *config.Configuration) (error) {
 	// TODO break this down into multiple functions
-	allDirs := conf.GetAllDirectories()
+	allDirs := conf.GetAllExportDirectories()
 	log.Printf("Now starting to push all non-most-recent files from %d directories.", len(allDirs))
 	for _, curDir := range allDirs {
 		log.Printf("Processing content of directory '%s'.", curDir)
@@ -514,7 +512,7 @@ func pushFilesToS3(conf *config.Configuration) (error) {
 
 func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
 	// TODO break this down into multiple functions
-	allDirs := conf.GetAllDirectories()
+	allDirs := conf.GetAllExportDirectories()
 	log.Printf("Now starting to delete all non-recent files from %d directories.", len(allDirs))
 	for _, curDir := range allDirs {
 		log.Printf("Processing content of directory '%s'.", curDir)
