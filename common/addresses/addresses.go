@@ -6,6 +6,7 @@ import (
 	"log"
 	"errors"
 	"strings"
+	"strconv"
 	"regexp"
 	"fmt"
 	"net"
@@ -164,6 +165,83 @@ func GetAddressFromBitString(bitstring string) (IPv6Address, error) {
 
 }
 
+func GetAddressFromString(bitstring string) (IPv6Address, error) {
+
+	regex, err := regexp.Compile("^[01]{128}$")
+	if err != nil {
+		return IPv6Address{}, err
+	}
+
+	if !regex.MatchString(bitstring) {
+		return IPv6Address{}, errors.New(fmt.Sprintf("%s is not a valid IPv6 address bit string.", bitstring))
+	}
+
+	var bytes []byte
+	var curByte byte = 0
+	var curLength = 0
+
+	for pos, _ := range(bitstring) {
+		curByte <<= 1
+		if bitstring[pos] == "0"[0] {
+			curByte |= 0
+		} else {
+			curByte |= 1
+		}
+		curLength += 1
+		if curLength == 8 {
+			bytes = append(bytes, curByte)
+			curByte = 0
+			curLength = 0
+		}
+	}
+
+	var byteArray [16]byte
+	copy(byteArray[:], bytes)
+
+	return NewIPv6Address(byteArray), nil
+
+}
+
+func GetAddressFromHexString(hexstring string) (IPv6Address, error) {
+
+	regex, err := regexp.Compile("^[A-Fa-f0-9:]+$")
+	if err != nil {
+		return IPv6Address{}, err
+	}
+
+	if !regex.MatchString(hexstring) {
+		return IPv6Address{}, errors.New(fmt.Sprintf("%s is not a valid IPv6 address hex string.", hexstring))
+	}
+
+	var ipBytes [16]byte
+
+	parts := strings.Split(hexstring, ":")
+
+	// Parse IP left->right
+	for pos, part := range(parts) {
+		bytes, _ := strconv.ParseUint(part, 16, 16)
+		ipBytes[pos*2+0] = (byte)((bytes >> 8) & 0xFF)
+		ipBytes[pos*2+1] = (byte)(bytes & 0xFF)
+
+		// We encountered a "::", finish parsing the address right->left
+		if len(part) == 0 {
+			poff := len(parts)-1
+			for pos := len(parts)-1; pos >= 0; pos-- {
+				part = parts[pos]
+				if len(part) == 0 {
+					break
+				}
+				bytes, _ := strconv.ParseUint(part, 16, 16)
+				ipBytes[15-(poff-pos)*2-1] = (byte)((bytes >> 8) & 0xFF)
+				ipBytes[15-(poff-pos)*2-0] = (byte)(bytes & 0xFF)
+			}
+			break
+		}
+	}
+
+	return NewIPv6Address(ipBytes), nil
+}
+
 func GetAddressListFromBytes(bytes []byte) (IPv6AddressList, error) {
 
 	if len(bytes) % 16 != 0 {
@@ -182,8 +260,31 @@ func GetAddressListFromBytes(bytes []byte) (IPv6AddressList, error) {
 
 }
 
-func GetAddressListFromAddressesFile(filePath string) (IPv6AddressList, error) {
-	return IPv6AddressList{}, nil
+func GetAddressListFromHexStringsFile(filePath string) (IPv6AddressList, error) {
+	var addresses []IPv6Address
+
+	fileContent, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return IPv6AddressList{}, err
+	}
+
+	contentString := strings.TrimSpace(string(fileContent))
+	lines := strings.Split(contentString, "\n")
+	var cleanedLines []string
+	for _, s := range(lines) {
+		cleanedLines = append(cleanedLines, strings.TrimSpace(s))
+	}
+
+	for _, line := range(cleanedLines) {
+		address, err := GetAddressFromHexString(line)
+		if err != nil {
+			return IPv6AddressList{}, err
+		}
+
+		addresses = append(addresses, address)
+	}
+
+	return NewIPv6AddressList(addresses), nil
 }
 
 func GetAddressListFromBitStringsFile(filePath string) (IPv6AddressList, error) {

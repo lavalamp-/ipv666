@@ -96,6 +96,10 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		case NETWORK_GROUP:
 			// Marc
 			// Process results of Zmap scan into a set of network ranges
+			err := getScanResultsNetworkRanges(conf)
+			if err != nil {
+				return err
+			}
 		case PING_SCAN_NET:
 			// Marc
 			// Test each of the network ranges to see if the range responds to every IP address
@@ -140,6 +144,28 @@ func RunStateMachine(conf *config.Configuration) (error) {
 
 	}
 
+}
+
+func getScanResultsNetworkRanges(conf *config.Configuration) (error) {
+	
+	// Find the target ping results file
+	pingResultsPath, err := data.GetMostRecentFilePathFromDir(conf.GetPingResultDirPath())
+	if err != nil {
+		return err
+	}
+
+	// Load the ping results
+	addresses, err := addresses.GetAddressListFromHexStringsFile(pingResultsPath)
+	if err != nil {
+		return err
+	}
+
+	// 
+	for _, s := range(addresses.Addresses) {
+		fmt.Println(s)
+	}
+
+	return nil
 }
 
 func getTimedFilePath(baseDir string) (string) {
@@ -201,7 +227,7 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 		return err
 	}
 	// TODO read addresses from results file
-	results, err := addresses.GetAddressListFromAddressesFile(resultsPath)
+	results, err := addresses.GetAddressListFromHexStringsFile(resultsPath)
 	if err != nil {
 		return err
 	}
