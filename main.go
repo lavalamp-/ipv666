@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 	"github.com/lavalamp-/ipv666/common/config"
-	"github.com/lavalamp-/ipv666/common"
 	"os"
 	"github.com/natefinch/lumberjack"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"flag"
 	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/statemachine"
 )
 
 func setupLogging(conf *config.Configuration) {
@@ -35,7 +35,7 @@ func initializeFilesystem(conf *config.Configuration) (error) {
 	log.Printf("Initializing state file at '%s'.", conf.GetStateFilePath())
 	if _, err := os.Stat(conf.GetStateFilePath()); os.IsNotExist(err) {
 		log.Printf("State file does not exist at path '%s'. Creating now.", conf.GetStateFilePath())
-		err = common.InitStateFile(conf.GetStateFilePath())
+		err = statemachine.InitStateFile(conf.GetStateFilePath())
 		if err != nil {
 			return err
 		}
@@ -82,7 +82,7 @@ func main() {
 
 	log.Print("All systems are green. Entering state machine.")
 
-	err = common.RunStateMachine(&conf)
+	err = statemachine.RunStateMachine(&conf)
 
 	if err != nil {
 		log.Fatal(err)
