@@ -7,7 +7,19 @@ import (
 	"github.com/lavalamp-/ipv666/common/addresses"
 	"os"
 	"fmt"
+	"github.com/rcrowley/go-metrics"
+	"time"
 )
+
+var blRemovalDurationTimer = metrics.NewTimer()
+var blRemovalCountGauge = metrics.NewGauge()
+var blLegitimateCountGauge = metrics.NewGauge()
+
+func init() {
+	metrics.Register("bl_removal_duration", blRemovalDurationTimer)
+	metrics.Register("bl_removal_count", blRemovalCountGauge)
+	metrics.Register("bl_legitimate_count", blLegitimateCountGauge)
+}
 
 func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 
@@ -37,6 +49,7 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 		return err
 	}
 
+	start := time.Now()
 	// Remove addresses from blacklisted networks
 	log.Printf("Removing addresses from blacklisted networks")
 	var cleanAddrs []addresses.IPv6Address
@@ -62,6 +75,10 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 			cleanAddrs = append(cleanAddrs, addr)
 		}
 	}
+	elapsed := time.Since(start)
+	blRemovalDurationTimer.Update(elapsed)
+	blRemovalCountGauge.Update(int64(len(addrs.Addresses) - len(cleanAddrs)))
+	blLegitimateCountGauge.Update(int64(len(cleanAddrs)))
 
 	// Write the clean ping response addresses to disk
 	cleanPath := getTimedFilePath(conf.GetCleanPingDirPath())

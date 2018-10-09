@@ -1,16 +1,16 @@
 #!/bin/bash
 
-SERVER_IP=206.189.64.130
+SERVER_IP=142.93.68.181
 
 # Build the binary
-cd ..
-go build
-cd deploy
+# cd ..
+# go build
+# cd deploy
 
 # Copy it over to the server
-ssh root@$SERVER_IP mkdir -p /root/ipv666
-scp ../ipv666 root@$SERVER_IP:/root/ipv666/
-scp ../config.json root@$SERVER_IP:/root/ipv666/config.json
+# ssh root@$SERVER_IP mkdir -p /root/ipv666
+# scp ../ipv666 root@$SERVER_IP:/root/ipv666/
+# scp ../config.json root@$SERVER_IP:/root/ipv666/config.json
 
 # Copy over the systemd script
 scp systemd.conf root@$SERVER_IP:/etc/systemd/system/ipv666.service

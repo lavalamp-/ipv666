@@ -6,7 +6,15 @@ import (
 	"github.com/lavalamp-/ipv666/common/fs"
 	"path/filepath"
 	"os"
+	"github.com/rcrowley/go-metrics"
 )
+
+
+var cleanUpFileCounter = metrics.NewCounter()
+
+func init() {
+	metrics.Register("cleanup_file_count", cleanUpFileCounter)
+}
 
 func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
 	allDirs := conf.GetAllExportDirectories()
@@ -29,6 +37,7 @@ func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
 				log.Printf("Error thrown when attempting to delete file at path '%s': %e", curFilePath, err)
 				return err
 			}
+			cleanUpFileCounter.Inc(1)
 			log.Printf("Successfully deleted file at path '%s'.", curFilePath)
 		}
 		log.Printf("Deleted all files in directory '%s'.", curDir)

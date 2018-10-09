@@ -9,6 +9,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"strconv"
 	"path/filepath"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -28,6 +29,19 @@ var FIRST_STATE = GEN_ADDRESSES
 var LAST_STATE = EMIT_METRICS
 
 type State int8
+
+var stateLoopTimers = make(map[string]metrics.Timer)
+
+func getStateLoopTimer(state State, conf *config.Configuration) (metrics.Timer, bool) {
+	key := fmt.Sprintf("%s.timer.%d", conf.MetricsStateLoopPrefix, state)
+	if _, ok := stateLoopTimers[key]; !ok {
+		timer := metrics.NewTimer()
+		metrics.Register(key, timer)
+		stateLoopTimers[key] = timer
+	}
+	val, found := stateLoopTimers[key]
+	return val, found
+}
 
 func fetchStateFromFile(filePath string) (State, error) {
 	content, err := ioutil.ReadFile(filePath)
@@ -144,8 +158,17 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		elapsed := time.Since(start)
 		log.Printf("Completed state %d (took %s).", state, elapsed)
 
+		timer, found := getStateLoopTimer(state, conf)
+		if !found {
+			log.Printf("Unable to find state loop timer for state %d.", state)
+			if conf.ExitOnFailedMetrics {
+				return errors.New(fmt.Sprintf("Unable to find state loop timer for state %d.", state))
+			}
+		}
+		timer.Update(elapsed)
+
 		state = (state + 1) % (LAST_STATE + 1)
-		err := updateStateFile(conf.GetStateFilePath(), state)
+		err = updateStateFile(conf.GetStateFilePath(), state)
 		if err != nil {
 			return err
 		}
