@@ -3,7 +3,7 @@ package statemachine
 import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"github.com/lavalamp-/ipv666/common/addresses"
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
 	"github.com/rcrowley/go-metrics"
 	"time"
@@ -21,7 +21,7 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	results, err := addresses.GetAddressListFromHexStringsFile(resultsPath)
+	results, err := addressing.GetAddressListFromHexStringsFile(resultsPath)
 	if err != nil {
 		return err
 	}

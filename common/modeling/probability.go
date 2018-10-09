@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"log"
 	"github.com/lavalamp-/ipv666/common/persist"
-	"github.com/lavalamp-/ipv666/common/addresses"
+	"github.com/lavalamp-/ipv666/common/addressing"
 )
 
 type ProbabilisticAddressModel struct {
@@ -65,26 +65,26 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 	return persist.Save(filePath, addrModel)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateMulti(fromNybble uint8, count int, updateFreq int) (addresses.IPv6AddressList) {
-	var addrs []addresses.IPv6Address
+func (addrModel *ProbabilisticAddressModel) GenerateMulti(fromNybble uint8, count int, updateFreq int) (addressing.IPv6AddressList) {
+	var addrs []addressing.IPv6Address
 
-	log.Printf("Generating %d IP addresses using model %s.", count, addrModel.Name)
+	log.Printf("Generating %d IP addressing using model %s.", count, addrModel.Name)
 
 	for i := 0; i < count; i++ {
 
 		if i % updateFreq == 0 {
-			log.Printf("Generating %d addresses out of %d.", i, count)
+			log.Printf("Generating %d addressing out of %d.", i, count)
 		}
 
 		addrs = append(addrs, addrModel.GenerateSingle(fromNybble))
 	}
 
-	log.Printf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
+	log.Printf("Successfully generated %d IP addressing using model %s.", count, addrModel.Name)
 
-	return addresses.NewIPv6AddressList(addrs)
+	return addressing.NewIPv6AddressList(addrs)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateSingle(fromNybble uint8) (addresses.IPv6Address) {
+func (addrModel *ProbabilisticAddressModel) GenerateSingle(fromNybble uint8) (addressing.IPv6Address) {
 	addrNybbles := []uint8{fromNybble}
 	curNybble := fromNybble
 	for _, nybbleModel := range(addrModel.NybbleModels) {
@@ -97,18 +97,18 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingle(fromNybble uint8) (ad
 		nybbleIndex := i * 2
 		addrBytes[i] = (addrNybbles[nybbleIndex] << 4) | addrNybbles[nybbleIndex + 1]
 	}
-	return addresses.NewIPv6Address(addrBytes)
+	return addressing.NewIPv6Address(addrBytes)
 }
 
-func GenerateAddressModel(addresses addresses.IPv6AddressList, name string) (*ProbabilisticAddressModel) {
+func GenerateAddressModel(addresses addressing.IPv6AddressList, name string) (*ProbabilisticAddressModel) {
 	toReturn := newAddressModel(name)
 	toReturn.UpdateMulti(addresses)
 	return toReturn
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateMulti(addresses addresses.IPv6AddressList) () {
+func (addrModel *ProbabilisticAddressModel) UpdateMulti(addresses addressing.IPv6AddressList) () {
 
-	log.Printf("Updating model %s with %d addresses.", addrModel.Name, len(addresses.Addresses))
+	log.Printf("Updating model %s with %d addressing.", addrModel.Name, len(addresses.Addresses))
 
 	for i, address := range(addresses.Addresses) {
 
@@ -119,11 +119,11 @@ func (addrModel *ProbabilisticAddressModel) UpdateMulti(addresses addresses.IPv6
 		addrModel.UpdateSingle(address)
 	}
 
-	log.Printf("Successfully updated model %s with %d addresses.", addrModel.Name, len(addresses.Addresses))
+	log.Printf("Successfully updated model %s with %d addressing.", addrModel.Name, len(addresses.Addresses))
 
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateSingle(address addresses.IPv6Address) () {
+func (addrModel *ProbabilisticAddressModel) UpdateSingle(address addressing.IPv6Address) () {
 	fromNybble := address.GetNybble(0)
 	for i, nybbleModel := range(addrModel.NybbleModels) {
 		toNybble := address.GetNybble(i+1)

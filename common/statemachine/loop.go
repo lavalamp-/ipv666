@@ -93,13 +93,13 @@ func RunStateMachine(conf *config.Configuration) (error) {
 
 		switch state {
 		case GEN_ADDRESSES:
-			// Generate the candidate addresses to scan from the most recent model
+			// Generate the candidate addressing to scan from the most recent model
 			err := generateCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
-			// Perform a Zmap scan of the candidate addresses that were generated
+			// Perform a Zmap scan of the candidate addressing that were generated
 			err := zmapScanCandidateAddresses(conf)
 			if err != nil {
 				return err
@@ -117,7 +117,7 @@ func RunStateMachine(conf *config.Configuration) (error) {
 				return err
 			}
 		case REM_BAD_ADDR:
-			// Remove all the addresses from the Zmap results that are in ranges that failed
+			// Remove all the addressing from the Zmap results that are in ranges that failed
 			// the test in the previous step
 			err := cleanBlacklistedAddresses(conf)
 			if err != nil {

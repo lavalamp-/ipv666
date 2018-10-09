@@ -1,4 +1,4 @@
-package addresses
+package addressing
 
 import (
 	"os"
@@ -11,11 +11,6 @@ import (
 	"fmt"
 	"net"
 )
-
-type IPv6Range struct {
-	Low IPv6Address
-	High IPv6Address
-}
 
 type IPv6Address struct {
 	Content [16]byte
@@ -33,7 +28,7 @@ func NewIPv6AddressList(addresses []IPv6Address) IPv6AddressList {
 	return IPv6AddressList{addresses}
 }
 
-func (address IPv6Address) GetNybble(index int) (uint8) {
+func (address *IPv6Address) GetNybble(index int) (uint8) {
 	// TODO fatal error if index > 31
 	byteIndex := index / 2
 	addrByte := address.Content[byteIndex]
@@ -82,7 +77,7 @@ func (list IPv6AddressList) ToAddressesFile(filePath string, updateFreq int) (er
 	}
 	defer f.Close()
 
-	log.Printf("Now writing %d IPv6 addresses to file at %s.", len(list.Addresses), filePath)
+	log.Printf("Now writing %d IPv6 addressing to file at %s.", len(list.Addresses), filePath)
 
 	for i, address := range(list.Addresses) {  // TODO optimize this?
 
@@ -95,7 +90,7 @@ func (list IPv6AddressList) ToAddressesFile(filePath string, updateFreq int) (er
 
 	f.Sync()
 
-	log.Printf("Finished writing %d IPv6 addresses to file at %s.", len(list.Addresses), filePath)
+	log.Printf("Finished writing %d IPv6 addressing to file at %s.", len(list.Addresses), filePath)
 
 	return nil
 
@@ -114,7 +109,7 @@ func (list IPv6AddressList) ToBinaryFile(filePath string, updateFreq int) (error
 	}
 	defer f.Close()
 
-	log.Printf("Now writing %d binary addresses to file at %s.", len(list.Addresses), filePath)
+	log.Printf("Now writing %d binary addressing to file at %s.", len(list.Addresses), filePath)
 
 	for i, address := range(list.Addresses) {  // TODO optimize this?
 
@@ -127,7 +122,7 @@ func (list IPv6AddressList) ToBinaryFile(filePath string, updateFreq int) (error
 
 	f.Sync()
 
-	log.Printf("Finished writing binary addresses to file at %s.", filePath)
+	log.Printf("Finished writing binary addressing to file at %s.", filePath)
 
 	return nil
 
@@ -290,41 +285,6 @@ func GetAddressListFromHexStringsFile(filePath string) (IPv6AddressList, error) 
 	}
 
 	return NewIPv6AddressList(addresses), nil
-}
-
-func GetAddressListFromBitStringsFile(filePath string) (IPv6AddressList, error) {
-
-	log.Printf("Checking that file exists at %s.", filePath)
-	_, err := os.Stat(filePath)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	log.Printf("Reading Content of file at %s.", filePath)
-	fileContent, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	contentString := strings.TrimSpace(string(fileContent))
-	lines := strings.Split(contentString, "\n")
-	var cleanedLines []string
-	for _, s := range(lines) {
-		cleanedLines = append(cleanedLines, strings.TrimSpace(s))
-	}
-
-	var addresses []IPv6Address
-
-	for pos, cleanedLine := range(cleanedLines) {
-		address, err := GetAddressFromBitString(cleanedLine)
-		if err != nil {
-			return IPv6AddressList{}, errors.New(fmt.Sprintf("Error at line %s: %s.", pos, err))
-		}
-		addresses = append(addresses, address)
-	}
-
-	return NewIPv6AddressList(addresses), nil
-
 }
 
 func GetAddressListFromBinaryFile(filePath string) (IPv6AddressList, error) {

@@ -14,7 +14,7 @@ type Configuration struct {
 
 	BaseOutputDirectory			string	// Base directory where transient files are kept
 	GeneratedModelDirectory		string	// Subdirectory where statistical models are kept
-	CandidateAddressDirectory	string	// Subdirectory where generated candidate addresses are kept
+	CandidateAddressDirectory	string	// Subdirectory where generated candidate addressing are kept
 	PingResultDirectory			string	// Subdirectory where results of ping scans are kept
 	NetworkGroupDirectory		string	// Subdirectory where results of grouping live hosts are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
@@ -23,15 +23,15 @@ type Configuration struct {
 
 	// Candidate address generation
 
-	GenerateAddressCount		int		// How many addresses to generate in a given iteration
-	GenerateFirstNybble			uint8	// The first nybble of IPv6 addresses to generate
+	GenerateAddressCount		int		// How many addressing to generate in a given iteration
+	GenerateFirstNybble			uint8	// The first nybble of IPv6 addressing to generate
 	GenerateUpdateFreq			int		// The interval upon which to emit to a log file during address generation
 	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
 
 	// Network grouping and validation
 
-	NetworkGroupingSize			int		// The bit-length of network size to use when checking for many-to-one
-	NetworkPingCount			int		// The number of addresses to try pinging when testing for many-to-one
+	NetworkGroupingSize			uint8	// The bit-length of network size to use when checking for many-to-one
+	NetworkPingCount			int		// The number of addressing to try pinging when testing for many-to-one
 
 	// Logging
 

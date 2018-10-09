@@ -4,7 +4,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"log"
-	"github.com/lavalamp-/ipv666/common/addresses"
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"os"
 	"fmt"
 	"github.com/rcrowley/go-metrics"
@@ -29,9 +29,9 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 		return err
 	}
 
-	// Load the blacklist network addresses
-	log.Printf("Loading blacklist network addresses")
-	nets, err := addresses.GetAddressListFromHexStringsFile(blacklistPath)
+	// Load the blacklist network addressing
+	log.Printf("Loading blacklist network addressing")
+	nets, err := addressing.GetAddressListFromHexStringsFile(blacklistPath)
 	if err != nil {
 		return err
 	}
@@ -43,16 +43,16 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	}
 
 	// Load the ping results
-	log.Printf("Loading ping scan result addresses")
-	addrs, err := addresses.GetAddressListFromHexStringsFile(addrsPath)
+	log.Printf("Loading ping scan result addressing")
+	addrs, err := addressing.GetAddressListFromHexStringsFile(addrsPath)
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	// Remove addresses from blacklisted networks
-	log.Printf("Removing addresses from blacklisted networks")
-	var cleanAddrs []addresses.IPv6Address
+	// Remove addressing from blacklisted networks
+	log.Printf("Removing addressing from blacklisted networks")
+	var cleanAddrs []addressing.IPv6Address
 	for _, addr := range(addrs.Addresses) {
 		found := false
 		for _, net := range(nets.Addresses) {
@@ -80,9 +80,9 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	blRemovalCountGauge.Update(int64(len(addrs.Addresses) - len(cleanAddrs)))
 	blLegitimateCountGauge.Update(int64(len(cleanAddrs)))
 
-	// Write the clean ping response addresses to disk
+	// Write the clean ping response addressing to disk
 	cleanPath := getTimedFilePath(conf.GetCleanPingDirPath())
-	log.Printf("Writing clean addresses to %s.", cleanPath)
+	log.Printf("Writing clean addressing to %s.", cleanPath)
 	file, err := os.OpenFile(cleanPath, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err

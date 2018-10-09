@@ -4,7 +4,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"log"
-	"github.com/lavalamp-/ipv666/common/addresses"
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"math/rand"
 	"time"
 	"io/ioutil"
@@ -36,24 +36,24 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 
 	// Load the network groups
 	log.Printf("Loading network groups")
-	nets, err := addresses.GetAddressListFromHexStringsFile(netsPath)
+	nets, err := addressing.GetAddressListFromHexStringsFile(netsPath)
 	if err != nil {
 		return err
 	}
 
 	start := time.Now()
-	// Generate random addresses in each network
-	log.Printf("Generating %d addresses in each network range", conf.NetworkPingCount)
+	// Generate random addressing in each network
+	log.Printf("Generating %d addressing in each network range", conf.NetworkPingCount)
 	rand.Seed(time.Now().UTC().UnixNano())
 	file, err := ioutil.TempFile("/tmp", "addrs")
 	if err != nil {
 		return err
 	}
-	var netRanges [][]addresses.IPv6Address
+	var netRanges [][]addressing.IPv6Address
 	for _, net := range(nets.Addresses) {
-		var netRange []addresses.IPv6Address
+		var netRange []addressing.IPv6Address
 		for x := 0; x < conf.NetworkPingCount; x++ {
-			addr := addresses.IPv6Address{net.Content}
+			addr := addressing.IPv6Address{net.Content}
 			for x := conf.NetworkGroupingSize; x < 128; x++ {
 				byteOff := (int)(x/8)
 				bitOff := (uint)(x-(byteOff*8))
@@ -69,7 +69,7 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 	elapsed := time.Since(start)
 	addrNetsGenerationTimer.Update(elapsed)
 
-	// Scan the addresses
+	// Scan the addressing
 	inputPath, err := filepath.Abs(file.Name())
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 		return err
 	}
 	log.Printf(
-		"Now Zmap scanning IPv6 addresses found in file at path '%s'. Results will be written to '%s'.",
+		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
 	)
@@ -113,7 +113,7 @@ func zmapScanNetworkRanges(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	addrs, err := addresses.GetAddressListFromHexStringsFile(outputPath)
+	addrs, err := addressing.GetAddressListFromHexStringsFile(outputPath)
 	if err != nil {
 		return err
 	}

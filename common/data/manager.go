@@ -7,10 +7,72 @@ import (
 	"fmt"
 	"path/filepath"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"net"
 )
 
 var curAddressModel modeling.ProbabilisticAddressModel
 var curAddressModelPath string
+var curCandidatePingResults addressing.IPv6AddressList
+var curCandidatePingResultsPath string
+var curScanResultsNetworkRanges []*net.IPNet
+var curScanResultsNetworkRangesPath string
+
+func UpdateScanResultsNetworkRanges(networks []*net.IPNet, filePath string) {
+	curScanResultsNetworkRanges = networks
+	curScanResultsNetworkRangesPath = filePath
+}
+
+func GetScanResultsNetworkRanges(scanResultsDir string) ([]*net.IPNet, error) {
+	log.Printf("Attempting to retrieve most recent candidate ping networks from directory '%s'.", scanResultsDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(scanResultsDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving candidate ping networks from directory '%s': %s", scanResultsDir, err)
+		return nil, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty.", scanResultsDir)
+		return nil, errors.New(fmt.Sprintf("No candidate ping networks files were found in directory %s.", scanResultsDir))
+	}
+	filePath := filepath.Join(scanResultsDir, fileName)
+	log.Printf("Most recent candidate ping networks file is at path '%s'.", filePath)
+	if fileName == curScanResultsNetworkRangesPath {
+		log.Printf("Already have candidate ping networks at path '%s' loaded in memory. Returning.", filePath)
+		return curScanResultsNetworkRanges, nil
+	} else {
+		log.Printf("Loading candidate ping networks from path '%s'.", filePath)
+		toReturn, err := addressing.ReadIPv6NetworksFromFile(filePath)
+		if err != nil {
+			UpdateScanResultsNetworkRanges(toReturn, filePath)
+		}
+		return toReturn, err
+	}
+}
+
+func GetCandidatePingResults(pingResultsDir string) (addressing.IPv6AddressList, error) {
+	log.Printf("Attempting to retrieve most recent candidate ping results from directory '%s'.", pingResultsDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(pingResultsDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving candidate ping results from directory '%s': %s", pingResultsDir, err)
+		return addressing.IPv6AddressList{}, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty.", pingResultsDir)
+		return addressing.IPv6AddressList{}, errors.New(fmt.Sprintf("No candidate ping files were found in directory %s.", pingResultsDir))
+	}
+	filePath := filepath.Join(pingResultsDir, fileName)
+	log.Printf("Most recent ping results file is at path '%s'.", filePath)
+	if fileName == curCandidatePingResultsPath {
+		log.Printf("Already have candidate ping results at path '%s' loaded in memory. Returning.", filePath)
+		return curCandidatePingResults, nil
+	} else {
+		log.Printf("Loading candidate ping results from path '%s'.", filePath)
+		toReturn, err := addressing.GetAddressListFromHexStringsFile(filePath)
+		if err != nil {
+			curCandidatePingResultsPath = filePath
+			curCandidatePingResults = toReturn
+		}
+		return toReturn, err
+	}
+}
 
 func GetProbabilisticAddressModel(modelDir string) (modeling.ProbabilisticAddressModel, error) {
 	log.Printf("Attempting to retrieve most recent probabilistic model from directory '%s'.", modelDir)
@@ -29,7 +91,12 @@ func GetProbabilisticAddressModel(modelDir string) (modeling.ProbabilisticAddres
 		return curAddressModel, nil
 	} else {
 		log.Printf("Loading probabilistic address model from path '%s'.", filePath)
-		return modeling.GetProbabilisticModelFromFile(filePath)
+		toReturn, err := modeling.GetProbabilisticModelFromFile(filePath)
+		if err != nil {
+			curAddressModelPath = filePath
+			curAddressModel = toReturn
+		}
+		return toReturn, err
 	}
 }
 

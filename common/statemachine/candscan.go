@@ -12,10 +12,12 @@ import (
 
 var liveAddrCandGauge = metrics.NewGauge()
 var zmapCandDurationTimer = metrics.NewTimer()
+var zmapCandErrorCounter = metrics.NewCounter()
 
 func init() {
 	metrics.Register("zmap_cand_addr_live", liveAddrCandGauge)
 	metrics.Register("zmap_cand_scan_duration", zmapCandDurationTimer)
+	metrics.Register("zmap_cand_scan_error_count", zmapCandErrorCounter)
 }
 
 func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
@@ -25,7 +27,7 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 	}
 	outputPath := getTimedFilePath(conf.GetPingResultDirPath())
 	log.Printf(
-		"Now Zmap scanning IPv6 addresses found in file at path '%s'. Results will be written to '%s'.",
+		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
 	)
@@ -33,6 +35,7 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 	_, err = shell.ZmapScanFromConfig(conf, inputPath, outputPath)
 	elapsed := time.Since(start)
 	if err != nil {
+		zmapCandErrorCounter.Inc(1)
 		log.Printf("An error was thrown when trying to run zmap: %s", err)
 		log.Printf("Zmap elapsed time was %s.", elapsed)
 		return err
