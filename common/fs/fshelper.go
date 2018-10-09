@@ -115,3 +115,15 @@ func CountLinesInFile(filePath string) (int, error) {
 		}
 	}
 }
+
+func CountFileSize(filePath string) (int64, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return -1, err
+	}
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return -1, err
+	}
+	return fileInfo.Size(), nil
+}

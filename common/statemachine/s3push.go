@@ -8,7 +8,18 @@ import (
 	"fmt"
 	"os"
 	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/rcrowley/go-metrics"
 )
+
+var s3PushFileCounter = metrics.NewCounter()
+var s3PushErrorCounter = metrics.NewCounter()
+var s3BytesPushedCounter = metrics.NewCounter()
+
+func init() {
+	metrics.Register("s3_push_files_count", s3PushFileCounter)
+	metrics.Register("s3_push_errors_count", s3PushErrorCounter)
+	metrics.Register("s3_bytes_pushed_count", s3BytesPushedCounter)
+}
 
 func pushFilesToS3(conf *config.Configuration) (error) {
 	allDirs := conf.GetAllExportDirectories()
@@ -30,6 +41,7 @@ func syncDirectoryWithS3(directory string, conf *config.Configuration) (error) {
 	log.Printf("Processing content of directory '%s'.", directory)
 	exportFiles, err := fs.GetNonMostRecentFilesFromDirectory(directory)
 	if err != nil {
+		s3PushErrorCounter.Inc(1)
 		log.Printf("Error thrown when attempting to gather files for export in directory '%s'.", directory)
 		return err
 	} else if len(exportFiles) == 0 {
@@ -57,20 +69,35 @@ func syncFileWithS3(localPath string, remotePath string, conf *config.Configurat
 	log.Printf("Zipping up file at path '%s' to file at path '%s'.", localPath, zipFilePath)
 	err := fs.ZipFiles([]string{localPath}, zipFilePath)
 	if err != nil {
+		s3PushErrorCounter.Inc(1)
 		log.Printf("Failed to zip up file at path '%s'. Stopping export.", localPath)
 		zipErr := os.Remove(zipFilePath)
 		if zipErr != nil {
+			s3PushErrorCounter.Inc(1)
 			log.Printf("Another error was thrown when trying to delete zip file at path '%s': %e", zipFilePath, err)
 		}
 		return err
 	}
 	log.Printf("Successfully created zip file at path '%s'.", zipFilePath)
-	log.Printf("Moving file at '%s' to S3 bucket (%s).", zipFilePath, remotePath)
+	fileSize, err := fs.CountFileSize(zipFilePath)
+	if err != nil {
+		s3PushErrorCounter.Inc(1)
+		log.Printf("Error thrown when getting file size of file at path '%s': %e", zipFilePath, err)
+		zipErr := os.Remove(zipFilePath)
+		if zipErr != nil {
+			s3PushErrorCounter.Inc(1)
+			log.Printf("Another error was thrown when trying to delete zip file at path '%s': %e", zipFilePath, err)
+		}
+		return err
+	}
+	log.Printf("Moving file at '%s' to S3 bucket (%s). %d total bytes.", zipFilePath, remotePath, fileSize)
 	err = data.PushFileToS3FromConfig(zipFilePath, remotePath, conf)
 	if err != nil {
+		s3PushErrorCounter.Inc(1)
 		log.Printf("Failed to move file at path '%s' to S3. Stopping export.", zipFilePath)
 		zipErr := os.Remove(zipFilePath)
 		if zipErr != nil {
+			s3PushErrorCounter.Inc(1)
 			log.Printf("Another error was thrown when trying to delete zip file at path '%s': %e", zipFilePath, err)
 		}
 		return err
@@ -78,9 +105,12 @@ func syncFileWithS3(localPath string, remotePath string, conf *config.Configurat
 	log.Printf("Deleting zip file at '%s'.", zipFilePath)
 	err = os.Remove(zipFilePath)
 	if err != nil {
+		s3PushErrorCounter.Inc(1)
 		log.Printf("Error thrown when attempting to delete zip file at path '%s': %e", zipFilePath, err)
 		return err
 	}
 	log.Printf("Successfully moved file at '%s' to S3 with compression.", localPath)
+	s3PushFileCounter.Inc(1)
+	s3BytesPushedCounter.Inc(fileSize)
 	return nil
 }

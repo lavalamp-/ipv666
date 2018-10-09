@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+var mainLoopRunTimer = metrics.NewTimer()
+
+func init() {
+	metrics.Register("main_loop_timer", mainLoopRunTimer)
+}
+
 func setupLogging(conf *config.Configuration) {
 	log.Print("Now setting up logging.")
 	log.SetFlags(log.Flags() & (log.Ldate | log.Ltime))
@@ -95,7 +101,12 @@ func main() {
 
 	log.Print("All systems are green. Entering state machine.")
 
+	start := time.Now()
 	err = statemachine.RunStateMachine(&conf)
+	elapsed := time.Since(start)
+	mainLoopRunTimer.Update(elapsed)
+
+	//TODO push metrics
 
 	if err != nil {
 		log.Fatal(err)
