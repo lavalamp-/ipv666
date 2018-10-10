@@ -9,14 +9,81 @@ import (
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
+	"github.com/lavalamp-/ipv666/common/blacklist"
 )
 
-var curAddressModel modeling.ProbabilisticAddressModel
+var curAddressModel *modeling.ProbabilisticAddressModel
 var curAddressModelPath string
-var curCandidatePingResults addressing.IPv6AddressList
+var curCandidatePingResults []*net.IP
 var curCandidatePingResultsPath string
 var curScanResultsNetworkRanges []*net.IPNet
 var curScanResultsNetworkRangesPath string
+var curBlacklist *blacklist.NetworkBlacklist
+var curBlacklistPath string
+var curCleanPingResults []*net.IP
+var curCleanPingResultsPath string
+
+
+func UpdateCleanPingResults(addrs []*net.IP, filePath string) {
+	curCleanPingResults = addrs
+	curCleanPingResultsPath = filePath
+}
+
+func GetCleanPingResults(resultsDir string) ([]*net.IP, error) {
+	log.Printf("Attempting to retrieve most recent cleaned ping results from directory '%s'.", resultsDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(resultsDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving cleaned ping results from directory '%s': %e", resultsDir, err)
+		return nil, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty.", resultsDir)
+		return nil, errors.New(fmt.Sprintf("No cleaned ping results files were found in directory %s.", resultsDir))
+	}
+	filePath := filepath.Join(resultsDir, fileName)
+	log.Printf("Most recent cleaned ping results file is at path '%s'.", filePath)
+	if filePath == curCleanPingResultsPath {
+		log.Printf("Already have cleaned ping results at path '%s' loaded in memory. Returning.", filePath)
+		return curCleanPingResults, nil
+	} else {
+		log.Printf("Loading cleaned ping results from path '%s'.", filePath)
+		toReturn, err := addressing.ReadIPsFromBinaryFile(filePath)
+		if err != nil {
+			UpdateCleanPingResults(toReturn, filePath)
+		}
+		return toReturn, err
+	}
+}
+
+func UpdateBlacklist(blacklist *blacklist.NetworkBlacklist, filePath string) {
+	curBlacklist = blacklist
+	curBlacklistPath = filePath
+}
+
+func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
+	log.Printf("Attempting to retrieve most recent blacklist from directory '%s'.", blacklistDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(blacklistDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving candidate ping networks from directory '%s': %s", blacklistDir, err)
+		return nil, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty. Returning a new, empty blacklist.", blacklistDir)
+		emptyNets := make([]*net.IPNet, 0)
+		return blacklist.NewNetworkBlacklist(emptyNets), nil
+	}
+	filePath := filepath.Join(blacklistDir, fileName)
+	log.Printf("Most recent blacklist file is at path '%s'.", filePath)
+	if filePath == curBlacklistPath {
+		log.Printf("Already have blacklist at path '%s' loaded in memory. Returning.", filePath)
+		return curBlacklist, nil
+	} else {
+		log.Printf("Loading blacklist from path '%s'.", filePath)
+		toReturn, err := blacklist.ReadNetworkBlacklistFromFile(filePath)
+		if err != nil {
+			UpdateBlacklist(toReturn, filePath)
+		}
+		return toReturn, err
+	}
+}
 
 func UpdateScanResultsNetworkRanges(networks []*net.IPNet, filePath string) {
 	curScanResultsNetworkRanges = networks
@@ -35,7 +102,7 @@ func GetScanResultsNetworkRanges(scanResultsDir string) ([]*net.IPNet, error) {
 	}
 	filePath := filepath.Join(scanResultsDir, fileName)
 	log.Printf("Most recent candidate ping networks file is at path '%s'.", filePath)
-	if fileName == curScanResultsNetworkRangesPath {
+	if filePath == curScanResultsNetworkRangesPath {
 		log.Printf("Already have candidate ping networks at path '%s' loaded in memory. Returning.", filePath)
 		return curScanResultsNetworkRanges, nil
 	} else {
@@ -48,53 +115,61 @@ func GetScanResultsNetworkRanges(scanResultsDir string) ([]*net.IPNet, error) {
 	}
 }
 
-func GetCandidatePingResults(pingResultsDir string) (addressing.IPv6AddressList, error) {
+func UpdateCandidatePingResults(ips []*net.IP, filePath string) {
+	curCandidatePingResultsPath = filePath
+	curCandidatePingResults = ips
+}
+
+func GetCandidatePingResults(pingResultsDir string) ([]*net.IP, error) {
 	log.Printf("Attempting to retrieve most recent candidate ping results from directory '%s'.", pingResultsDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(pingResultsDir)
 	if err != nil {
 		log.Printf("Error thrown when retrieving candidate ping results from directory '%s': %s", pingResultsDir, err)
-		return addressing.IPv6AddressList{}, err
+		return nil, err
 	} else if fileName == "" {
 		log.Printf("The directory at '%s' was empty.", pingResultsDir)
-		return addressing.IPv6AddressList{}, errors.New(fmt.Sprintf("No candidate ping files were found in directory %s.", pingResultsDir))
+		return nil, errors.New(fmt.Sprintf("No candidate ping files were found in directory %s.", pingResultsDir))
 	}
 	filePath := filepath.Join(pingResultsDir, fileName)
 	log.Printf("Most recent ping results file is at path '%s'.", filePath)
-	if fileName == curCandidatePingResultsPath {
+	if filePath == curCandidatePingResultsPath {
 		log.Printf("Already have candidate ping results at path '%s' loaded in memory. Returning.", filePath)
 		return curCandidatePingResults, nil
 	} else {
 		log.Printf("Loading candidate ping results from path '%s'.", filePath)
-		toReturn, err := addressing.GetAddressListFromHexStringsFile(filePath)
+		toReturn, err := addressing.ReadIPsFromHexFile(filePath)
 		if err != nil {
-			curCandidatePingResultsPath = filePath
-			curCandidatePingResults = toReturn
+			UpdateCandidatePingResults(toReturn, filePath)
 		}
 		return toReturn, err
 	}
 }
 
-func GetProbabilisticAddressModel(modelDir string) (modeling.ProbabilisticAddressModel, error) {
+func UpdateProbabilisticAddressModel(model *modeling.ProbabilisticAddressModel, filePath string) {
+	curAddressModelPath = filePath
+	curAddressModel = model
+}
+
+func GetProbabilisticAddressModel(modelDir string) (*modeling.ProbabilisticAddressModel, error) {
 	log.Printf("Attempting to retrieve most recent probabilistic model from directory '%s'.", modelDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(modelDir)
 	if err != nil {
 		log.Printf("Error thrown when retrieving probabilistic model from directory '%s': %s", modelDir, err)
-		return modeling.ProbabilisticAddressModel{}, err
+		return &modeling.ProbabilisticAddressModel{}, err
 	} else if fileName == "" {
 		log.Printf("The directory at '%s' was empty.", modelDir)
-		return modeling.ProbabilisticAddressModel{}, errors.New(fmt.Sprintf("No model files were found in directory %s.", modelDir))
+		return &modeling.ProbabilisticAddressModel{}, errors.New(fmt.Sprintf("No model files were found in directory %s.", modelDir))
 	}
 	filePath := filepath.Join(modelDir, fileName)
 	log.Printf("Most recent probabilistic address model is at path '%s'.", filePath)
-	if fileName == curAddressModelPath {
+	if filePath == curAddressModelPath {
 		log.Printf("Already have model at path '%s' loaded in memory. Returning.", filePath)
 		return curAddressModel, nil
 	} else {
 		log.Printf("Loading probabilistic address model from path '%s'.", filePath)
 		toReturn, err := modeling.GetProbabilisticModelFromFile(filePath)
 		if err != nil {
-			curAddressModelPath = filePath
-			curAddressModel = toReturn
+			UpdateProbabilisticAddressModel(toReturn, filePath)
 		}
 		return toReturn, err
 	}

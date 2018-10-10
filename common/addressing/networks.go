@@ -6,7 +6,32 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"github.com/lavalamp-/ipv666/common/zrandom"
 )
+
+func GenerateRandomAddressesInNetwork(network *net.IPNet, addrCount int) ([]*net.IP) {
+	var existsMap = make(map[string]bool)
+	var toReturn []*net.IP
+	for len(toReturn) < addrCount {
+		newAddr := GenerateRandomAddressInNetwork(network)
+		if _, ok := existsMap[newAddr.String()]; !ok {
+			toReturn = append(toReturn, newAddr)
+			existsMap[newAddr.String()] = true
+		}
+	}
+	return toReturn
+}
+
+func GenerateRandomAddressInNetwork(network *net.IPNet) (*net.IP) {
+	ones, _ := network.Mask.Size()
+	randomBytes := zrandom.GenerateHostBits(128 - ones)
+	var newBytes []byte
+	for i := range network.IP {
+		newBytes = append(newBytes, (network.IP[i] & network.Mask[i]) | randomBytes[i])
+	}
+	var genIP = net.IP(newBytes)
+	return &genIP
+}
 
 func GetUniqueNetworks(networks []*net.IPNet) ([]*net.IPNet) {
 	var toReturn []*net.IPNet
@@ -41,10 +66,10 @@ func CheckNetworkEquality(first *net.IPNet, second *net.IPNet) (bool) {
 
 func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
-	defer file.Close()
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 	for _, network := range networks {
 		file.Write(network.IP)
 		ones, _ := network.Mask.Size()

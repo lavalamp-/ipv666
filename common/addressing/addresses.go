@@ -3,311 +3,92 @@ package addressing
 import (
 	"os"
 	"io/ioutil"
-	"log"
 	"errors"
 	"strings"
-	"strconv"
-	"regexp"
 	"fmt"
 	"net"
+	"io"
 )
 
-type IPv6Address struct {
-	Content [16]byte
+func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
+	fileContent, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	contentString := strings.TrimSpace(string(fileContent))
+	lines := strings.Split(contentString, "\n")
+	var toReturn []*net.IP
+	for _, line := range lines {
+		newIP := net.ParseIP(strings.TrimSpace(line))
+		toReturn = append(toReturn, &newIP)
+	}
+	return toReturn, nil
 }
 
-type IPv6AddressList struct {
-	Addresses []IPv6Address
+func WriteIPsToHexFile(filePath string, addrs []*net.IP) (error) {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	for _, addr := range addrs {
+		file.WriteString(fmt.Sprintf("%s\n", addr.String()))
+	}
+	return nil
 }
 
-func NewIPv6Address(bytes [16]byte) IPv6Address {
-	return IPv6Address{bytes}
+func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	fileSize := fileInfo.Size()
+	if fileSize % 16 != 0 {
+		return nil, errors.New(fmt.Sprintf("Expected file size to be a multiple of 16 (got %d).", fileSize))
+	}
+	buffer := make([]byte, 16)
+	var toReturn []*net.IP
+	for {
+		_, err := file.Read(buffer)
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			break
+		}
+		ipBytes := make([]byte, 16)
+		copy(ipBytes, buffer)
+		newIP := net.IP(ipBytes)
+		toReturn = append(toReturn, &newIP)
+	}
+	return toReturn, nil
 }
 
-func NewIPv6AddressList(addresses []IPv6Address) IPv6AddressList {
-	return IPv6AddressList{addresses}
+func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) (error) {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	for _, addr := range addrs {
+		file.Write(*addr)
+	}
+	return nil
 }
 
-func (address *IPv6Address) GetNybble(index int) (uint8) {
+func GetNybbleFromIP(ip *net.IP, index int) (uint8) {
 	// TODO fatal error if index > 31
 	byteIndex := index / 2
-	addrByte := address.Content[byteIndex]
+	addrBytes := ([]byte)(*ip)
+	addrByte := addrBytes[byteIndex]
 	if index % 2 == 0 {
 		return addrByte >> 4
 	} else {
 		return addrByte & 0xf
 	}
-}
-
-func (address *IPv6Address) GetIP() (*net.IP) {
-	return &net.IP{
-		address.Content[0],
-		address.Content[1],
-		address.Content[2],
-		address.Content[3],
-		address.Content[4],
-		address.Content[5],
-		address.Content[6],
-		address.Content[7],
-		address.Content[8],
-		address.Content[9],
-		address.Content[10],
-		address.Content[11],
-		address.Content[12],
-		address.Content[13],
-		address.Content[14],
-		address.Content[15],
-	}
-}
-
-func (address *IPv6Address) String() string {
-	return address.GetIP().String()
-}
-
-func (list IPv6AddressList) ToAddressesFile(filePath string, updateFreq int) (error) {
-
-	_, err := os.Stat(filePath)
-	if err == nil {
-		return errors.New(fmt.Sprintf("A file already exists at %s.", filePath))
-	}
-
-	f, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	log.Printf("Now writing %d IPv6 addressing to file at %s.", len(list.Addresses), filePath)
-
-	for i, address := range(list.Addresses) {  // TODO optimize this?
-
-		if i % updateFreq == 0 {
-			log.Printf("Writing address %d out of %d.", i, len(list.Addresses))
-		}
-
-		f.WriteString(fmt.Sprintf("%s\n", address.String()))
-	}
-
-	f.Sync()
-
-	log.Printf("Finished writing %d IPv6 addressing to file at %s.", len(list.Addresses), filePath)
-
-	return nil
-
-}
-
-func (list IPv6AddressList) ToBinaryFile(filePath string, updateFreq int) (error) {
-
-	_, err := os.Stat(filePath)
-	if err == nil {
-		return errors.New(fmt.Sprintf("A file already exists at %s.", filePath))
-	}
-
-	f, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	log.Printf("Now writing %d binary addressing to file at %s.", len(list.Addresses), filePath)
-
-	for i, address := range(list.Addresses) {  // TODO optimize this?
-
-		if i % updateFreq == 0 {
-			log.Printf("Writing address %d out of %d.", i, len(list.Addresses))
-		}
-
-		f.Write(address.Content[:])
-	}
-
-	f.Sync()
-
-	log.Printf("Finished writing binary addressing to file at %s.", filePath)
-
-	return nil
-
-}
-
-func GetAddressFromBitString(bitstring string) (IPv6Address, error) {
-
-	regex, err := regexp.Compile("^[01]{128}$")
-	if err != nil {
-		return IPv6Address{}, err
-	}
-
-	if !regex.MatchString(bitstring) {
-		return IPv6Address{}, errors.New(fmt.Sprintf("%s is not a valid IPv6 address bit string.", bitstring))
-	}
-
-	var bytes []byte
-	var curByte byte = 0
-	var curLength = 0
-
-	for pos, _ := range(bitstring) {
-		curByte <<= 1
-		if bitstring[pos] == "0"[0] {
-			curByte |= 0
-		} else {
-			curByte |= 1
-		}
-		curLength += 1
-		if curLength == 8 {
-			bytes = append(bytes, curByte)
-			curByte = 0
-			curLength = 0
-		}
-	}
-
-	var byteArray [16]byte
-	copy(byteArray[:], bytes)
-
-	return NewIPv6Address(byteArray), nil
-
-}
-
-func GetAddressFromString(bitstring string) (IPv6Address, error) {
-
-	regex, err := regexp.Compile("^[01]{128}$")
-	if err != nil {
-		return IPv6Address{}, err
-	}
-
-	if !regex.MatchString(bitstring) {
-		return IPv6Address{}, errors.New(fmt.Sprintf("%s is not a valid IPv6 address bit string.", bitstring))
-	}
-
-	var bytes []byte
-	var curByte byte = 0
-	var curLength = 0
-
-	for pos, _ := range(bitstring) {
-		curByte <<= 1
-		if bitstring[pos] == "0"[0] {
-			curByte |= 0
-		} else {
-			curByte |= 1
-		}
-		curLength += 1
-		if curLength == 8 {
-			bytes = append(bytes, curByte)
-			curByte = 0
-			curLength = 0
-		}
-	}
-
-	var byteArray [16]byte
-	copy(byteArray[:], bytes)
-
-	return NewIPv6Address(byteArray), nil
-
-}
-
-func GetAddressFromHexString(hexstring string) (IPv6Address, error) {
-
-	regex, err := regexp.Compile("^[A-Fa-f0-9:]+$")
-	if err != nil {
-		return IPv6Address{}, err
-	}
-
-	if !regex.MatchString(hexstring) {
-		return IPv6Address{}, errors.New(fmt.Sprintf("%s is not a valid IPv6 address hex string.", hexstring))
-	}
-
-	var ipBytes [16]byte
-
-	parts := strings.Split(hexstring, ":")
-
-	// Parse IP left->right
-	for pos, part := range(parts) {
-		bytes, _ := strconv.ParseUint(part, 16, 16)
-		ipBytes[pos*2+0] = (byte)((bytes >> 8) & 0xFF)
-		ipBytes[pos*2+1] = (byte)(bytes & 0xFF)
-
-		// We encountered a "::", finish parsing the address right->left
-		if len(part) == 0 {
-			poff := len(parts)-1
-			for pos := len(parts)-1; pos >= 0; pos-- {
-				part = parts[pos]
-				if len(part) == 0 {
-					break
-				}
-				bytes, _ := strconv.ParseUint(part, 16, 16)
-				ipBytes[15-(poff-pos)*2-1] = (byte)((bytes >> 8) & 0xFF)
-				ipBytes[15-(poff-pos)*2-0] = (byte)(bytes & 0xFF)
-			}
-			break
-		}
-	}
-
-	return NewIPv6Address(ipBytes), nil
-}
-
-func GetAddressListFromBytes(bytes []byte) (IPv6AddressList, error) {
-
-	if len(bytes) % 16 != 0 {
-		return IPv6AddressList{}, errors.New("Length of bytes did not end on a 16 byte boundary.")
-	}
-
-	var addresses []IPv6Address
-	var curAddr [16]byte
-
-	for i := 0; i < len(bytes); i += 16 {
-		copy(curAddr[:], bytes[i:i+16])
-		addresses = append(addresses, NewIPv6Address(curAddr))
-	}
-
-	return NewIPv6AddressList(addresses), nil
-
-}
-
-func GetAddressListFromHexStringsFile(filePath string) (IPv6AddressList, error) {
-	var addresses []IPv6Address
-
-	fileContent, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	contentString := strings.TrimSpace(string(fileContent))
-	lines := strings.Split(contentString, "\n")
-	var cleanedLines []string
-	for _, s := range(lines) {
-		cleanedLines = append(cleanedLines, strings.TrimSpace(s))
-	}
-
-	for _, line := range(cleanedLines) {
-		address, err := GetAddressFromHexString(line)
-		if err != nil {
-			return IPv6AddressList{}, err
-		}
-
-		addresses = append(addresses, address)
-	}
-
-	return NewIPv6AddressList(addresses), nil
-}
-
-func GetAddressListFromBinaryFile(filePath string) (IPv6AddressList, error) {
-
-	log.Printf("Checking that file exists at %s.", filePath)
-	_, err := os.Stat(filePath)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	log.Printf("Reading Content of file at %s.", filePath)
-	fileContent, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	toReturn, err := GetAddressListFromBytes(fileContent)
-	if err != nil {
-		return IPv6AddressList{}, err
-	}
-
-	log.Printf("A total of %d Addresses were loaded from file at %s.", len(toReturn.Addresses), filePath)
-
-	return toReturn, nil
-
 }

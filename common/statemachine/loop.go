@@ -16,10 +16,11 @@ const (
 	GEN_ADDRESSES	State = iota
 	PING_SCAN_ADDR
 	NETWORK_GROUP
+	GEN_NET_ADDRS
 	PING_SCAN_NET
+	PROCESS_BL_CHECK_RESULTS
 	REM_BAD_ADDR
 	UPDATE_MODEL
-	AGGREGATE_BLACKLIST
 	PUSH_S3
 	CLEAN_UP
 	EMIT_METRICS
@@ -94,43 +95,53 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		switch state {
 		case GEN_ADDRESSES:
 			// Generate the candidate addressing to scan from the most recent model
-			err := generateCandidateAddresses(conf)
+			err := generateCandidateAddresses(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
 			// Perform a Zmap scan of the candidate addressing that were generated
-			err := zmapScanCandidateAddresses(conf)
+			err := zmapScanCandidateAddresses(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
 		case NETWORK_GROUP:
 			// Process results of Zmap scan into a set of network ranges
-			err := getScanResultsNetworkRanges(conf)
+			err := generateScanResultsNetworkRanges(conf) // Looking gr8
+			if err != nil {
+				return err
+			}
+		case GEN_NET_ADDRS:
+			// Generate addresses from the network ranges assembled in the previous step
+			err := generateNetworkAddresses(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_NET:
 			// Test each of the network ranges to see if the range responds to every IP address
-			err := zmapScanNetworkRanges(conf)
+			err := zmapScanNetworkRanges(conf) // Looking gr8
+			if err != nil {
+				return err
+			}
+		case PROCESS_BL_CHECK_RESULTS:
+			// Process the results of the network range ping scans and update the blacklist
+			err := processBlacklistScanResults(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
 		case REM_BAD_ADDR:
 			// Remove all the addressing from the Zmap results that are in ranges that failed
 			// the test in the previous step
-			err := cleanBlacklistedAddresses(conf)
+			err := cleanBlacklistedAddresses(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
 		case UPDATE_MODEL:
 			// Update the statistical model with the valid IPv6 results we have left over
-			err := updateModelWithSuccessfulHosts(conf)
+			err := updateModelWithSuccessfulHosts(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
-		case AGGREGATE_BLACKLIST:
-			// Aggregate all of the blacklists into a single blacklist
 		case PUSH_S3:
 			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
 			if !conf.ExportEnabled {
