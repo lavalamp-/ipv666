@@ -75,6 +75,11 @@ type Configuration struct {
 	MetricsToStdout				bool	// Whether or not to print metrics to Stdout
 	MetricsStdoutFreq			int64	// The frequency in seconds of how often to print metrics to Stdout
 
+	// Output
+
+	OutputFileName				string	// The file name for the file to write addresses to
+	OutputFileType				string	// The output file type
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {
@@ -90,9 +95,19 @@ func LoadFromFile(filePath string) (Configuration, error) {
 	}
 }
 
-func (config *Configuration) Print() () {
+func (config *Configuration) Print() {
 	fmt.Print("\n-= Configuration Values =-\n\n")
 	fmt.Printf("%# v", pretty.Formatter(config))
+}
+
+func (config *Configuration) GetOutputFilePath() (string) {
+	var fileExt string
+	if config.OutputFileType != "bin" {
+		fileExt = "%s.bin"
+	} else {
+		fileExt = "%s.txt"
+	}
+	return fmt.Sprintf(fileExt, config.OutputFileName)
 }
 
 func (config *Configuration) GetStateFilePath() (string) {

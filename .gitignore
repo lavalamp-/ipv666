@@ -17,3 +17,5 @@
 *.model
 ipv6results
 ipv666.log
+discovered_addrs.bin
+discovered_addrs.txt

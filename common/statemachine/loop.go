@@ -21,6 +21,7 @@ const (
 	PROCESS_BL_CHECK_RESULTS
 	REM_BAD_ADDR
 	UPDATE_MODEL
+	UPDATE_ADDR_FILE
 	PUSH_S3
 	CLEAN_UP
 	EMIT_METRICS
@@ -139,6 +140,12 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		case UPDATE_MODEL:
 			// Update the statistical model with the valid IPv6 results we have left over
 			err := updateModelWithSuccessfulHosts(conf) // Looking gr8
+			if err != nil {
+				return err
+			}
+		case UPDATE_ADDR_FILE:
+			// Update the cumulative addresses file
+			err := updateAddressFile(conf)
 			if err != nil {
 				return err
 			}
