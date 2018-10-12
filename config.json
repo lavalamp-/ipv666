@@ -35,5 +35,7 @@
   "CleanUpEnabled": false,
   "MetricsStateLoopPrefix": "stateloop",
   "MetricsToStdout": true,
-  "MetricsStdoutFreq": 300
+  "MetricsStdoutFreq": 300,
+  "OutputFilePath": "discovered_addrs",
+  "OutputFileType": "bin"
 }
