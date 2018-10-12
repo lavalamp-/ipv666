@@ -8,6 +8,7 @@ import (
 	"net"
 	"github.com/rcrowley/go-metrics"
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"encoding/binary"	
 	"github.com/lavalamp-/ipv666/common/fs"
 )
 
@@ -37,12 +38,25 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 		model.DigestCount,
 		conf.GenerateFirstNybble,
 	)
+
+	// Blacklist net.IPNet's to uint64's
+	blnets := map[uint64]bool{}
+	for _, ipnet:= range blacklist.Networks {
+		n := binary.LittleEndian.Uint64((*ipnet).IP[:8])
+		blnets[n] = true
+	}
+
 	var addresses []*net.IP
 	var blacklistCount, madeCount = 0, 0
 	start := time.Now()
 	for len(addresses) < conf.GenerateAddressCount {
 		newIP := model.GenerateSingleIP(conf.GenerateFirstNybble)
-		if !blacklist.IsIPBlacklisted(newIP) {
+		
+		n := binary.LittleEndian.Uint64((*newIP)[:8])
+		_, found := blnets[n]
+
+		// if !blacklist.IsIPBlacklisted(newIP) {
+		if !found {
 			addresses = append(addresses, newIP)
 			madeCount++
 		} else {
