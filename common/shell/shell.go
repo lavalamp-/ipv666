@@ -4,6 +4,10 @@ import (
 	"os/exec"
 	"github.com/lavalamp-/ipv666/common/config"
 	"fmt"
+	"bytes"
+	"io"
+	"os"
+	"log"
 )
 
 func IsCommandAvailable(command string, args ...string) (bool, error) {
@@ -27,8 +31,8 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 	args = append(args, fmt.Sprintf("--ipv6-source-ip=%s", sourceAddress))
 	args = append(args, "--probe-module=icmp6_echoscan")
 	cmd := exec.Command(conf.ZmapExecPath, args...)
-	fmt.Print(cmd)
-	if err := cmd.Run(); err != nil {
+	log.Printf("Zmap command is: %s %s", cmd.Path, cmd.Args)
+	if err := RunCommandToStdout(cmd); err != nil {
 		return "", err
 	} else {
 		return "", nil
@@ -36,6 +40,14 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 }
 
 func ZmapScanFromConfig(conf *config.Configuration, inputFile string, outputFile string) (string, error) {
-	// return "", nil
 	return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, conf.ZmapSourceAddress)
+}
+
+func RunCommandToStdout(cmd *exec.Cmd) (error) {
+	var stdBuffer bytes.Buffer
+	mw := io.MultiWriter(os.Stdout, &stdBuffer)
+	cmd.Stdout = mw
+	cmd.Stderr = mw
+	toReturn := cmd.Run()
+	return toReturn
 }
