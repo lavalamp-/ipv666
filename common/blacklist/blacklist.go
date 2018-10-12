@@ -51,7 +51,7 @@ func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
 }
 
 func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (error) {
-	toWrite := make([]*net.IPNet, len(blacklist.Networks))
+	toWrite := []*net.IPNet{}
 	for _, v := range blacklist.Networks {
 		toWrite = append(toWrite, v)
 	}
