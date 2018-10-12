@@ -25,7 +25,7 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	outputPath := getTimedFilePath(conf.GetPingResultDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetPingResultDirPath())
 	log.Printf(
 		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,

@@ -7,6 +7,9 @@ import (
 	"compress/zlib"
 	"io"
 	"bytes"
+	"path/filepath"
+	"strconv"
+	"time"
 )
 
 func CreateDirectoryIfNotExist(dirPath string) (error) {
@@ -82,13 +85,12 @@ func ZipFiles(inputPaths []string, outputPath string) (error) {
 			log.Printf("Error thrown when opening file at path '%s': %e", inputPath, err)
 			return err
 		}
+		defer inputFile.Close()
 		if _, err := io.Copy(outZipFile, inputFile); err != nil {
 			log.Printf("Error thrown when trying to add file at '%s' to zip file at '%s': %e", inputPath, outputPath, err)
-			inputFile.Close()
 			return err
 		}
 		log.Printf("File at path '%s' successfully added to zip file at '%s'.", inputPath, outputPath)
-		inputFile.Close()
 	}
 	log.Printf("Successfully added %d files (at %s) into output zip file at path '%s'.", len(inputPaths), inputPaths, outputPath)
 	return nil
@@ -126,4 +128,30 @@ func CountFileSize(filePath string) (int64, error) {
 		return -1, err
 	}
 	return fileInfo.Size(), nil
+}
+
+func DeleteAllFilesInDirectory(dirPath string) (int, error) {
+	var files []string
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) (error) {
+		mode := info.Mode()
+		if mode.IsRegular() {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return -1, err
+	}
+	for _, filePath := range files {
+		err := os.Remove(filePath)
+		if err != nil {
+			return -1, err
+		}
+	}
+	return len(files), nil
+}
+
+func GetTimedFilePath(baseDir string) (string) {
+	curTime := strconv.FormatInt(time.Now().Unix(), 10)
+	return filepath.Join(baseDir, curTime)
 }

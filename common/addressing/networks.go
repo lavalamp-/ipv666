@@ -7,7 +7,19 @@ import (
 	"fmt"
 	"io"
 	"github.com/lavalamp-/ipv666/common/zrandom"
+	"log"
 )
+
+func GetBaseAddressString(network *net.IPNet) (string) {
+	ipBytes := ([]byte)(network.IP)
+	maskBytes := ([]byte)(network.Mask)
+	var normalized []byte
+	for i := range ipBytes {
+		normalized = append(normalized, ipBytes[i] & maskBytes[i])
+	}
+	ip := (net.IP)(normalized)
+	return ip.String()
+}
 
 func GenerateRandomAddressesInNetwork(network *net.IPNet, addrCount int) ([]*net.IP) {
 	var existsMap = make(map[string]bool)
@@ -33,18 +45,17 @@ func GenerateRandomAddressInNetwork(network *net.IPNet) (*net.IP) {
 	return &genIP
 }
 
-func GetUniqueNetworks(networks []*net.IPNet) ([]*net.IPNet) {
+func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
+	checkMap := make(map[string]bool)
 	var toReturn []*net.IPNet
 	for i, curNet := range networks {
-		found := false
-		for _, checkNet := range toReturn {
-			if CheckNetworkEquality(curNet, checkNet) {
-				found = true
-				break
-			}
+		if i % updateFreq == 0 {
+			log.Printf("Processing %d out of %d for unique networks.", i, len(networks))
 		}
-		if !found {
-			toReturn = append(toReturn, networks[i])
+		netString := GetBaseAddressString(curNet)
+		if _, ok := checkMap[netString]; !ok {
+			checkMap[netString] = true
+			toReturn = append(toReturn, curNet)
 		}
 	}
 	return toReturn

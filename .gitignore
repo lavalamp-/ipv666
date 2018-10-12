@@ -19,3 +19,5 @@ ipv6results
 ipv666.log
 discovered_addrs.bin
 discovered_addrs.txt
+all_ipv6_addrs.txt
+ipv6_addresses_2.bin

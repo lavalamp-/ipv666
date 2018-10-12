@@ -8,6 +8,7 @@ import (
 	"log"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 var blacklistCandGenDuration = metrics.NewTimer()
@@ -33,7 +34,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	blacklistCandGenDuration.Update(elapsed)
 	blacklistCandGenCount.Inc(int64(len(addrs)))
 	log.Printf("Successfully generated %d addresses to test for blacklist.", len(addrs))
-	outputPath := getTimedFilePath(conf.GetNetworkScanTargetsDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
 	log.Printf("Writing results to file at path '%s'.", outputPath)
 	err = addressing.WriteIPsToHexFile(outputPath, addrs)
 	log.Printf("Blacklist test addresses successfully written to '%s'.", outputPath)

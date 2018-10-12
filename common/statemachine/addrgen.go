@@ -8,6 +8,7 @@ import (
 	"net"
 	"github.com/rcrowley/go-metrics"
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 var generateDurationTimer = metrics.NewTimer()
@@ -55,7 +56,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	generateDurationTimer.Update(elapsed)
 	generateBlacklistCount.Inc(int64(blacklistCount))
 	log.Printf("Took a total of %s to generate %d candidate addresses (%d blacklisted filtered out).", elapsed, conf.GenerateAddressCount, blacklistCount)
-	outputPath := getTimedFilePath(conf.GetCandidateAddressDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetCandidateAddressDirPath())
 	log.Printf("Writing results of candidate address generation to file at '%s'.", outputPath)
 	start = time.Now()
 	err = addressing.WriteIPsToHexFile(outputPath, addresses)

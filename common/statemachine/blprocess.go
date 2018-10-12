@@ -9,8 +9,7 @@ import (
 	"log"
 	"github.com/rcrowley/go-metrics"
 	"time"
-	// "os"
-	// "fmt"
+	"github.com/lavalamp-/ipv666/common/fs"
 	"encoding/binary"
 )
 
@@ -67,7 +66,6 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 
 	blProcessNetMembershipTimer.Update(elapsed)
 	var blacklistNets []*net.IPNet
-
 	// Turn the uint64 network bytes into *net.IPNet
 	mask := make([]byte, 16)
 	binary.LittleEndian.PutUint64(mask, uint64(0xFFFFFFFFFFFFFFFF))
@@ -88,7 +86,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	for _, curNet := range blacklistNets {
 		blacklist.Update(curNet)
 	}
-	outputPath := getTimedFilePath(conf.GetNetworkBlacklistDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 	log.Printf("Writing new version of blacklist to file at path '%s'.", outputPath)
 	err = blacklist2.WriteNetworkBlacklistToFile(outputPath, blacklist)
 	if err != nil {
