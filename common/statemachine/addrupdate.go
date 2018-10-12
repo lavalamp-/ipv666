@@ -38,7 +38,7 @@ func updateAddressFile(conf *config.Configuration) (error) {
 		}
 	} else {
 		for _, addr := range cleanPings {
-			toWrite := addr[:]
+			toWrite := ([]byte)(*addr)
 			file.Write(toWrite)
 		}
 	}
