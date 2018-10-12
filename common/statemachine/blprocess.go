@@ -54,7 +54,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 
 	// Identify the networks with a hit rate above the defined threshold
 	blnets := []uint64{}
-	threshold := (uint)(float32(conf.NetworkPingCount) * conf.NetworkBlacklistPercent)
+	threshold := (uint)(float64(conf.NetworkPingCount) * conf.NetworkBlacklistPercent)
 	for n, c := range nets {
 		if c >= threshold {
 			blnets = append(blnets, n)
