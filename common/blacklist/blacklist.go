@@ -3,6 +3,7 @@ package blacklist
 import (
 	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"encoding/binary"
 )
 
 type NetworkBlacklist struct {
@@ -21,8 +22,26 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 
 func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP) ([]*net.IP) {
 	var toReturn []*net.IP
+
+	// Blacklist net.IPNet's to uint64's
+	blnets := []uint64{}
+	for _, ipnet:= range blacklist.Networks {
+		n := binary.LittleEndian.Uint64((*ipnet).IP[:8])
+		blnets = append(blnets, n)
+	}
+
 	for _, curClean := range toClean {
-		if !blacklist.IsIPBlacklisted(curClean) {
+		n := binary.LittleEndian.Uint64((*curClean)[:8])
+		found := false
+		for _, v := range blnets {
+			if v == n {
+				found = true
+				break
+			}
+		}
+
+		// if !blacklist.IsIPBlacklisted(curClean) {
+		if !found {
 			toReturn = append(toReturn, curClean)
 		}
 	}
