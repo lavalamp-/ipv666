@@ -7,6 +7,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
 	"github.com/rcrowley/go-metrics"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 var netRangesCreatedGauge = metrics.NewGauge()
@@ -23,7 +24,7 @@ func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	log.Printf("Loaded ping scan results, now converting down to addresses.")
+	log.Printf("Loaded ping scan results, now converting down to networks.")
 	var nets []*net.IPNet
 	for _, curAddr := range addrs {
 		byteMask := addressing.GetByteMask(conf.NetworkGroupingSize)
@@ -32,11 +33,11 @@ func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
 			Mask:	byteMask,
 		})
 	}
-	nets = addressing.GetUniqueNetworks(nets)
+	nets = addressing.GetUniqueNetworks(nets, conf.LogLoopEmitFreq)
 	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), conf.NetworkGroupingSize)
 	netRangesCreatedGauge.Update(int64(len(nets)))
 	netRangesDownFromGauge.Update(int64(len(addrs)))
-	outputPath := getTimedFilePath(conf.GetNetworkGroupDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetNetworkGroupDirPath())
 	log.Printf("Writing resulting network file to path '%s'.", outputPath)
 	err = addressing.WriteIPv6NetworksToFile(outputPath, nets)
 	if err != nil {

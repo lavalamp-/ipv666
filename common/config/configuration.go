@@ -35,7 +35,7 @@ type Configuration struct {
 
 	NetworkGroupingSize			uint8	// The bit-length of network size to use when checking for many-to-one
 	NetworkPingCount			int		// The number of addressing to try pinging when testing for many-to-one
-	NetworkBlacklistPercent		float32	// The percentage of ping results that, if returned positive, indicate a blacklisted network
+	NetworkBlacklistPercent		float64	// The percentage of ping results that, if returned positive, indicate a blacklisted network
 
 	// Logging
 
@@ -45,6 +45,7 @@ type Configuration struct {
 	LogFileMaxBackups			int		// The maximum number of backups to have in rotating log files
 	LogFileMaxAge				int		// The maximum number of days to store log files
 	CompressLogFiles			bool	// Whether or not to compress log files
+	LogLoopEmitFreq				int		// The general frequency with which logs should be emitted in long loops
 
 	// Scanning
 
@@ -80,6 +81,13 @@ type Configuration struct {
 	OutputFileName				string	// The file name for the file to write addresses to
 	OutputFileType				string	// The output file type
 
+	// Input
+
+	InputEntropyThreshold		float64	// The threshold upon which addresses having more entropy will be removed
+	InputEntropyBitLength		int		// The number of bits within IP addresses to calculate entropy based on
+	InputMinAddresses			int		// The recommended minimum number of addresses to require for a given statistical model
+	InputEmitFreq				int		// The interval upon which to emit log updates when processing input files
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {
@@ -101,13 +109,7 @@ func (config *Configuration) Print() {
 }
 
 func (config *Configuration) GetOutputFilePath() (string) {
-	var fileExt string
-	if config.OutputFileType != "bin" {
-		fileExt = "%s.bin"
-	} else {
-		fileExt = "%s.txt"
-	}
-	return fmt.Sprintf(fileExt, config.OutputFileName)
+	return fmt.Sprintf("%s.%s", config.OutputFileName, config.OutputFileType)
 }
 
 func (config *Configuration) GetStateFilePath() (string) {

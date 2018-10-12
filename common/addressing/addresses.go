@@ -8,7 +8,23 @@ import (
 	"fmt"
 	"net"
 	"io"
+	"log"
 )
+
+func GetUniqueIPs(ips []*net.IP, updateFreq int) ([]*net.IP) {
+	checkMap := make(map[string]bool)
+	var toReturn []*net.IP
+	for i, ip := range ips {
+		if i % updateFreq == 0 {
+			log.Printf("Processing %d out of %d for unique IPs.", i, len(ips))
+		}
+		if _, ok := checkMap[ip.String()]; !ok {
+			checkMap[ip.String()] = true
+			toReturn = append(toReturn, ip)
+		}
+	}
+	return toReturn
+}
 
 func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
@@ -18,8 +34,12 @@ func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 	contentString := strings.TrimSpace(string(fileContent))
 	lines := strings.Split(contentString, "\n")
 	var toReturn []*net.IP
-	for _, line := range lines {
+	for i, line := range lines {
 		newIP := net.ParseIP(strings.TrimSpace(line))
+		if newIP == nil {
+			log.Printf("No IP found from content '%s' (line %d in file '%s').", line, i, filePath)
+			continue
+		}
 		toReturn = append(toReturn, &newIP)
 	}
 	return toReturn, nil

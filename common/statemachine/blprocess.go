@@ -9,6 +9,7 @@ import (
 	"log"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 var blProcessNetMembershipTimer = metrics.NewTimer()
@@ -59,7 +60,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	blProcessNetMembershipTimer.Update(elapsed)
 	var blacklistNets []*net.IPNet
 	for _, v := range netTrackMap {
-		responsePercent := float32(v.Count) / float32(conf.NetworkPingCount)
+		responsePercent := float64(v.Count) / float64(conf.NetworkPingCount)
 		//TODO add histogram for tracking percentage of responses that come from nets
 		if responsePercent >= conf.NetworkBlacklistPercent {
 			blacklistNets = append(blacklistNets, v.Network)
@@ -75,7 +76,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	for _, curNet := range blacklistNets {
 		blacklist.Update(curNet)
 	}
-	outputPath := getTimedFilePath(conf.GetNetworkBlacklistDirPath())
+	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 	log.Printf("Writing new version of blacklist to file at path '%s'.", outputPath)
 	err = blacklist2.WriteNetworkBlacklistToFile(outputPath, blacklist)
 	if err != nil {
