@@ -14,7 +14,7 @@ type ProbabilisticAddressModel struct {
 	NybbleModels 	[31]*ProbabilisticNybbleModel 	`json:"models"`
 }
 
-func newAddressModel(name string) (*ProbabilisticAddressModel) {
+func NewAddressModel(name string) (*ProbabilisticAddressModel) {
 	var models [31]*ProbabilisticNybbleModel
 	for i := 0; i < 31; i++ {
 		models[i] = newNybbleModel()
@@ -97,7 +97,7 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIP(fromNybble uint8) (
 }
 
 func GenerateAddressModel(ips []*net.IP, name string, updateInterval int) (*ProbabilisticAddressModel) {
-	toReturn := newAddressModel(name)
+	toReturn := NewAddressModel(name)
 	toReturn.UpdateMultiIP(ips, updateInterval)
 	return toReturn
 }

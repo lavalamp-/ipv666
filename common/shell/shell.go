@@ -4,6 +4,12 @@ import (
 	"os/exec"
 	"github.com/lavalamp-/ipv666/common/config"
 	"fmt"
+	"bytes"
+	"io"
+	"os"
+	"log"
+	"bufio"
+	"strings"
 )
 
 func IsCommandAvailable(command string, args ...string) (bool, error) {
@@ -27,8 +33,8 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 	args = append(args, fmt.Sprintf("--ipv6-source-ip=%s", sourceAddress))
 	args = append(args, "--probe-module=icmp6_echoscan")
 	cmd := exec.Command(conf.ZmapExecPath, args...)
-	fmt.Print(cmd)
-	if err := cmd.Run(); err != nil {
+	log.Printf("Zmap command is: %s %s", cmd.Path, cmd.Args)
+	if err := RunCommandToStdout(cmd); err != nil {
 		return "", err
 	} else {
 		return "", nil
@@ -36,6 +42,38 @@ func ZmapScan(conf *config.Configuration, inputFile string, outputFile string, b
 }
 
 func ZmapScanFromConfig(conf *config.Configuration, inputFile string, outputFile string) (string, error) {
-	// return "", nil
 	return ZmapScan(conf, inputFile, outputFile, conf.ZmapBandwidth, conf.ZmapSourceAddress)
+}
+
+func RunCommandToStdout(cmd *exec.Cmd) (error) {
+	var stdBuffer bytes.Buffer
+	mw := io.MultiWriter(os.Stdout, &stdBuffer)
+	cmd.Stdout = mw
+	cmd.Stderr = mw
+	toReturn := cmd.Run()
+	return toReturn
+}
+
+func PromptForInput(prompt string) (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println(fmt.Sprintf("\n%s\n", prompt))
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	} else {
+		return text, nil
+	}
+}
+
+func PromptForApproval(prompt string, error string) (error) {
+	resp, err := PromptForInput(prompt)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	resp = strings.TrimSpace(strings.ToLower(resp))
+	if resp != "y" {
+		log.Fatal(error)
+	}
+	return nil
 }

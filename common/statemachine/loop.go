@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/config"
-	"strconv"
-	"path/filepath"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -21,6 +19,7 @@ const (
 	PROCESS_BL_CHECK_RESULTS
 	REM_BAD_ADDR
 	UPDATE_MODEL
+	UPDATE_ADDR_FILE
 	PUSH_S3
 	CLEAN_UP
 	EMIT_METRICS
@@ -59,12 +58,7 @@ func fetchStateFromFile(filePath string) (State, error) {
 	return State(state), nil
 }
 
-func getTimedFilePath(baseDir string) (string) {
-	curTime := strconv.FormatInt(time.Now().Unix(), 10)
-	return filepath.Join(baseDir, curTime)
-}
-
-func updateStateFile(filePath string, curState State) (error) {
+func SetStateFile(filePath string, curState State) (error) {
 	log.Printf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
 	var b []byte
 	b = append(b, byte(curState))
@@ -72,7 +66,7 @@ func updateStateFile(filePath string, curState State) (error) {
 }
 
 func InitStateFile(filePath string) (error) {
-	return updateStateFile(filePath, FIRST_STATE)
+	return SetStateFile(filePath, FIRST_STATE)
 }
 
 func RunStateMachine(conf *config.Configuration) (error) {
@@ -142,6 +136,12 @@ func RunStateMachine(conf *config.Configuration) (error) {
 			if err != nil {
 				return err
 			}
+		case UPDATE_ADDR_FILE:
+			// Update the cumulative addresses file
+			err := updateAddressFile(conf)
+			if err != nil {
+				return err
+			}
 		case PUSH_S3:
 			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
 			if !conf.ExportEnabled {
@@ -179,7 +179,7 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		timer.Update(elapsed)
 
 		state = (state + 1) % (LAST_STATE + 1)
-		err = updateStateFile(conf.GetStateFilePath(), state)
+		err = SetStateFile(conf.GetStateFilePath(), state)
 		if err != nil {
 			return err
 		}

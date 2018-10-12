@@ -12,9 +12,13 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"time"
 	"math/rand"
+	"fmt"
+	"github.com/lavalamp-/ipv666/common/input"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
+
+//TODO switch all the various interval logging emissions to the single config value
 
 func init() {
 	metrics.Register("main_loop_timer", mainLoopRunTimer)
@@ -63,17 +67,61 @@ func initMetrics(conf *config.Configuration) () {
 		log.Printf("Not printing metrics to stdout.")
 	}
 }
+
+func isValidFileType(toCheck string) (bool) {
+	return toCheck == "txt" || toCheck == "bin"
+}
   
 func main() {
 
+	//TODO refactor into a input struct and its own function (input handling)
+
 	var configPath string
+	var inputFile string
+	var inputType string
+	var outputFile string
+	var outputType string
 
 	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
+	flag.StringVar(&inputFile, "input", "", "An input file containing IPv6 addresses to initiate scanning from.")
+	flag.StringVar(&inputType, "input-type", "txt", "The type of file pointed to by the 'input' argument (bin or txt).")
+	flag.StringVar(&outputFile, "output", "", "The path to the file where discovered addresses should be written.")
+	flag.StringVar(&outputType, "output-type", "txt", "The type of output to write to the output file (txt or bin).")
+
+	flag.Parse()
+
+	if inputFile != "" && !isValidFileType(inputType) {
+		log.Fatal(fmt.Sprintf("%s is not a valid input file type (requires txt or bin).", inputType))
+	}
+
+	if !isValidFileType(outputType) {
+		log.Fatal(fmt.Sprintf("%s is not a valid output file type (requires txt or bin).", outputType))
+	}
+
+	if inputFile != "" {
+		if _, err := os.Stat(inputFile); os.IsNotExist(err) {
+			log.Fatal(fmt.Sprintf("No file found at input file path of '%s'.", inputFile))
+		}
+	}
 
 	conf, err := config.LoadFromFile(configPath)
 
 	if err != nil {
 		log.Fatal("Can't proceed without loading valid configuration file.")
+	}
+
+	if !(outputFile == "") { //TODO figure out why the straight != check is failing
+		conf.OutputFileName = outputFile
+		conf.OutputFileType = outputType
+	}
+
+	if _, err := os.Stat(conf.GetOutputFilePath()); !os.IsNotExist(err) {
+		prompt := fmt.Sprintf("Output file already exists at path '%s,' continue (will append to existing file)? [y/N]", conf.GetOutputFilePath())
+		errMsg := fmt.Sprintf("Exiting. Please move the file at path '%s' and try again.", conf.GetOutputFilePath())
+		err := shell.PromptForApproval(prompt, errMsg)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if !conf.LogToFile {
@@ -100,6 +148,13 @@ func main() {
 
 	initMetrics(&conf)
 	rand.Seed(time.Now().UTC().UnixNano())
+
+	if inputFile != "" {
+		err := input.PrepareFromInputFile(inputFile, inputType, &conf)
+		if err != nil {
+			log.Fatal(fmt.Sprintf("Error thrown when preparing to scan from input file '%s': %e", inputFile, err))
+		}
+	}
 
 	log.Print("All systems are green. Entering state machine.")
 

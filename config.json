@@ -23,6 +23,7 @@
   "LogFileMaxBackups": 10,
   "LogFileMaxAge": 120,
   "CompressLogFiles": false,
+  "LogLoopEmitFreq": 250000,
   "ZmapExecPath": "/usr/local/sbin/zmap",
   "ZmapBandwidth": "10M",
   "ZmapSourceAddress": "nahhh",
@@ -35,5 +36,11 @@
   "CleanUpEnabled": false,
   "MetricsStateLoopPrefix": "stateloop",
   "MetricsToStdout": true,
-  "MetricsStdoutFreq": 300
+  "MetricsStdoutFreq": 300,
+  "OutputFileName": "discovered_addrs",
+  "OutputFileType": "bin",
+  "InputEntropyThreshold": 0.9,
+  "InputEntropyBitLength": 64,
+  "InputMinAddresses": 100000,
+  "InputEmitFreq": 250000
 }
