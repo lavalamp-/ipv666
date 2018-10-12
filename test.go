@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func main() {
+func _main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	log.Printf("Hello world")
 	log.Printf("%d", 65 % 8)
