@@ -9,6 +9,9 @@ import (
 	"log"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	// "os"
+	// "fmt"
+	"encoding/binary"
 )
 
 var blProcessNetMembershipTimer = metrics.NewTimer()
@@ -37,34 +40,44 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	log.Printf("%d blacklist scan result IPs found in file at '%s'.", len(resultIPs), resultsPath)
 	scanNetRanges, err := data.GetScanResultsNetworkRanges(conf.GetNetworkGroupDirPath())
 	log.Printf("Matching %d IP addresses against %d network ranges.", len(resultIPs), len(scanNetRanges))
-	netTrackMap := make(map[string]*blacklistTracker)
+	// netTrackMap := make(map[string]*blacklistTracker)
 	start := time.Now()
+	
+	// Count unique 64-bit networks
+	nets := map[uint64]uint{}
 	for _, resultIP := range resultIPs {
-		for _, scanNetRange := range scanNetRanges {
-			if scanNetRange.Contains(*resultIP) {
-				if _, ok := netTrackMap[scanNetRange.String()]; ok {
-					netTrackMap[scanNetRange.String()].Count++
-				} else {
-					netTrackMap[scanNetRange.String()] = &blacklistTracker{
-						Count:		1,
-						Network:	scanNetRange,
-					}
-				}
-				break
-			}
+		n := binary.LittleEndian.Uint64((*resultIP)[:8])
+		if _, ok := nets[n]; !ok {
+    	nets[n] = 0
+		}
+		nets[n]++
+	}
+
+	// Identify the networks with a hit rate above the defined threshold
+	blnets := []uint64{}
+	threshold := (uint)(float32(conf.NetworkPingCount) * conf.NetworkBlacklistPercent)
+	for n, c := range nets {
+		if c >= threshold {
+			blnets = append(blnets, n)
 		}
 	}
+
 	elapsed := time.Since(start)
 	log.Printf("Matched IP addresses and networks in %s.", elapsed)
+
 	blProcessNetMembershipTimer.Update(elapsed)
 	var blacklistNets []*net.IPNet
-	for _, v := range netTrackMap {
-		responsePercent := float32(v.Count) / float32(conf.NetworkPingCount)
-		//TODO add histogram for tracking percentage of responses that come from nets
-		if responsePercent >= conf.NetworkBlacklistPercent {
-			blacklistNets = append(blacklistNets, v.Network)
-		}
+
+	// Turn the uint64 network bytes into *net.IPNet
+	mask := make([]byte, 16)
+	binary.LittleEndian.PutUint64(mask, uint64(0xFFFFFFFFFFFFFFFF))
+	for _, n := range blnets {
+		b := make([]byte, 16)
+		binary.LittleEndian.PutUint64(b, uint64(n))
+		blnet := net.IPNet{b, mask}
+		blacklistNets = append(blacklistNets, &blnet)
 	}
+
 	log.Printf("A total of %d new blacklist networks were discovered.", len(blacklistNets))
 	blNetDiscoveryCounter.Inc(int64(len(blacklistNets)))
 	blacklist, err := data.GetBlacklist(conf.GetNetworkBlacklistDirPath())
@@ -83,5 +96,6 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	}
 	data.UpdateBlacklist(blacklist, outputPath)
 	log.Printf("Blacklist successfully updated and written to '%s'.", outputPath)
+
 	return nil
 }
