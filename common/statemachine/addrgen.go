@@ -5,10 +5,27 @@ import (
 	"github.com/lavalamp-/ipv666/common/data"
 	"log"
 	"time"
+	"net"
+	"github.com/rcrowley/go-metrics"
+	"github.com/lavalamp-/ipv666/common/addressing"
 )
+
+var generateDurationTimer = metrics.NewTimer()
+var generateBlacklistCount = metrics.NewCounter()
+var generateWriteTimer = metrics.NewTimer()
+
+func init() {
+	metrics.Register("gen_duration_timer", generateDurationTimer)
+	metrics.Register("gen_blacklist_count", generateBlacklistCount)
+	metrics.Register("gen_write_timer", generateWriteTimer)
+}
 
 func generateCandidateAddresses(conf *config.Configuration) (error) {
 	model, err := data.GetProbabilisticAddressModel(conf.GetGeneratedModelDirPath())
+	if err != nil {
+		return err
+	}
+	blacklist, err := data.GetBlacklist(conf.GetNetworkBlacklistDirPath())
 	if err != nil {
 		return err
 	}
@@ -19,15 +36,35 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 		model.DigestCount,
 		conf.GenerateFirstNybble,
 	)
+	var addresses []*net.IP
+	var blacklistCount, madeCount = 0, 0
 	start := time.Now()
-	// TODO: filter out from blacklist
-	// TODO: add metrics to how many are filtered out
-	addresses := model.GenerateMulti(conf.GenerateFirstNybble, conf.GenerateAddressCount, conf.GenerateUpdateFreq)
+	for len(addresses) < conf.GenerateAddressCount {
+		newIP := model.GenerateSingleIP(conf.GenerateFirstNybble)
+		if !blacklist.IsIPBlacklisted(newIP) {
+			addresses = append(addresses, newIP)
+			madeCount++
+		} else {
+			blacklistCount++
+		}
+		if (madeCount + blacklistCount) % conf.GenerateUpdateFreq == 0 {
+			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted.", madeCount + blacklistCount, madeCount, blacklistCount)
+		}
+	}
 	elapsed := time.Since(start)
-	log.Printf("Took a total of %s to generate %d candidate addresses", elapsed, conf.GenerateAddressCount)
+	generateDurationTimer.Update(elapsed)
+	generateBlacklistCount.Inc(int64(blacklistCount))
+	log.Printf("Took a total of %s to generate %d candidate addresses (%d blacklisted filtered out).", elapsed, conf.GenerateAddressCount, blacklistCount)
 	outputPath := getTimedFilePath(conf.GetCandidateAddressDirPath())
 	log.Printf("Writing results of candidate address generation to file at '%s'.", outputPath)
-	addresses.ToAddressesFile(outputPath, conf.GenWriteUpdateFreq)
+	start = time.Now()
+	err = addressing.WriteIPsToHexFile(outputPath, addresses)
+	elapsed = time.Since(start)
+	generateWriteTimer.Update(elapsed)
+	log.Printf("It took a total of %s to write %d addresses to file.", elapsed, len(addresses))
+	if err != nil {
+		return err
+	}
 	log.Printf("Successfully wrote %d candidate addresses to file at '%s'.", conf.GenerateAddressCount, outputPath)
 	return nil
 }

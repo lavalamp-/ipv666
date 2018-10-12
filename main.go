@@ -11,6 +11,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/statemachine"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	"math/rand"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -98,6 +99,7 @@ func main() {
 	log.Printf("Zmap found and working at path '%s'.", conf.ZmapExecPath)
 
 	initMetrics(&conf)
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	log.Print("All systems are green. Entering state machine.")
 

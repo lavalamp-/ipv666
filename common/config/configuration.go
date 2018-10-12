@@ -14,24 +14,28 @@ type Configuration struct {
 
 	BaseOutputDirectory			string	// Base directory where transient files are kept
 	GeneratedModelDirectory		string	// Subdirectory where statistical models are kept
-	CandidateAddressDirectory	string	// Subdirectory where generated candidate addresses are kept
+	CandidateAddressDirectory	string	// Subdirectory where generated candidate addressing are kept
 	PingResultDirectory			string	// Subdirectory where results of ping scans are kept
 	NetworkGroupDirectory		string	// Subdirectory where results of grouping live hosts are kept
+	NetworkScanTargetsDirectory	string	// Subdirectory where the addresses to scan for blacklist checks are kept
+	NetworkScanResultsDirectory	string	// Subdirectory where the results of scanning blacklist candidate networks are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
 	CleanPingResultDirectory	string	// Subdirectory where cleaned ping results are kept
 	StateFileName				string	// The file name for the file that contains the current state
 
 	// Candidate address generation
 
-	GenerateAddressCount		int		// How many addresses to generate in a given iteration
-	GenerateFirstNybble			uint8	// The first nybble of IPv6 addresses to generate
+	GenerateAddressCount		int		// How many addressing to generate in a given iteration
+	GenerateFirstNybble			uint8	// The first nybble of IPv6 addressing to generate
 	GenerateUpdateFreq			int		// The interval upon which to emit to a log file during address generation
 	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
+	ModelUpdateFreq				int		// The interval upon which to emit to a log file during model updates
 
 	// Network grouping and validation
 
-	NetworkGroupingSize			int		// The bit-length of network size to use when checking for many-to-one
-	NetworkPingCount			int		// The number of addresses to try pinging when testing for many-to-one
+	NetworkGroupingSize			uint8	// The bit-length of network size to use when checking for many-to-one
+	NetworkPingCount			int		// The number of addressing to try pinging when testing for many-to-one
+	NetworkBlacklistPercent		float32	// The percentage of ping results that, if returned positive, indicate a blacklisted network
 
 	// Logging
 
@@ -111,6 +115,14 @@ func (config *Configuration) GetNetworkGroupDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.NetworkGroupDirectory)
 }
 
+func (config *Configuration) GetNetworkScanTargetsDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.NetworkScanTargetsDirectory)
+}
+
+func (config *Configuration) GetNetworkScanResultsDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.NetworkScanResultsDirectory)
+}
+
 func (config *Configuration) GetNetworkBlacklistDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.NetworkBlacklistDirectory)
 }
@@ -126,6 +138,8 @@ func (config *Configuration) GetAllDirectories() ([]string) {
 		config.GetCandidateAddressDirPath(),
 		config.GetPingResultDirPath(),
 		config.GetNetworkGroupDirPath(),
+		config.GetNetworkScanTargetsDirPath(),
+		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
 	}
@@ -137,6 +151,8 @@ func (config *Configuration) GetAllExportDirectories() ([]string) {
 		config.GetCandidateAddressDirPath(),
 		config.GetPingResultDirPath(),
 		config.GetNetworkGroupDirPath(),
+		config.GetNetworkScanTargetsDirPath(),
+		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
 	}

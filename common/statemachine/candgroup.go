@@ -4,59 +4,45 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"log"
-	"github.com/lavalamp-/ipv666/common/addresses"
-	"os"
-	"fmt"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"net"
+	"github.com/rcrowley/go-metrics"
 )
 
-func getScanResultsNetworkRanges(conf *config.Configuration) (error) {
+var netRangesCreatedGauge = metrics.NewGauge()
+var netRangesDownFromGauge = metrics.NewGauge()
 
-	// Find the target ping results file
-	pingResultsPath, err := data.GetMostRecentFilePathFromDir(conf.GetPingResultDirPath())
+func init() {
+	metrics.Register("network_ranges_created", netRangesCreatedGauge)
+	metrics.Register("network_ranges_down_from", netRangesDownFromGauge)
+}
+
+func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
+	log.Printf("Now converting ping scan for candidates into network ranges.")
+	addrs, err := data.GetCandidatePingResults(conf.GetPingResultDirPath())
 	if err != nil {
 		return err
 	}
-
-	// Load the ping results
-	log.Printf("Loading ping scan results")
-	addrs, err := addresses.GetAddressListFromHexStringsFile(pingResultsPath)
-	if err != nil {
-		return err
+	log.Printf("Loaded ping scan results, now converting down to addresses.")
+	var nets []*net.IPNet
+	for _, curAddr := range addrs {
+		byteMask := addressing.GetByteMask(conf.NetworkGroupingSize)
+		nets = append(nets, &net.IPNet{
+			IP:		*curAddr,
+			Mask:	byteMask,
+		})
 	}
-
-	// Clear the host bits and enumerate unique networks
+	nets = addressing.GetUniqueNetworks(nets)
+	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), conf.NetworkGroupingSize)
+	netRangesCreatedGauge.Update(int64(len(nets)))
+	netRangesDownFromGauge.Update(int64(len(addrs)))
 	outputPath := getTimedFilePath(conf.GetNetworkGroupDirPath())
-	log.Printf("Writing network addresses to %s.", outputPath)
-	file, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0600)
+	log.Printf("Writing resulting network file to path '%s'.", outputPath)
+	err = addressing.WriteIPv6NetworksToFile(outputPath, nets)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	var nets []addresses.IPv6Address
-	for _, s := range(addrs.Addresses) {
-		addr := addresses.IPv6Address{s.Content}
-		for x := conf.NetworkGroupingSize; x < 128; x++ {
-			byteOff := (int)(x/8)
-			bitOff := (uint)(x-(byteOff*8))
-			byteMask := (byte)(^(1 << bitOff))
-			addr.Content[byteOff] &= byteMask
-		}
-		found := false
-		for _, net := range(nets) {
-			if net.Content == addr.Content {
-				found = true
-				break
-			}
-		}
-		if found == false {
-			nets = append(nets, addr)
-		}
-	}
-
-	// Persist the networks to disk
-	for _, addr := range(nets) {
-		file.WriteString(fmt.Sprintf("%s\n", addr.String()));
-	}
-
+	log.Printf("Resulting network file successfully written.")
+	data.UpdateScanResultsNetworkRanges(nets, outputPath)
 	return nil
 }
