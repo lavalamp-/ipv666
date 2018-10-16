@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/kr/pretty"
 	"path/filepath"
+	"time"
 )
 
 type Configuration struct {
@@ -85,6 +86,10 @@ type Configuration struct {
 	ExitOnFailedMetrics			bool	// Whether or not to exit the program when a metrics operation fails
 	MetricsToStdout				bool	// Whether or not to print metrics to Stdout
 	MetricsStdoutFreq			int64	// The frequency in seconds of how often to print metrics to Stdout
+	GraphiteExportEnabled		bool	// Whether or not to export data to Graphite
+	GraphiteHost				string	// The host address for Graphite
+	GraphitePort				int		// The Graphite port
+	GraphiteEmitFreq			int64	// How often to emit metrics to Graphite in seconds
 
 	// Output
 
@@ -193,4 +198,8 @@ func (config *Configuration) GetAllExportDirectories() ([]string) {
 		config.GetCleanPingDirPath(),
 		config.GetBloomDirPath(),
 	}
+}
+
+func (config *Configuration) GetGraphiteEmitDuration() (time.Duration) {
+	return time.Duration(config.GraphiteEmitFreq) * time.Second
 }

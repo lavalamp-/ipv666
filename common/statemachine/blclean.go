@@ -11,13 +11,13 @@ import (
 )
 
 var blRemovalDurationTimer = metrics.NewTimer()
-var blRemovalCountGauge = metrics.NewGauge()
-var blLegitimateCountGauge = metrics.NewGauge()
+var blRemovalCount = metrics.NewCounter()
+var blLegitimateCount = metrics.NewCounter()
 
 func init() {
-	metrics.Register("bl_removal_duration", blRemovalDurationTimer)
-	metrics.Register("bl_removal_count", blRemovalCountGauge)
-	metrics.Register("bl_legitimate_count", blLegitimateCountGauge)
+	metrics.Register("blclean.removal.time", blRemovalDurationTimer)
+	metrics.Register("blclean.removal.count", blRemovalCount)
+	metrics.Register("blclean.legitimate.count", blLegitimateCount)
 }
 
 func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
@@ -35,8 +35,8 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	cleaned_addrs := blacklist.CleanIPList(addrs, conf.LogLoopEmitFreq)
 	elapsed := time.Since(start)
 	blRemovalDurationTimer.Update(elapsed)
-	blRemovalCountGauge.Update(int64(len(addrs) - len(cleaned_addrs)))
-	blLegitimateCountGauge.Update(int64(len(cleaned_addrs)))
+	blRemovalCount.Inc(int64(len(addrs) - len(cleaned_addrs)))
+	blLegitimateCount.Inc(int64(len(cleaned_addrs)))
 	log.Printf("Resulting cleaned list contains %d addresses (down from %d). Cleaned in %s.", len(cleaned_addrs), len(addrs), elapsed)
 	outputPath := fs.GetTimedFilePath(conf.GetCleanPingDirPath())
 	log.Printf("Writing resulting cleaned ping addresses to file at path '%s'.", outputPath)

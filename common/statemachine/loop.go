@@ -32,15 +32,24 @@ type State int8
 
 var stateLoopTimers = make(map[string]metrics.Timer)
 
-func getStateLoopTimer(state State, conf *config.Configuration) (metrics.Timer, bool) {
-	key := fmt.Sprintf("%s.timer.%d", conf.MetricsStateLoopPrefix, state)
-	if _, ok := stateLoopTimers[key]; !ok {
+func init() {
+	//TODO get rid of conf.MetricsStateLoopPrefix
+	for i := FIRST_STATE; i <= LAST_STATE; i++ {
+		key := getTimerKeyForLoop((int)(i))
 		timer := metrics.NewTimer()
 		metrics.Register(key, timer)
 		stateLoopTimers[key] = timer
 	}
-	val, found := stateLoopTimers[key]
-	return val, found
+}
+
+func getTimerKeyForLoop(loop int) (string) {
+	return fmt.Sprintf("loop.state_%d.time", loop)
+}
+
+func getStateLoopTimer(state State, conf *config.Configuration) (metrics.Timer, bool) {
+	key := getTimerKeyForLoop((int)(state))
+	timer, found := stateLoopTimers[key]
+	return timer, found
 }
 
 func fetchStateFromFile(filePath string) (State, error) {

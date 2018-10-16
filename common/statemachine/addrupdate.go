@@ -13,7 +13,7 @@ import (
 var addressUpdateTimer = metrics.NewTimer()
 
 func init() {
-	metrics.Register("address_file_update_time", addressUpdateTimer)
+	metrics.Register("addrupdate.file_write.time", addressUpdateTimer)
 }
 
 func updateAddressFile(conf *config.Configuration) (error) {

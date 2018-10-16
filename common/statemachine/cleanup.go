@@ -13,7 +13,7 @@ import (
 var cleanUpFileCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("cleanup_file_count", cleanUpFileCounter)
+	metrics.Register("cleanup.files.count", cleanUpFileCounter)
 }
 
 func cleanUpNonRecentFiles(conf *config.Configuration) (error) {

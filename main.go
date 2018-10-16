@@ -14,6 +14,8 @@ import (
 	"math/rand"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/input"
+	"net"
+	"github.com/cyberdelia/go-metrics-graphite"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -21,7 +23,7 @@ var mainLoopRunTimer = metrics.NewTimer()
 //TODO switch all the various interval logging emissions to the single config value
 
 func init() {
-	metrics.Register("main_loop_timer", mainLoopRunTimer)
+	metrics.Register("main.run.time", mainLoopRunTimer)
 }
 
 func setupLogging(conf *config.Configuration) {
@@ -59,13 +61,25 @@ func initFilesystem(conf *config.Configuration) (error) {
 	return nil
 }
 
-func initMetrics(conf *config.Configuration) () {
+func initMetrics(conf *config.Configuration) (error) {
 	if conf.MetricsToStdout {
 		log.Printf("Setting up metrics to print to stdout every %d seconds.", conf.MetricsStdoutFreq)
 		go metrics.Log(metrics.DefaultRegistry, time.Duration(conf.MetricsStdoutFreq) * time.Second, log.New(os.Stdout, "metrics: ", log.Lmicroseconds))
 	} else {
 		log.Printf("Not printing metrics to stdout.")
 	}
+	if conf.GraphiteExportEnabled {
+		graphiteEndpoint := fmt.Sprintf("%s:%d", conf.GraphiteHost, conf.GraphitePort)
+		log.Printf("Configured to export to Graphite at %s (%s frequency).", graphiteEndpoint, conf.GetGraphiteEmitDuration())
+		addr, err := net.ResolveTCPAddr("tcp", graphiteEndpoint)
+		if err != nil {
+			log.Printf("Error thrown when resolving TCP address %s: %e", graphiteEndpoint, err)
+			return err
+		}
+		go graphite.Graphite(metrics.DefaultRegistry, conf.GetGraphiteEmitDuration(), "metrics", addr)
+		log.Printf("Export to Graphite at %s set up and running.", graphiteEndpoint)
+	}
+	return nil
 }
 
 func isValidFileType(toCheck string) (bool) {
@@ -154,8 +168,10 @@ func main() {
 
 	log.Printf("Zmap found and working at path '%s'.", conf.ZmapExecPath)
 
-	initMetrics(&conf)
-	rand.Seed(time.Now().UTC().UnixNano())
+	err = initMetrics(&conf)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if inputFile != "" {
 		err := input.PrepareFromInputFile(inputFile, inputType, &conf)
@@ -163,6 +179,8 @@ func main() {
 			log.Fatal(fmt.Sprintf("Error thrown when preparing to scan from input file '%s': %e", inputFile, err))
 		}
 	}
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	log.Print("All systems are green. Entering state machine.")
 

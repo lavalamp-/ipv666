@@ -14,8 +14,8 @@ var netRangesCreatedGauge = metrics.NewGauge()
 var netRangesDownFromGauge = metrics.NewGauge()
 
 func init() {
-	metrics.Register("network_ranges_created", netRangesCreatedGauge)
-	metrics.Register("network_ranges_down_from", netRangesDownFromGauge)
+	metrics.Register("candgroup.net_ranges.gauge", netRangesCreatedGauge)
+	metrics.Register("candgroup.addrs.gauge", netRangesDownFromGauge)
 }
 
 func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
