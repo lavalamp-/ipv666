@@ -21,6 +21,7 @@ type Configuration struct {
 	NetworkScanResultsDirectory	string	// Subdirectory where the results of scanning blacklist candidate networks are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
 	CleanPingResultDirectory	string	// Subdirectory where cleaned ping results are kept
+	BloomFilterDirectory		string	// Subdirectory where the Bloom filter is kept
 	StateFileName				string	// The file name for the file that contains the current state
 
 	// Candidate address generation
@@ -31,11 +32,20 @@ type Configuration struct {
 	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
 	ModelUpdateFreq				int		// The interval upon which to emit to a log file during model updates
 
+	// Existing address bloom filter
+
+	AddressFilterSize			uint	// The size of the Bloom filter to use for identifying already guessed addresses
+	AddressFilterHashCount		uint	// The number of hashing functions to use for the address Bloom filter
+
 	// Network grouping and validation
 
 	NetworkGroupingSize			uint8	// The bit-length of network size to use when checking for many-to-one
 	NetworkPingCount			int		// The number of addressing to try pinging when testing for many-to-one
 	NetworkBlacklistPercent		float64	// The percentage of ping results that, if returned positive, indicate a blacklisted network
+
+	// Blacklist candidate generation
+
+	BlacklistFlushInterval		int		// The frequency with which to write newly-generate blacklist candidate addresses to disk
 
 	// Logging
 
@@ -87,6 +97,10 @@ type Configuration struct {
 	InputEntropyBitLength		int		// The number of bits within IP addresses to calculate entropy based on
 	InputMinAddresses			int		// The recommended minimum number of addresses to require for a given statistical model
 	InputEmitFreq				int		// The interval upon which to emit log updates when processing input files
+
+	// Runtime
+
+	ForceAcceptPrompts			bool	// Whether or not to bypass prompts by force accepting them
 
 }
 
@@ -148,6 +162,10 @@ func (config *Configuration) GetCleanPingDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.CleanPingResultDirectory)
 }
 
+func (config *Configuration) GetBloomDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.BloomFilterDirectory)
+}
+
 func (config *Configuration) GetAllDirectories() ([]string) {
 	return []string{
 		config.BaseOutputDirectory,
@@ -159,6 +177,7 @@ func (config *Configuration) GetAllDirectories() ([]string) {
 		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
+		config.GetBloomDirPath(),
 	}
 }
 
@@ -172,5 +191,6 @@ func (config *Configuration) GetAllExportDirectories() ([]string) {
 		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
+		config.GetBloomDirPath(),
 	}
 }

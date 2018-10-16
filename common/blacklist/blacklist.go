@@ -3,45 +3,43 @@ package blacklist
 import (
 	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"encoding/binary"
+	"log"
 )
 
+type blacklistPlaceholder struct {}
+
 type NetworkBlacklist struct {
-	Networks		map[string]*net.IPNet
+	Networks			map[string]*net.IPNet
+	checks				map[uint64]blacklistPlaceholder
 }
 
 func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
-	blacklistMap := make(map[string]*net.IPNet)
-	for _, curNet := range nets {
-		blacklistMap[curNet.String()] = curNet
+	toReturn := &NetworkBlacklist{
+		Networks:	make(map[string]*net.IPNet),
+		checks:		make(map[uint64]blacklistPlaceholder),
 	}
-	return &NetworkBlacklist{
-		Networks:	blacklistMap,
+	for _, curNet := range nets {
+		toReturn.AddNetwork(*curNet)
+	}
+	return toReturn
+}
+
+func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
+	networkString := addressing.GetBaseAddressString(&toAdd)
+	if _, ok := blacklist.Networks[networkString]; !ok {
+		blacklist.Networks[networkString] = &toAdd
+		netBytes := addressing.GetFirst64BitsOfNetwork(&toAdd)
+		blacklist.checks[netBytes] = blacklistPlaceholder{}
 	}
 }
 
-func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP) ([]*net.IP) {
+func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
-
-	// Blacklist net.IPNet's to uint64's
-	blnets := []uint64{}
-	for _, ipnet:= range blacklist.Networks {
-		n := binary.LittleEndian.Uint64((*ipnet).IP[:8])
-		blnets = append(blnets, n)
-	}
-
-	for _, curClean := range toClean {
-		n := binary.LittleEndian.Uint64((*curClean)[:8])
-		found := false
-		for _, v := range blnets {
-			if v == n {
-				found = true
-				break
-			}
+	for i, curClean := range toClean {
+		if i % emitFreq == 0 {
+			log.Printf("Cleaning entry %d out of %d.", i, len(toClean))
 		}
-
-		// if !blacklist.IsIPBlacklisted(curClean) {
-		if !found {
+		if !blacklist.IsIPBlacklisted(curClean) {
 			toReturn = append(toReturn, curClean)
 		}
 	}
@@ -49,16 +47,9 @@ func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP) ([]*net.IP) {
 }
 
 func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
-	for _, v := range blacklist.Networks {
-		if v.Contains(*toTest) {
-			return true
-		}
-	}
-	return false
-}
-
-func (blacklist *NetworkBlacklist) Update(toAdd *net.IPNet) {
-	blacklist.Networks[toAdd.String()] = toAdd
+	first64 := addressing.GetFirst64BitsOfIP(toTest)
+	_, ok := blacklist.checks[first64]
+	return ok
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {

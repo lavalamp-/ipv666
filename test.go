@@ -11,12 +11,13 @@ import (
 	"os"
 	"fmt"
 	"net"
-	"github.com/lavalamp-/ipv666/common/statemachine"
+	"github.com/willf/bloom"
+	"github.com/lavalamp-/ipv666/common/data"
 )
 
 func main() {
-	statemachine.SetStateFile("ipv6results/state.txt", statemachine.NETWORK_GROUP)
-	log.Fatal("LULZ!")
+	//statemachine.SetStateFile("ipv6results/state.txt", statemachine.NETWORK_GROUP)
+	//log.Fatal("LULZ!")
 	rand.Seed(time.Now().UTC().UnixNano())
 	log.Printf("Hello world")
 	log.Printf("%d", 65 % 8)
@@ -71,6 +72,36 @@ func main() {
 	ipnets := []*net.IPNet{ipnet1, ipnet2, ipnet3, ipnet4, ipnet5, ipnet6}
 	othernets := addressing.GetUniqueNetworks(ipnets, 100)
 	log.Printf("Othernets: %s", othernets)
+	filter := bloom.New(10000000000, 7)
+	model, err := data.GetProbabilisticAddressModel("ipv6results/models")
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Generating addresses")
+	addrs := model.GenerateMultiIP(2,10000000, 100000)
+	log.Printf("Updating filter")
+	for i, addr := range addrs {
+		if i % 100000 == 0 {
+			log.Printf("Here: %d out of %d", i, len(addrs))
+		}
+		addrBytes := ([]byte)(*addr)
+		filter.Add(addrBytes)
+	}
+	log.Printf("Updated filter with 10m addresses.")
+	file, err := os.OpenFile("tester.bin", os.O_WRONLY | os.O_CREATE, 0600)
+	if err != nil {
+		panic(err)
+	}
+	bytesWritten, err := filter.WriteTo(file)
+	if err != nil {
+		panic(err)
+	}
+	if bytesWritten <= 0 {
+		panic(fmt.Sprintf("Dog wtf: %d", bytesWritten))
+	}
+	log.Printf("WE DID IT WOOOO")
+	//falsePositiveRate := filter.EstimateFalsePositiveRate(100000000)
+	//log.Printf("False positive rate: %f", falsePositiveRate)
 	//err := addressing.WriteIPv6NetworksToFile("test_networks", ipnets)
 	//ipnets, err := addressing.ReadIPv6NetworksFromFile("test_networks")
 	//log.Printf("Error: %e", err)

@@ -32,7 +32,7 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	}
 	log.Printf("Total of %d addresses to clean.", len(addrs))
 	start := time.Now()
-	cleaned_addrs := blacklist.CleanIPList(addrs)
+	cleaned_addrs := blacklist.CleanIPList(addrs, conf.LogLoopEmitFreq)
 	elapsed := time.Since(start)
 	blRemovalDurationTimer.Update(elapsed)
 	blRemovalCountGauge.Update(int64(len(addrs) - len(cleaned_addrs)))

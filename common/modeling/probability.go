@@ -68,21 +68,21 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 
 func (addrModel *ProbabilisticAddressModel) GenerateMultiIP(fromNybble uint8, count int, updateFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
-	log.Printf("Generating %d IP addressing using model %s.", count, addrModel.Name)
+	log.Printf("Generating %d IP addresses using model %s.", count, addrModel.Name)
 	for i := 0; i < count; i++ {
 		if i % updateFreq == 0 {
-			log.Printf("Generating %d addressing out of %d.", i, count)
+			log.Printf("Generating %d addresses out of %d.", i, count)
 		}
 		toReturn = append(toReturn, addrModel.GenerateSingleIP(fromNybble))
 	}
-	log.Printf("Successfully generated %d IP addressing using model %s.", count, addrModel.Name)
+	log.Printf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
 	return toReturn
 }
 
 func (addrModel *ProbabilisticAddressModel) GenerateSingleIP(fromNybble uint8) (*net.IP) {
 	addrNybbles := []uint8{fromNybble}
 	curNybble := fromNybble
-	for _, nybbleModel := range(addrModel.NybbleModels) {
+	for _, nybbleModel := range addrModel.NybbleModels {
 		nextNybble := nybbleModel.predictNextNybble(curNybble)
 		addrNybbles = append(addrNybbles, nextNybble)
 		curNybble = nextNybble

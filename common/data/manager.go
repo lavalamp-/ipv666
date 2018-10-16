@@ -10,6 +10,9 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
 	"github.com/lavalamp-/ipv666/common/blacklist"
+	"github.com/willf/bloom"
+	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/filtering"
 )
 
 var curAddressModel *modeling.ProbabilisticAddressModel
@@ -22,7 +25,39 @@ var curBlacklist *blacklist.NetworkBlacklist
 var curBlacklistPath string
 var curCleanPingResults []*net.IP
 var curCleanPingResultsPath string
+var curBloomFilter *bloom.BloomFilter
+var curBloomFilterPath string
 
+func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
+	curBloomFilter = filter
+	curBloomFilterPath = filePath
+}
+
+func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {
+	filterDir := conf.GetBloomDirPath()
+	log.Printf("Attempting to retrieve most recent Bloom filter from directory '%s'.", filterDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(filterDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving Bloom filter from directory '%s': %s", filterDir, err)
+		return nil, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty. Returning a new, empty Bloom filter.", filterDir)
+		return bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount), nil
+	}
+	filePath := filepath.Join(filterDir, fileName)
+	log.Printf("Most recent Bloom filter is at path '%s'.", filePath)
+	if filePath == curBloomFilterPath {
+		log.Printf("Already have Bloom filter at path '%s' loaded in memory. Returning.", filePath)
+		return curBloomFilter, nil
+	} else {
+		log.Printf("Loading Bloom filter from path '%s'.", filePath)
+		toReturn, err := filtering.GetBloomFilterFromFile(filePath, conf.AddressFilterSize, conf.AddressFilterHashCount)
+		if err != nil {
+			UpdateBloomFilter(toReturn, filePath)
+		}
+		return toReturn, err
+	}
+}
 
 func UpdateCleanPingResults(addrs []*net.IP, filePath string) {
 	curCleanPingResults = addrs

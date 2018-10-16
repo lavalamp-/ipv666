@@ -81,12 +81,14 @@ func main() {
 	var inputType string
 	var outputFile string
 	var outputType string
+	var forceAccept bool
 
 	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
 	flag.StringVar(&inputFile, "input", "", "An input file containing IPv6 addresses to initiate scanning from.")
 	flag.StringVar(&inputType, "input-type", "txt", "The type of file pointed to by the 'input' argument (bin or txt).")
 	flag.StringVar(&outputFile, "output", "", "The path to the file where discovered addresses should be written.")
 	flag.StringVar(&outputType, "output-type", "txt", "The type of output to write to the output file (txt or bin).")
+	flag.BoolVar(&forceAccept, "force", false, "Whether or not to force accept all prompts (useful for daemonized scanning).")
 
 	flag.Parse()
 
@@ -114,14 +116,20 @@ func main() {
 		conf.OutputFileName = outputFile
 		conf.OutputFileType = outputType
 	}
+	conf.ForceAcceptPrompts = forceAccept
 
 	if _, err := os.Stat(conf.GetOutputFilePath()); !os.IsNotExist(err) {
-		prompt := fmt.Sprintf("Output file already exists at path '%s,' continue (will append to existing file)? [y/N]", conf.GetOutputFilePath())
-		errMsg := fmt.Sprintf("Exiting. Please move the file at path '%s' and try again.", conf.GetOutputFilePath())
-		err := shell.PromptForApproval(prompt, errMsg)
-		if err != nil {
-			log.Fatal(err)
+		if !conf.ForceAcceptPrompts {
+			prompt := fmt.Sprintf("Output file already exists at path '%s,' continue (will append to existing file)? [y/N]", conf.GetOutputFilePath())
+			errMsg := fmt.Sprintf("Exiting. Please move the file at path '%s' and try again.", conf.GetOutputFilePath())
+			err := shell.PromptForApproval(prompt, errMsg)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			log.Printf("Force accept configured. Not asking for permission to append to file '%s'.", conf.GetOutputFilePath())
 		}
+
 	}
 
 	if !conf.LogToFile {
