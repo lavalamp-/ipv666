@@ -10,6 +10,10 @@ import (
 	"log"
 )
 
+func GetFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
+	return GetFirst64BitsOfIP(&network.IP)
+}
+
 func GetBaseAddressString(network *net.IPNet) (string) {
 	ipBytes := ([]byte)(network.IP)
 	maskBytes := ([]byte)(network.Mask)

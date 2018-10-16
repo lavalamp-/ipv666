@@ -9,7 +9,13 @@ import (
 	"net"
 	"io"
 	"log"
+	"encoding/binary"
 )
+
+func GetFirst64BitsOfIP(ip *net.IP) (uint64) {
+	ipBytes := ([]byte)(*ip)
+	return binary.LittleEndian.Uint64(ipBytes[:8])
+}
 
 func GetUniqueIPs(ips []*net.IP, updateFreq int) ([]*net.IP) {
 	checkMap := make(map[string]bool)
@@ -55,6 +61,14 @@ func WriteIPsToHexFile(filePath string, addrs []*net.IP) (error) {
 		file.WriteString(fmt.Sprintf("%s\n", addr.String()))
 	}
 	return nil
+}
+
+func GetTextLinesFromIPs(addrs []*net.IP) (string) {
+	var toReturn []string
+	for _, addr := range addrs {
+		toReturn = append(toReturn, fmt.Sprintf("%s\n", addr.String()))
+	}
+	return strings.Join(toReturn, "")
 }
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {

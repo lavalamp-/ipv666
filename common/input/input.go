@@ -15,10 +15,15 @@ import (
 
 func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Configuration) (error) {
 	// Confirm that cleaning up is ok
-	err := confirmCleanUpExisting(inputFilePath, conf)
-	if err != nil {
-		return err
+	if !conf.ForceAcceptPrompts {
+		err := confirmCleanUpExisting(inputFilePath, conf)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Printf("Configured to force accept prompts. Moving forward with cleaning up prior to starting from input file '%s'.", inputFilePath)
 	}
+
 	// Load addresses from input file
 	addrs, err := getIPsFromFile(inputFilePath, fileType)
 	if err != nil {
@@ -30,9 +35,13 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	addrs = filterOutHighEntropyIPs(addrs, conf)
 	// Check that enough addresses remain
 	if len(addrs) < conf.InputMinAddresses {
-		err := confirmTooFew(len(addrs), conf)
-		if err != nil {
-			return err
+		if !conf.ForceAcceptPrompts {
+			err := confirmTooFew(len(addrs), conf)
+			if err != nil {
+				return err
+			}
+		} else {
+			log.Printf("Configured to force accept prompts. Moving forward despite too few remaining addresses (got %d, wanted %d or more).", len(addrs), conf.InputMinAddresses)
 		}
 	}
 	// Delete all existing files in all directories

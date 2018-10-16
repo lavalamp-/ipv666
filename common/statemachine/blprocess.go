@@ -84,7 +84,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	}
 	log.Printf("Updating blacklist with new networks.")
 	for _, curNet := range blacklistNets {
-		blacklist.Update(curNet)
+		blacklist.AddNetwork(*curNet)
 	}
 	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 	log.Printf("Writing new version of blacklist to file at path '%s'.", outputPath)
