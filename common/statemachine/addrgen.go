@@ -11,7 +11,7 @@ import (
 
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/filtering"
-	"github.com/willf/bloom"
+	bloom2 "github.com/willf/bloom"
 	"os"
 )
 
@@ -121,9 +121,9 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 
 }
 
-func remakeBloomFilter(conf *config.Configuration, existingAddrs []*net.IP) (*bloom.BloomFilter, error) {
+func remakeBloomFilter(conf *config.Configuration, existingAddrs []*net.IP) (*bloom2.BloomFilter, error) {
 	log.Printf("Creating new Bloom filter with %d entries and %d hashes.", conf.AddressFilterSize, conf.AddressFilterHashCount)
-	var filter *bloom.BloomFilter
+	var filter *bloom2.BloomFilter
 	if _, err := os.Stat(conf.GetOutputFilePath()); !os.IsNotExist(err) {
 		log.Printf("Output file at path '%s' exists. Creating new Bloom filter from its contents.", conf.GetOutputFilePath())
 		filter, err = data.LoadBloomFilterFromOutput(conf)
