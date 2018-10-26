@@ -105,7 +105,7 @@ func writeNewAddresses(toWrite []*net.IP, conf *config.Configuration) (error) {
 func confirmTooFew(count int, conf *config.Configuration) (error) {
 	prompt := fmt.Sprintf("The resulting list of addresses is only %d long, and we recommend having at least %d to get good results. Continue? [y/N]", count, conf.InputMinAddresses)
 	errMsg := fmt.Sprintf("Exiting. Please add more addresses to your input list and try again.")
-	err := shell.PromptForApproval(prompt, errMsg)
+	err := shell.RequireApproval(prompt, errMsg)
 	if err != nil {
 		return err
 	} else {
@@ -116,7 +116,7 @@ func confirmTooFew(count int, conf *config.Configuration) (error) {
 func confirmCleanUpExisting(inputFilePath string, conf *config.Configuration) (error) {
 	prompt := fmt.Sprintf("Provided input file at path '%s'. Starting with an input file requires cleaning up all existing state from previous runs. Continue? [y/N]", inputFilePath)
 	errMsg := fmt.Sprintf("Exiting. Please backup all existing state (all directories under '%s') and try again.", conf.BaseOutputDirectory)
-	err := shell.PromptForApproval(prompt, errMsg)
+	err := shell.RequireApproval(prompt, errMsg)
 	if err != nil {
 		return err
 	} else {

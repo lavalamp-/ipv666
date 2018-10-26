@@ -13,6 +13,16 @@ type NetworkBlacklist struct {
 	checks				map[uint64]blacklistPlaceholder
 }
 
+//type BlacklistNode struct {
+//	ChildNodes			map[byte]*BlacklistNode
+//	IsBlacklisted		bool
+//	BlacklistedBits		map[uint8]map[byte]blacklistPlaceholder
+//}
+//
+//func (blNode *BlacklistNode) Check(bytes []byte) (bool) {
+//
+//}
+
 func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	toReturn := &NetworkBlacklist{
 		Networks:	make(map[string]*net.IPNet),
@@ -22,6 +32,12 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 		toReturn.AddNetwork(*curNet)
 	}
 	return toReturn
+}
+
+func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
+	for _, curNet := range toAdd {
+		blacklist.AddNetwork(*curNet)
+	}
 }
 
 func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
@@ -61,7 +77,7 @@ func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
 }
 
 func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (error) {
-	toWrite := []*net.IPNet{}
+	var toWrite []*net.IPNet
 	for _, v := range blacklist.Networks {
 		toWrite = append(toWrite, v)
 	}

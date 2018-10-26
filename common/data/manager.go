@@ -122,7 +122,7 @@ func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
 	log.Printf("Attempting to retrieve most recent blacklist from directory '%s'.", blacklistDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(blacklistDir)
 	if err != nil {
-		log.Printf("Error thrown when retrieving candidate ping networks from directory '%s': %s", blacklistDir, err)
+		log.Printf("Error thrown when retrieving blacklist from directory '%s': %s", blacklistDir, err)
 		return nil, err
 	} else if fileName == "" {
 		log.Printf("The directory at '%s' was empty. Returning a new, empty blacklist.", blacklistDir)
