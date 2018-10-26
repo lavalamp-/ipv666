@@ -13,8 +13,8 @@ var modelUpdateDurationTimer = metrics.NewTimer()
 var modelUpdateCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("model_update_duration", modelUpdateDurationTimer)
-	metrics.Register("model_update_counter", modelUpdateCounter)
+	metrics.Register("modelupdate.update.time", modelUpdateDurationTimer)
+	metrics.Register("modelupdate.update.count", modelUpdateCounter)
 }
 
 func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {

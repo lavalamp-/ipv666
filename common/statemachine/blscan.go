@@ -15,9 +15,9 @@ var blCandidateResponseCounter = metrics.NewCounter()
 var zmapNetsDurationTimer = metrics.NewTimer()
 
 func init() {
-	metrics.Register("zmap_nets_scan_duration", zmapNetsDurationTimer)
-	metrics.Register("zmap_nets_cand_counter", blCandidateCounter)
-	metrics.Register("zmap_nets_cand_response_counter", blCandidateResponseCounter)
+	metrics.Register("blscan.zmap.time", zmapNetsDurationTimer)
+	metrics.Register("blscan.candidates.count", blCandidateCounter)
+	metrics.Register("blscan.candidates_respond.count", blCandidateResponseCounter)
 }
 
 func zmapScanNetworkRanges(conf *config.Configuration) (error) {

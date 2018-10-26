@@ -16,9 +16,9 @@ var s3PushErrorCounter = metrics.NewCounter()
 var s3BytesPushedCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("s3_push_files_count", s3PushFileCounter)
-	metrics.Register("s3_push_errors_count", s3PushErrorCounter)
-	metrics.Register("s3_bytes_pushed_count", s3BytesPushedCounter)
+	metrics.Register("s3push.s3_push.count", s3PushFileCounter)
+	metrics.Register("s3push.s3_error.count", s3PushErrorCounter)
+	metrics.Register("s3push.s3_push_bytes.count", s3BytesPushedCounter)
 }
 
 func pushFilesToS3(conf *config.Configuration) (error) {

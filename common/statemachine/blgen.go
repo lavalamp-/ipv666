@@ -17,9 +17,9 @@ var blacklistCandGenCount = metrics.NewCounter()
 var blacklistCandGenFlushDuration = metrics.NewTimer()
 
 func init() {
-	metrics.Register("blacklist_cand_gen_duration", blacklistCandGenDuration)
-	metrics.Register("blacklist_cand_gen_count", blacklistCandGenCount)
-	metrics.Register("blacklist_cand_gen_flush_duration", blacklistCandGenFlushDuration)
+	metrics.Register("blgen.cand_gen.time", blacklistCandGenDuration)
+	metrics.Register("blgen.cand_gen.count", blacklistCandGenCount)
+	metrics.Register("blgen.cand_file_write.time", blacklistCandGenFlushDuration)
 }
 
 func generateNetworkAddresses(conf *config.Configuration) (error) {

@@ -20,11 +20,11 @@ var generateWriteTimer = metrics.NewTimer()
 var bloomWriteTimer = metrics.NewTimer()
 
 func init() {
-	metrics.Register("gen_duration_timer", generateDurationTimer)
-	metrics.Register("gen_blacklist_count", generateBlacklistCount)
-	metrics.Register("gen_bloom_count", generateBloomCount)
-	metrics.Register("gen_write_timer", generateWriteTimer)
-	metrics.Register("bloom_write_timer", bloomWriteTimer)
+	metrics.Register("addrgen.generate_duration.time", generateDurationTimer)
+	metrics.Register("addrgen.generate_blacklist.count", generateBlacklistCount)
+	metrics.Register("addrgen.generate_bloom.count", generateBloomCount)
+	metrics.Register("addrgen.candidate_write.time", generateWriteTimer)
+	metrics.Register("addrgen.bloom_write.time", bloomWriteTimer)
 }
 
 func generateCandidateAddresses(conf *config.Configuration) (error) {

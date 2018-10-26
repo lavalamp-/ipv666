@@ -22,8 +22,8 @@ type blacklistTracker struct {
 }
 
 func init() {
-	metrics.Register("blacklist_process_net_membership_timer", blProcessNetMembershipTimer)
-	metrics.Register("blacklist_network_discovery_count", blNetDiscoveryCounter)
+	metrics.Register("blprocess.net_membership.time", blProcessNetMembershipTimer)
+	metrics.Register("blprocess.new_nets.count", blNetDiscoveryCounter)
 }
 
 func processBlacklistScanResults(conf *config.Configuration) (error) {

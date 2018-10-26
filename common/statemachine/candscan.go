@@ -15,9 +15,9 @@ var zmapCandDurationTimer = metrics.NewTimer()
 var zmapCandErrorCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("zmap_cand_addr_live", liveAddrCandGauge)
-	metrics.Register("zmap_cand_scan_duration", zmapCandDurationTimer)
-	metrics.Register("zmap_cand_scan_error_count", zmapCandErrorCounter)
+	metrics.Register("candscan.live_results.gauge", liveAddrCandGauge)
+	metrics.Register("candscan.zmap_scan.time", zmapCandDurationTimer)
+	metrics.Register("candscan.zmap_scan_error.count", zmapCandErrorCounter)
 }
 
 func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
