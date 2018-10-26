@@ -34,14 +34,14 @@ func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
 	curBloomFilterPath = filePath
 }
 
-func loadBloomFilterFromOutput(conf *config.Configuration) (*bloom.BloomFilter, error) {
+func LoadBloomFilterFromOutput(conf *config.Configuration) (*bloom.BloomFilter, error) {
 	log.Printf("Creating Bloom filter from output file '%s'.", conf.GetOutputFilePath())
 	ips, err := addressing.ReadIPsFromHexFile(conf.GetOutputFilePath())
 	ips = addressing.GetUniqueIPs(ips, conf.LogLoopEmitFreq)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d IP addresses loaded from file '%s'.", conf.GetOutputFilePath())
+	log.Printf("%d IP addresses loaded from file '%s'.", len(ips), conf.GetOutputFilePath())
 	bloom := bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
 	for _, ip := range ips {
 		ipBytes := ([]byte)(*ip)
@@ -62,7 +62,7 @@ func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {
 		log.Printf("The directory at '%s' was empty. Checking for pre-existing output file at '%s'.", filterDir, conf.GetOutputFilePath())
 		if _, err := os.Stat(conf.GetOutputFilePath()); !os.IsNotExist(err) {
 			log.Printf("File at path '%s' exists. Using for new Bloom filter.", conf.GetOutputFilePath())
-			return loadBloomFilterFromOutput(conf)
+			return LoadBloomFilterFromOutput(conf)
 		} else {
 			log.Printf("No existing output file at '%s'. Returning a new, empty Bloom filter.", conf.GetOutputFilePath())
 			return bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount), nil

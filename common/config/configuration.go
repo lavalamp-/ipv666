@@ -37,6 +37,7 @@ type Configuration struct {
 
 	AddressFilterSize			uint	// The size of the Bloom filter to use for identifying already guessed addresses
 	AddressFilterHashCount		uint	// The number of hashing functions to use for the address Bloom filter
+	BloomEmptyMultiple			float64	// The multiple of the address generation size upon which the Bloom filter should be emptied and remade
 
 	// Network grouping and validation
 

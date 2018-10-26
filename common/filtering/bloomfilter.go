@@ -5,7 +5,12 @@ import (
 	"os"
 	"errors"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/config"
 )
+
+func NewFromConfig(conf *config.Configuration) (*bloom.BloomFilter) {
+	return bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
+}
 
 func GetBloomFilterFromFile(filePath string, filterSize uint, keyCount uint) (*bloom.BloomFilter, error) {
 	file, err := os.Open(filePath)
