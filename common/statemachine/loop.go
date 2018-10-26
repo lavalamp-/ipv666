@@ -163,6 +163,7 @@ func RunStateMachine(conf *config.Configuration) (error) {
 				}
 			}
 		case EMIT_METRICS:
+			return nil
 			// Push the metrics to wherever they need to go
 		}
 
