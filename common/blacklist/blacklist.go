@@ -29,8 +29,7 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	}
 
 	// Build the per-length masks
-	for l := range nets {
-		log.Printf("foo %d out of %d", l, len(nets))
+	for l := 0; l < 128; l++ {
 		toReturn.masks[l] = &[2]uint64{}
 		if l <= 64 {
 			toReturn.masks[l][1] = 0
@@ -53,8 +52,8 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 }
 
 func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
-	for i, curNet := range toAdd {
-		log.Printf("%d out of %d", i, len(toAdd))
+	for _, curNet := range toAdd {
+		// log.Printf("%d out of %d", i, len(toAdd))
 		blacklist.AddNetwork(*curNet)
 	}
 }
@@ -69,7 +68,7 @@ func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
 		netLen := 0
 		for x := 15; x >= 0; x-- {
 			if toAdd.Mask[x] > 0 {
-				netLen = (x-1)*8
+				netLen = x*8
 				for y := 0; y < 8; y++ {
 					mask := byte(1 << uint(y))
 					if toAdd.Mask[x] & mask == mask {
