@@ -30,6 +30,7 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 
 	// Build the per-length masks
 	for l := range nets {
+		log.Printf("foo %d out of %d", l, len(nets))
 		toReturn.masks[l] = &[2]uint64{}
 		if l <= 64 {
 			toReturn.masks[l][1] = 0
@@ -46,41 +47,53 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 		}
 	}
 
-	for _, curNet := range nets {
-		toReturn.AddNetwork(*curNet)
-	}
+	toReturn.AddNetworks(nets)
+
 	return toReturn
+}
+
+func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
+	for i, curNet := range toAdd {
+		log.Printf("%d out of %d", i, len(toAdd))
+		blacklist.AddNetwork(*curNet)
+	}
 }
 
 func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
 
-	// Compute the length of the network
-	netLen := 0
-	for x := 15; x >= 0; x-- {
-		if toAdd.Mask[x] > 0 {
-			netLen = (x-1)*8
-			for y := 0; y < 8; y++ {
-				mask := byte(1 << uint(y))
-				if toAdd.Mask[x] & mask == mask {
-					netLen += (8-y)
-					break
+	networkString := addressing.GetBaseAddressString(&toAdd)
+	if _, ok := blacklist.Networks[networkString]; !ok {
+		blacklist.Networks[networkString] = &toAdd
+
+		// Compute the length of the network
+		netLen := 0
+		for x := 15; x >= 0; x-- {
+			if toAdd.Mask[x] > 0 {
+				netLen = (x-1)*8
+				for y := 0; y < 8; y++ {
+					mask := byte(1 << uint(y))
+					if toAdd.Mask[x] & mask == mask {
+						netLen += 8 - y
+						break
+					}
 				}
+				break
 			}
-			break
 		}
-	}
 
-	// New len?
-	if _, ok := blacklist.nets[netLen]; !ok {
-		blacklist.nets[netLen] = &ipNets{}
-		blacklist.nets[netLen].nets = map[[2]uint64]struct{}{}
-	}
+		// New len?
+		if _, ok := blacklist.nets[netLen]; !ok {
+			blacklist.nets[netLen] = &ipNets{}
+			blacklist.nets[netLen].nets = map[[2]uint64]struct{}{}
+		}
 
-	// Add this network
-	ip := [2]uint64{}
-	ip[0] = binary.LittleEndian.Uint64(toAdd.IP[0:8])
-	ip[1] = binary.LittleEndian.Uint64(toAdd.IP[8:16])
-	blacklist.nets[netLen].nets[ip] = struct{}{}
+		// Add this network
+		ip := [2]uint64{}
+		ip[0] = binary.LittleEndian.Uint64(toAdd.IP[0:8])
+		ip[1] = binary.LittleEndian.Uint64(toAdd.IP[8:16])
+		blacklist.nets[netLen].nets[ip] = struct{}{}
+
+	}
 
 	//  // Legacy logic
 	// networkString := addressing.GetBaseAddressString(&toAdd)
@@ -135,10 +148,13 @@ func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
+	log.Printf("Loading blacklist from path '%s'.", filePath)
 	networks, err := addressing.ReadIPv6NetworksFromFile(filePath)
+	log.Printf("Read %d networks from file '%s'.", len(networks), filePath)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Creating blacklist from %d networks.", len(networks))
 	return NewNetworkBlacklist(networks), nil
 }
 
