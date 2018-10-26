@@ -65,7 +65,17 @@ func PromptForInput(prompt string) (string, error) {
 	}
 }
 
-func PromptForApproval(prompt string, error string) (error) {
+func AskForApproval(prompt string) (bool, error) {
+	resp, err := PromptForInput(prompt)
+	if err != nil {
+		return false, err
+	}
+	fmt.Println()
+	resp = strings.TrimSpace(strings.ToLower(resp))
+	return resp == "y", nil
+}
+
+func RequireApproval(prompt string, error string) (error) {
 	resp, err := PromptForInput(prompt)
 	if err != nil {
 		return err

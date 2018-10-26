@@ -8,6 +8,8 @@ import (
 	"io"
 	"github.com/lavalamp-/ipv666/common/zrandom"
 	"log"
+	"io/ioutil"
+	"strings"
 )
 
 func GetFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
@@ -92,6 +94,28 @@ func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 		file.Write([]byte{foo})
 	}
 	return nil
+}
+
+func ReadIPv6NetworksFromHexFile(filePath string) ([]*net.IPNet, error) {
+	log.Printf("Reading IPv6 networks from file at path '%s'.", filePath)
+	fileBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	fileContent := strings.TrimSpace(string(fileBytes))
+	fileLines := strings.Split(fileContent, "\n")
+	var networks []*net.IPNet
+	for _, fileLine := range fileLines {
+		trimmedLine := strings.TrimSpace(fileLine)
+		_, network, err := net.ParseCIDR(trimmedLine)
+		if err != nil {
+			log.Printf("Error thrown when parsing '%s' as CIDR: %e", trimmedLine, err)
+			continue
+		}
+		networks = append(networks, network)
+	}
+	log.Printf("Read %d networks from file '%s'.", len(networks), filePath)
+	return networks, nil
 }
 
 func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
