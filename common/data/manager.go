@@ -135,7 +135,6 @@ func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
 		log.Printf("Already have blacklist at path '%s' loaded in memory. Returning.", filePath)
 		return curBlacklist, nil
 	} else {
-		log.Printf("Loading blacklist from path '%s'.", filePath)
 		toReturn, err := blacklist.ReadNetworkBlacklistFromFile(filePath)
 		if err != nil {
 			UpdateBlacklist(toReturn, filePath)

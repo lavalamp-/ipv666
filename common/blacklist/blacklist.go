@@ -1,6 +1,7 @@
 package blacklist
 
 import (
+	"encoding/binary"
 	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
@@ -8,45 +9,98 @@ import (
 
 type blacklistPlaceholder struct {}
 
-type NetworkBlacklist struct {
-	Networks			map[string]*net.IPNet
-	checks				map[uint64]blacklistPlaceholder
+type ipNets struct {
+	nets map[[2]uint64]struct{}
 }
 
-//type BlacklistNode struct {
-//	ChildNodes			map[byte]*BlacklistNode
-//	IsBlacklisted		bool
-//	BlacklistedBits		map[uint8]map[byte]blacklistPlaceholder
-//}
-//
-//func (blNode *BlacklistNode) Check(bytes []byte) (bool) {
-//
-//}
+type NetworkBlacklist struct {
+	Networks map[string]*net.IPNet
+	nets     map[int]*ipNets
+	masks    map[int]*[2]uint64
+	checks   map[uint64]blacklistPlaceholder
+}
 
 func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	toReturn := &NetworkBlacklist{
-		Networks:	make(map[string]*net.IPNet),
-		checks:		make(map[uint64]blacklistPlaceholder),
+		Networks: make(map[string]*net.IPNet),
+		nets:     make(map[int]*ipNets),
+		checks:   make(map[uint64]blacklistPlaceholder),
+		masks:    make(map[int]*[2]uint64),
 	}
-	for _, curNet := range nets {
-		toReturn.AddNetwork(*curNet)
+
+	// Build the per-length masks
+	for l := 0; l < 128; l++ {
+		toReturn.masks[l] = &[2]uint64{}
+		if l <= 64 {
+			toReturn.masks[l][1] = 0
+			for x := 0; x < l; x++ {
+				toReturn.masks[l][0] |= 1 << (63 - uint64(x))
+			}
+		} else {
+			for x := 0; x < l; x++ {
+				toReturn.masks[l][0] |= 1 << (63 - uint64(x))
+			}
+			for x := 64; x < l; x++ {
+				toReturn.masks[l][1] |= 1 << (127 - uint64(x))
+			}
+		}
 	}
+
+	toReturn.AddNetworks(nets)
+
 	return toReturn
 }
 
 func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
 	for _, curNet := range toAdd {
+		// log.Printf("%d out of %d", i, len(toAdd))
 		blacklist.AddNetwork(*curNet)
 	}
 }
 
 func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
+
 	networkString := addressing.GetBaseAddressString(&toAdd)
 	if _, ok := blacklist.Networks[networkString]; !ok {
 		blacklist.Networks[networkString] = &toAdd
-		netBytes := addressing.GetFirst64BitsOfNetwork(&toAdd)
-		blacklist.checks[netBytes] = blacklistPlaceholder{}
+
+		// Compute the length of the network
+		netLen := 0
+		for x := 15; x >= 0; x-- {
+			if toAdd.Mask[x] > 0 {
+				netLen = x*8
+				for y := 0; y < 8; y++ {
+					mask := byte(1 << uint(y))
+					if toAdd.Mask[x] & mask == mask {
+						netLen += 8 - y
+						break
+					}
+				}
+				break
+			}
+		}
+
+		// New len?
+		if _, ok := blacklist.nets[netLen]; !ok {
+			blacklist.nets[netLen] = &ipNets{}
+			blacklist.nets[netLen].nets = map[[2]uint64]struct{}{}
+		}
+
+		// Add this network
+		ip := [2]uint64{}
+		ip[0] = binary.LittleEndian.Uint64(toAdd.IP[0:8])
+		ip[1] = binary.LittleEndian.Uint64(toAdd.IP[8:16])
+		blacklist.nets[netLen].nets[ip] = struct{}{}
+
 	}
+
+	//  // Legacy logic
+	// networkString := addressing.GetBaseAddressString(&toAdd)
+	// if _, ok := blacklist.Networks[networkString]; !ok {
+	// 	blacklist.Networks[networkString] = &toAdd
+	// 	netBytes := addressing.GetFirst64BitsOfNetwork(&toAdd)
+	// 	blacklist.checks[netBytes] = blacklistPlaceholder{}
+	// }
 }
 
 func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) ([]*net.IP) {
@@ -63,16 +117,43 @@ func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) 
 }
 
 func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
-	first64 := addressing.GetFirst64BitsOfIP(toTest)
-	_, ok := blacklist.checks[first64]
-	return ok
+
+	ipUints := [2]uint64{
+		binary.LittleEndian.Uint64((*toTest)[0:8]),
+		binary.LittleEndian.Uint64((*toTest)[8:16]),
+	}
+
+	// Check the IP against each network length
+	for l := range blacklist.nets {
+		ipMask := [2]uint64{}
+		if l <= 64 {
+			ipMask[1] = 0
+			ipMask[0] = ipUints[0] & blacklist.masks[l][0]
+		} else {
+			ipMask[1] = ipUints[1] & blacklist.masks[l][1]
+			ipMask[0] = ipUints[0] & blacklist.masks[l][0]
+		}
+
+		if _, ok := blacklist.nets[l].nets[ipMask]; ok {
+			return true
+		}
+	}
+
+	return false
+
+	// first64 := addressing.GetFirst64BitsOfIP(toTest)
+	// _, ok := blacklist.checks[first64]
+	// return ok
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
+	log.Printf("Loading blacklist from path '%s'.", filePath)
 	networks, err := addressing.ReadIPv6NetworksFromFile(filePath)
+	log.Printf("Read %d networks from file '%s'.", len(networks), filePath)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Creating blacklist from %d networks.", len(networks))
 	return NewNetworkBlacklist(networks), nil
 }
 
