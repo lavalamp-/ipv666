@@ -42,13 +42,13 @@ func LoadBloomFilterFromOutput(conf *config.Configuration) (*bloom.BloomFilter, 
 		return nil, err
 	}
 	log.Printf("%d IP addresses loaded from file '%s'.", len(ips), conf.GetOutputFilePath())
-	bloom := bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
+	newBloom := bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
 	for _, ip := range ips {
 		ipBytes := ([]byte)(*ip)
-		bloom.Add(ipBytes)
+		newBloom.Add(ipBytes)
 	}
 	log.Printf("Created Bloom filter with %d addresses from '%s'.", len(ips), conf.GetOutputFilePath())
-	return bloom, nil
+	return newBloom, nil
 }
 
 func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {

@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func GetFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
+func getFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
 	return GetFirst64BitsOfIP(&network.IP)
 }
 
@@ -67,7 +67,8 @@ func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
 	return toReturn
 }
 
-func CheckNetworkEquality(first *net.IPNet, second *net.IPNet) (bool) {
+func checkNetworkEquality(first *net.IPNet, second *net.IPNet) (bool) {
+	//TODO fix this - checking IPs can fail in this way as the IPNet struct doesn't mask out the address
 	for i := range first.IP {
 		if first.IP[i] != second.IP[i] {
 			return false

@@ -32,7 +32,7 @@ func GetMostRecentFileFromDirectory(dirPath string) (string, error) {
 		log.Printf("Error thrown when reading files from directory '%s': %s", dirPath, err)
 		return "", err
 	}
-	var newestFile string = ""
+	var newestFile = ""
 	var newestTime int64 = 0
 	for _, fi := range files {
 		if fi.Mode().IsRegular() {
@@ -72,7 +72,7 @@ func ZipFiles(inputPaths []string, outputPath string) (error) {
 	log.Printf("Zipping up %d files (at %s) into output path of '%s'.", len(inputPaths), inputPaths, outputPath)
 	outFile, err := os.Create(outputPath)
 	if err != nil {
-		log.Printf("Error thrown when trying to create file at path '%s': %e", outFile, err)
+		log.Printf("Error thrown when trying to create file at path '%s': %e", outputPath, err)
 		return err
 	}
 	defer outFile.Close()
@@ -85,12 +85,12 @@ func ZipFiles(inputPaths []string, outputPath string) (error) {
 			log.Printf("Error thrown when opening file at path '%s': %e", inputPath, err)
 			return err
 		}
-		defer inputFile.Close()
 		if _, err := io.Copy(outZipFile, inputFile); err != nil {
 			log.Printf("Error thrown when trying to add file at '%s' to zip file at '%s': %e", inputPath, outputPath, err)
 			return err
 		}
 		log.Printf("File at path '%s' successfully added to zip file at '%s'.", inputPath, outputPath)
+		inputFile.Close()
 	}
 	log.Printf("Successfully added %d files (at %s) into output zip file at path '%s'.", len(inputPaths), inputPaths, outputPath)
 	return nil
