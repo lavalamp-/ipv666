@@ -5,6 +5,7 @@ import (
 	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
+	"os"
 )
 
 type blacklistPlaceholder struct {}
@@ -158,9 +159,16 @@ func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
 }
 
 func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (error) {
-	var toWrite []*net.IPNet
-	for _, v := range blacklist.Networks {
-		toWrite = append(toWrite, v)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
 	}
-	return addressing.WriteIPv6NetworksToFile(filePath, toWrite)
+	defer file.Close()
+	for _, network := range blacklist.Networks {
+		file.Write(network.IP)
+		ones, _ := network.Mask.Size()
+		length := uint8(ones)
+		file.Write([]byte{length})
+	}
+	return nil
 }

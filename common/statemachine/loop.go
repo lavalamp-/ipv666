@@ -10,6 +10,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+//noinspection GoSnakeCaseUsage
 const (
 	GEN_ADDRESSES	State = iota
 	PING_SCAN_ADDR
@@ -46,7 +47,7 @@ func getTimerKeyForLoop(loop int) (string) {
 	return fmt.Sprintf("loop.state_%d.time", loop)
 }
 
-func getStateLoopTimer(state State, conf *config.Configuration) (metrics.Timer, bool) {
+func getStateLoopTimer(state State) (metrics.Timer, bool) {
 	key := getTimerKeyForLoop((int)(state))
 	timer, found := stateLoopTimers[key]
 	return timer, found
@@ -178,7 +179,7 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		elapsed := time.Since(start)
 		log.Printf("Completed state %d (took %s).", state, elapsed)
 
-		timer, found := getStateLoopTimer(state, conf)
+		timer, found := getStateLoopTimer(state)
 		if !found {
 			log.Printf("Unable to find state loop timer for state %d.", state)
 			if conf.ExitOnFailedMetrics {

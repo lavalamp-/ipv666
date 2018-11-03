@@ -16,11 +16,6 @@ import (
 var blProcessNetMembershipTimer = metrics.NewTimer()
 var blNetDiscoveryCounter = metrics.NewCounter()
 
-type blacklistTracker struct {
-	Count		int
-	Network		*net.IPNet
-}
-
 func init() {
 	metrics.Register("blprocess.net_membership.time", blProcessNetMembershipTimer)
 	metrics.Register("blprocess.new_nets.count", blNetDiscoveryCounter)
@@ -53,7 +48,7 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	}
 
 	// Identify the networks with a hit rate above the defined threshold
-	blnets := []uint64{}
+	var blnets []uint64
 	threshold := (uint)(float64(conf.NetworkPingCount) * conf.NetworkBlacklistPercent)
 	for n, c := range nets {
 		if c >= threshold {
@@ -72,7 +67,10 @@ func processBlacklistScanResults(conf *config.Configuration) (error) {
 	for _, n := range blnets {
 		b := make([]byte, 16)
 		binary.LittleEndian.PutUint64(b, uint64(n))
-		blnet := net.IPNet{b, mask}
+		blnet := net.IPNet{
+			IP: b,
+			Mask: mask,
+		}
 		blacklistNets = append(blacklistNets, &blnet)
 	}
 

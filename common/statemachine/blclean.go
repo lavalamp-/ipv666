@@ -32,20 +32,20 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	}
 	log.Printf("Total of %d addresses to clean.", len(addrs))
 	start := time.Now()
-	cleaned_addrs := blacklist.CleanIPList(addrs, conf.LogLoopEmitFreq)
+	cleanedAddrs := blacklist.CleanIPList(addrs, conf.LogLoopEmitFreq)
 	elapsed := time.Since(start)
 	blRemovalDurationTimer.Update(elapsed)
-	blRemovalCount.Inc(int64(len(addrs) - len(cleaned_addrs)))
-	blLegitimateCount.Inc(int64(len(cleaned_addrs)))
-	log.Printf("Resulting cleaned list contains %d addresses (down from %d). Cleaned in %s.", len(cleaned_addrs), len(addrs), elapsed)
+	blRemovalCount.Inc(int64(len(addrs) - len(cleanedAddrs)))
+	blLegitimateCount.Inc(int64(len(cleanedAddrs)))
+	log.Printf("Resulting cleaned list contains %d addresses (down from %d). Cleaned in %s.", len(cleanedAddrs), len(addrs), elapsed)
 	outputPath := fs.GetTimedFilePath(conf.GetCleanPingDirPath())
 	log.Printf("Writing resulting cleaned ping addresses to file at path '%s'.", outputPath)
-	err = addressing.WriteIPsToBinaryFile(outputPath, cleaned_addrs)
+	err = addressing.WriteIPsToBinaryFile(outputPath, cleanedAddrs)
 	if err != nil {
 		return err
 	}
 	log.Printf("Cleaned ping results successfully written to path '%s'.", outputPath)
 	//TODO aggregate all found IP addresses
-	data.UpdateCleanPingResults(cleaned_addrs, outputPath)
+	data.UpdateCleanPingResults(cleanedAddrs, outputPath)
 	return nil
 }

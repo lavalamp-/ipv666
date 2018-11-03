@@ -96,7 +96,7 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIP(fromNybble uint8) (
 	return &newIP
 }
 
-func GenerateAddressModel(ips []*net.IP, name string, updateInterval int) (*ProbabilisticAddressModel) {
+func generateAddressModel(ips []*net.IP, name string, updateInterval int) (*ProbabilisticAddressModel) {
 	toReturn := NewAddressModel(name)
 	toReturn.UpdateMultiIP(ips, updateInterval)
 	return toReturn
@@ -115,7 +115,7 @@ func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateI
 
 func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP) () {
 	fromNybble := addressing.GetNybbleFromIP(ip, 0)
-	for i, nybbleModel := range(addrModel.NybbleModels) {
+	for i, nybbleModel := range addrModel.NybbleModels {
 		toNybble := addressing.GetNybbleFromIP(ip, i+1)
 		nybbleModel.update(fromNybble, toNybble)
 		fromNybble = toNybble

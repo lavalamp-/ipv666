@@ -45,6 +45,6 @@ func updateAddressFile(conf *config.Configuration) (error) {
 	}
 	elapsed := time.Since(start)
 	addressUpdateTimer.Update(elapsed)
-	fmt.Sprintf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
+	log.Printf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
 	return nil
 }
