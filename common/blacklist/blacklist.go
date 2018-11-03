@@ -31,7 +31,7 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	}
 
 	// Build the per-length masks
-	for l := 0; l < 128; l++ {
+	for l := 0; l < 129; l++ {
 		toReturn.masks[l] = &[2]uint64{}
 		if l <= 64 {
 			toReturn.masks[l][1] = 0

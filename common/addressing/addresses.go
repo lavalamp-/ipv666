@@ -76,7 +76,7 @@ func GetTextLinesFromIPs(addrs []*net.IP) (string) {
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 	file, err := os.Open(filePath)
-	reader := bufio.NewReader(file)
+	// reader := bufio.NewReader(file)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 	buffer := make([]byte, 16)
 	var toReturn []*net.IP
 	for {
-		_, err := reader.Read(buffer)
+		_, err := file.Read(buffer)
 		if err != nil {
 			if err != io.EOF {
 				return nil, err
