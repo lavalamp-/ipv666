@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"encoding/binary"
+	"github.com/lavalamp-/ipv666/common/zrandom"
 )
 
 func GetFirst64BitsOfIP(ip *net.IP) (uint64) {
@@ -125,4 +126,56 @@ func GetNybbleFromIP(ip *net.IP, index int) (uint8) {
 	} else {
 		return addrByte & 0xf
 	}
+}
+
+func GenerateRandomAddress() (*net.IP) {
+	bytes := zrandom.GenerateHostBits(128)
+	toReturn := net.IP(bytes)
+	return &toReturn
+}
+
+func FlipBitsInAddress(toFlip net.IP, startIndex uint8, endIndex uint8) (*net.IP) {
+	endIndex++
+	startByte := startIndex / 8
+	startOffset := startIndex % 8
+	endByte := endIndex / 8
+	endOffset := endIndex % 8
+	var maskBytes []byte
+	var flipBytes []byte
+	var i uint8
+
+	if startByte == endByte {
+		for i = 0; i < 16; i++ {
+			if i == startByte {
+				firstHalf := byte(^(0xff >> startOffset))
+				secondHalf := byte(0xff >> endOffset)
+				maskBytes = append(maskBytes, firstHalf | secondHalf)
+			} else {
+				maskBytes = append(maskBytes, 0xff)
+			}
+		}
+	} else {
+		for i = 0; i < 16; i++ {
+			if i < startByte {
+				maskBytes = append(maskBytes, 0xff)
+			} else if i == startByte {
+				maskBytes = append(maskBytes, byte(^(0xff >> startOffset)))
+			} else if i < endByte {
+				maskBytes = append(maskBytes, 0x00)
+			} else if i == endByte {
+				maskBytes = append(maskBytes, byte(0xff >> endOffset))
+			} else {
+				maskBytes = append(maskBytes, 0xff)
+			}
+		}
+	}
+
+	for i = 0; i < 16; i++ {
+		flippedBits := ^toFlip[i] & ^maskBytes[i]
+		flipBytes = append(flipBytes, toFlip[i] & maskBytes[i] | flippedBits)
+	}
+
+	toReturn := net.IP(flipBytes)
+	return &toReturn
+
 }

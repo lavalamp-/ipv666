@@ -4,11 +4,25 @@ import (
 	"testing"
 	"net"
 	"github.com/stretchr/testify/assert"
+	"github.com/lavalamp-/ipv666/common/addressing"
 )
 
 func getTestAddress() (*net.IP) {
 	toReturn := net.ParseIP("2001:0:4137:9e76:38c1:3e16:6ac9:506a")
 	return &toReturn
+}
+
+func getFoundAddrsMap(toInclude []*net.IP, addrCount int) (map[string]*Empty) {
+	toReturn := make(map[string]*Empty)
+	placeholder := &Empty{}
+	for _, curInclude := range toInclude {
+		toReturn[curInclude.String()] = placeholder
+	}
+	for len(toReturn) < addrCount {
+		newAddr := addressing.GenerateRandomAddress()
+		toReturn[newAddr.String()] = placeholder
+	}
+	return toReturn
 }
 
 func TestNewAliasCheckStateRightError(t *testing.T) {
@@ -47,24 +61,54 @@ func TestAliasCheckState_GetBaseAddress(t *testing.T) {
 	assert.Equal(t, testAddress, acs.GetBaseAddress())
 }
 
-func TestAliasCheckState_GetMiddleOdd(t *testing.T) {
-	acs, _ := NewAliasCheckState(getTestAddress(), 10, 21)
-	assert.EqualValues(t, 16, acs.GetMiddle())
+func TestAliasCheckState_GetLeftTestIndexZero(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 16, 17)
+	assert.EqualValues(t, acs.GetRight(), acs.GetLeftTestIndex())
 }
 
-func TestAliasCheckState_GetMiddleEven(t *testing.T) {
+func TestAliasCheckState_GetLeftTestIndexOne(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 16, 18)
+	assert.EqualValues(t, 17, acs.GetLeftTestIndex())
+}
+
+func TestAliasCheckState_GetLeftTestIndexOdd(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 10, 19)
+	assert.EqualValues(t, 15, acs.GetLeftTestIndex())
+}
+
+func TestAliasCheckState_GetLeftTestIndexEven(t *testing.T) {
 	acs, _ := NewAliasCheckState(getTestAddress(), 10, 20)
-	assert.EqualValues(t, 16, acs.GetMiddle())
+	assert.EqualValues(t, 15, acs.GetLeftTestIndex())
 }
 
-func TestAliasCheckState_GetMiddleOneDistance(t *testing.T) {
-	acs, _ := NewAliasCheckState(getTestAddress(), 10, 11)
-	assert.EqualValues(t, 11, acs.GetMiddle())
-}
-
-func TestAliasCheckState_GetMiddleMaxDistance(t *testing.T) {
+func TestAliasCheckState_GetLeftTestIndex(t *testing.T) {
 	acs, _ := NewAliasCheckState(getTestAddress(), 0, 127)
-	assert.EqualValues(t, 64, acs.GetMiddle())
+	assert.EqualValues(t, 64, acs.GetLeftTestIndex())
+}
+
+func TestAliasCheckState_GetRightTestIndexZero(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 16, 17)
+	assert.EqualValues(t, acs.GetRight(), acs.GetRightTestIndex())
+}
+
+func TestAliasCheckState_GetRightTestIndexOne(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 16, 18)
+	assert.EqualValues(t, 17, acs.GetRightTestIndex())
+}
+
+func TestAliasCheckState_GetRightTestIndexOdd(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 10, 19)
+	assert.EqualValues(t, 18, acs.GetRightTestIndex())
+}
+
+func TestAliasCheckState_GetRightTestIndexEven(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 10, 20)
+	assert.EqualValues(t, 19, acs.GetRightTestIndex())
+}
+
+func TestAliasCheckState_GetRightTestIndex(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 0, 127)
+	assert.EqualValues(t, 126, acs.GetRightTestIndex())
 }
 
 func TestAliasCheckState_GetTestDistanceOne(t *testing.T) {
@@ -89,10 +133,44 @@ func TestAliasCheckState_GetTestBitCountOne(t *testing.T) {
 
 func TestAliasCheckState_GetTestBitCountMax(t *testing.T) {
 	acs, _ := NewAliasCheckState(getTestAddress(), 0, 127)
-	assert.EqualValues(t, 64, acs.GetTestBitCount())
+	assert.EqualValues(t, 63, acs.GetTestBitCount())
 }
 
 func TestAliasCheckState_GetTestBitCount(t *testing.T) {
 	acs, _ := NewAliasCheckState(getTestAddress(), 0, 7)
-	assert.EqualValues(t, 4, acs.GetTestBitCount())
+	assert.EqualValues(t, 3, acs.GetTestBitCount())
 }
+
+//func TestAliasCheckState_UpdateFoundPosition(t *testing.T) {
+//	addr, addrMap := getDefaultTestAddrAndMap(true)
+//	acs, _ := NewAliasCheckState(addr, 0, 127)
+//	middle := acs.GetMiddle()
+//	acs.Update(addrMap)
+//	assert.Equal(t, middle, acs.GetRight())
+//}
+//
+//func TestAliasCheckState_UpdateNotFoundPosition(t *testing.T) {
+//	addr, addrMap := getDefaultTestAddrAndMap(false)
+//	acs, _ := NewAliasCheckState(addr, 0, 127)
+//	middle := acs.GetMiddle()
+//	acs.Update(addrMap)
+//	assert.Equal(t, middle, acs.GetLeft())
+//}
+//
+//func TestAliasCheckState_UpdateFoundNotFinished(t *testing.T) {
+//	addr, addrMap := getDefaultTestAddrAndMap(true)
+//	acs, _ := NewAliasCheckState(addr, 0, 127)
+//	acs.Update(addrMap)
+//	assert.False(t, acs.GetFound())
+//}
+//
+//func TestAliasCheckState_UpdateFoundFinished(t *testing.T) {
+//	addr, addrMap := getDefaultTestAddrAndMap(true)
+//	acs, _ := NewAliasCheckState(addr, 0, 127)
+//	acs.Update(addrMap)
+//	assert.False(t, acs.GetFound())
+//}
+//
+//func TestAliasCheckState_UpdateEmptyAddr(t *testing.T) {
+//
+//}
