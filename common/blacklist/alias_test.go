@@ -12,6 +12,15 @@ func getTestAddress() (*net.IP) {
 	return &toReturn
 }
 
+func getTestAddress2() (*net.IP) {
+	toReturn := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	return &toReturn
+}
+
+func getTestAddresses() ([]*net.IP) {
+	return []*net.IP{getTestAddress(), getTestAddress2()}
+}
+
 func getFoundAddrsMap(toInclude []*net.IP, addrCount int) (map[string]*Empty) {
 	toReturn := make(map[string]*Empty)
 	placeholder := &Empty{}
@@ -141,36 +150,166 @@ func TestAliasCheckState_GetTestBitCount(t *testing.T) {
 	assert.EqualValues(t, 3, acs.GetTestBitCount())
 }
 
-//func TestAliasCheckState_UpdateFoundPosition(t *testing.T) {
-//	addr, addrMap := getDefaultTestAddrAndMap(true)
-//	acs, _ := NewAliasCheckState(addr, 0, 127)
-//	middle := acs.GetMiddle()
-//	acs.Update(addrMap)
-//	assert.Equal(t, middle, acs.GetRight())
-//}
-//
-//func TestAliasCheckState_UpdateNotFoundPosition(t *testing.T) {
-//	addr, addrMap := getDefaultTestAddrAndMap(false)
-//	acs, _ := NewAliasCheckState(addr, 0, 127)
-//	middle := acs.GetMiddle()
-//	acs.Update(addrMap)
-//	assert.Equal(t, middle, acs.GetLeft())
-//}
-//
-//func TestAliasCheckState_UpdateFoundNotFinished(t *testing.T) {
-//	addr, addrMap := getDefaultTestAddrAndMap(true)
-//	acs, _ := NewAliasCheckState(addr, 0, 127)
-//	acs.Update(addrMap)
-//	assert.False(t, acs.GetFound())
-//}
-//
-//func TestAliasCheckState_UpdateFoundFinished(t *testing.T) {
-//	addr, addrMap := getDefaultTestAddrAndMap(true)
-//	acs, _ := NewAliasCheckState(addr, 0, 127)
-//	acs.Update(addrMap)
-//	assert.False(t, acs.GetFound())
-//}
-//
-//func TestAliasCheckState_UpdateEmptyAddr(t *testing.T) {
-//
-//}
+func TestAliasCheckState_GenerateTestAddressNotNil(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 16, 127)
+	acs.GenerateTestAddress()
+	assert.NotNil(t, acs.GetTestAddr())
+}
+
+func TestAliasCheckState_GenerateTestAddress(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 127)
+	acs.GenerateTestAddress()
+	expectedAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aa55:5555:5555:5554")
+	assert.Equal(t, expectedAddr.String(), acs.GetTestAddr().String())
+}
+
+func TestAliasCheckState_UpdateFoundPosition(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 127)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{acs.GetTestAddr()}, 10)
+	expectedPosition := acs.GetLeftTestIndex()
+	acs.Update(foundAddrs)
+	assert.EqualValues(t, expectedPosition, acs.GetRight())
+}
+
+func TestAliasCheckState_UpdateNotFoundPosition(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 127)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{}, 10)
+	expectedPosition := acs.GetLeftTestIndex()
+	acs.Update(foundAddrs)
+	assert.EqualValues(t, expectedPosition, acs.GetLeft())
+}
+
+func TestAliasCheckState_UpdateFoundNotFinished(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 127)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{acs.GetTestAddr()}, 10)
+	acs.Update(foundAddrs)
+	assert.False(t, acs.GetFound())
+}
+
+func TestAliasCheckState_UpdateFoundFinished(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 18)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{acs.GetTestAddr()}, 10)
+	acs.Update(foundAddrs)
+	assert.True(t, acs.GetFound())
+}
+
+func TestAliasCheckState_UpdateEmptyAddr(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 16, 18)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{acs.GetTestAddr()}, 10)
+	acs.Update(foundAddrs)
+	assert.Nil(t, acs.GetTestAddr())
+}
+
+func TestAliasCheckState_GetAliasedNetworkError(t *testing.T) {
+	acs, _ := NewAliasCheckState(getTestAddress(), 0, 127)
+	_, err := acs.GetAliasedNetwork()
+	assert.NotNil(t, err)
+}
+
+func TestAliasCheckState_GetAliasedNetwork(t *testing.T) {
+	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	acs, _ := NewAliasCheckState(&testAddr, 15, 17)
+	acs.GenerateTestAddress()
+	foundAddrs := getFoundAddrsMap([]*net.IP{acs.GetTestAddr()}, 10)
+	acs.Update(foundAddrs)
+	network, _ := acs.GetAliasedNetwork()
+	assert.Equal(t, "aaaa::/16", network.String())
+}
+
+func TestNewAliasCheckStatesRightError(t *testing.T) {
+	_, err := NewAliasCheckStates(getTestAddresses(), 16, 128)
+	assert.NotNil(t, err)
+}
+
+func TestNewAliasCheckStatesRightLessThanLeftError(t *testing.T) {
+	_, err := NewAliasCheckStates(getTestAddresses(), 16, 15)
+	assert.NotNil(t, err)
+}
+
+func TestAliasCheckStates_GetChecksCount(t *testing.T) {
+	acs, _ := NewAliasCheckStates(getTestAddresses(), 16, 127)
+	assert.EqualValues(t, 2, acs.GetChecksCount())
+}
+
+func TestAliasCheckStates_GetFoundCountInit(t *testing.T) {
+	acs, _ := NewAliasCheckStates(getTestAddresses(), 16, 127)
+	assert.EqualValues(t, 0, acs.GetFoundCount())
+}
+
+func TestAliasCheckStates_GetFoundCount(t *testing.T) {
+	addr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	addr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff")
+	addrs := []*net.IP{&addr1, &addr2}
+	acs, _ := NewAliasCheckStates(addrs, 95, 97)
+	foundAddr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:2aaa:aaaa")
+	foundAddr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:7fff:ffff")
+	foundAddrs := getFoundAddrsMap([]*net.IP{&foundAddr1, &foundAddr2}, 10)
+	acs.GenerateTestAddresses()
+	acs.Update(foundAddrs)
+	assert.EqualValues(t, 2, acs.GetFoundCount())
+}
+
+func TestAliasCheckStates_GetAllFoundInit(t *testing.T) {
+	acs, _ := NewAliasCheckStates(getTestAddresses(), 16, 127)
+	assert.False(t, acs.GetAllFound())
+}
+
+func TestAliasCheckStates_GetAllFoundTrue(t *testing.T) {
+	addr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	addr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff")
+	addrs := []*net.IP{&addr1, &addr2}
+	acs, _ := NewAliasCheckStates(addrs, 95, 97)
+	foundAddr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:2aaa:aaaa")
+	foundAddr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:7fff:ffff")
+	foundAddrs := getFoundAddrsMap([]*net.IP{&foundAddr1, &foundAddr2}, 10)
+	acs.GenerateTestAddresses()
+	acs.Update(foundAddrs)
+	assert.True(t, acs.GetAllFound())
+}
+
+func TestAliasCheckStates_GetAllFoundFalse(t *testing.T) {
+	addr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	addr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff")
+	addrs := []*net.IP{&addr1, &addr2}
+	acs, _ := NewAliasCheckStates(addrs, 10, 97)
+	foundAddr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:2aaa:aaaa")
+	foundAddr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:7fff:ffff")
+	foundAddrs := getFoundAddrsMap([]*net.IP{&foundAddr1, &foundAddr2}, 10)
+	acs.GenerateTestAddresses()
+	acs.Update(foundAddrs)
+	assert.False(t, acs.GetAllFound())
+}
+
+func TestAliasCheckStates_GetAliasedNetworksError(t *testing.T) {
+	addr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	addr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff")
+	addrs := []*net.IP{&addr1, &addr2}
+	acs, _ := NewAliasCheckStates(addrs, 95, 97)
+	_, err := acs.GetAliasedNetworks()
+	assert.NotNil(t, err)
+}
+
+func TestAliasCheckStates_GetAliasedNetworks(t *testing.T) {
+	addr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")
+	addr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff")
+	addrs := []*net.IP{&addr1, &addr2}
+	acs, _ := NewAliasCheckStates(addrs, 95, 97)
+	foundAddr1 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:2aaa:aaaa")
+	foundAddr2 := net.ParseIP("aaaa:aaaa:aaaa:aaaa:ffff:ffff:7fff:ffff")
+	foundAddrs := getFoundAddrsMap([]*net.IP{&foundAddr1, &foundAddr2}, 10)
+	acs.GenerateTestAddresses()
+	acs.Update(foundAddrs)
+	nets, _ := acs.GetAliasedNetworks()
+	assert.NotNil(t, nets)
+}

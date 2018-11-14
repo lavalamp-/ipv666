@@ -8,7 +8,7 @@ import (
 func main() {
 	ip_1 := net.ParseIP("aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff:ffff")
 
-	addressing.FlipBitsInAddress(ip_1, 12, 35)
+	addressing.FlipBitsInAddress(&ip_1, 12, 35)
 
 	//var i uint8
 	//for i = 8; i < 32; i++ {

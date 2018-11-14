@@ -134,7 +134,8 @@ func GenerateRandomAddress() (*net.IP) {
 	return &toReturn
 }
 
-func FlipBitsInAddress(toFlip net.IP, startIndex uint8, endIndex uint8) (*net.IP) {
+func FlipBitsInAddress(toFlip *net.IP, startIndex uint8, endIndex uint8) (*net.IP) {
+	toFlipBytes := *toFlip
 	endIndex++
 	startByte := startIndex / 8
 	startOffset := startIndex % 8
@@ -171,8 +172,8 @@ func FlipBitsInAddress(toFlip net.IP, startIndex uint8, endIndex uint8) (*net.IP
 	}
 
 	for i = 0; i < 16; i++ {
-		flippedBits := ^toFlip[i] & ^maskBytes[i]
-		flipBytes = append(flipBytes, toFlip[i] & maskBytes[i] | flippedBits)
+		flippedBits := ^toFlipBytes[i] & ^maskBytes[i]
+		flipBytes = append(flipBytes, toFlipBytes[i] & maskBytes[i] | flippedBits)
 	}
 
 	toReturn := net.IP(flipBytes)

@@ -5,6 +5,8 @@ import (
 	"math"
 	"errors"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"log"
 )
 
 type Empty struct {}
@@ -106,31 +108,112 @@ func (state *AliasCheckState) GetPossibleTestAddressCount() (uint64, bool) {
 }
 
 func (state *AliasCheckState) GenerateTestAddress() () {
-
+	state.testAddr = addressing.FlipBitsInAddress(state.baseAddress, state.GetLeftTestIndex(), state.GetRightTestIndex())
 }
 
 func (state *AliasCheckState) Update(foundAddrs map[string]*Empty) () {
 	//// TODO for set membership checks, i'm guessing strings are expensive. how about 128bit int?
 	//// TODO by only checking for a single address, we risk marking ranges as aliased when they aren't. small amount of error, but could be a lot of effort to fix.
-	//
-	//if _, ok := foundAddrs[state.testAddr.String()]; ok {
-	//	// The bit flipped address responded, meaning the range is aliased
-	//	state.rightPosition = state.GetMiddle()
-	//} else {
-	//	// The bit flipped address did not respond, meaning the range is not aliased
-	//	state.leftPosition = state.GetMiddle()
-	//}
-	//
-	//// If the distance between left and right is 1 then we've found the aliased network threshold
-	//if state.GetTestDistance() == 1 {
-	//	state.found = true
-	//}
-	//
-	//// Empty out the list of test addresses to preserve memory
-	//state.testAddr = nil
+
+	if _, ok := foundAddrs[state.testAddr.String()]; ok {
+		// The bit flipped address responded, meaning the range is aliased
+		state.rightPosition = state.GetLeftTestIndex()
+	} else {
+		// The bit flipped address did not respond, meaning the range is not aliased
+		state.leftPosition = state.GetLeftTestIndex()
+	}
+
+	// If the distance between left and right is 1 then we've found the aliased network threshold
+	if state.GetTestDistance() == 1 {
+		state.found = true
+	}
+
+	// Empty out the list of test addresses to preserve memory
+	state.testAddr = nil
 
 }
 
-func (state *AliasCheckState) GenerateTestAddresses() () {
+func (state *AliasCheckState) GetAliasedNetwork() (*net.IPNet, error) {
+	if !state.found {
+		return nil, errors.New("attempted to get aliased network from AliasCheckState that hadn't found the network yet")
+	} else {
+		cidrString := fmt.Sprintf("%s/%d", state.baseAddress, state.rightPosition)
+		_, ipnet, err := net.ParseCIDR(cidrString)
+		return ipnet, err
+	}
+}
 
+type AliasCheckStates struct {
+	checks				[]*AliasCheckState
+}
+
+func NewAliasCheckStates(addrs []*net.IP, left uint8, right uint8) (*AliasCheckStates, error) {
+	var checkStates []*AliasCheckState
+	for _, addr := range addrs {
+		newState, err := NewAliasCheckState(addr, left, right)
+		if err != nil {
+			return nil, err
+		}
+		checkStates = append(checkStates, newState)
+	}
+	toReturn := &AliasCheckStates{
+		checks:		checkStates,
+	}
+	return toReturn, nil
+}
+
+func (states *AliasCheckStates) GetChecksCount() (int) {
+	return len(states.checks)
+}
+
+func (states *AliasCheckStates) GetFoundCount() (int) {
+	toReturn := 0
+	for _, check := range states.checks {
+		if check.GetFound() {
+			toReturn++
+		}
+	}
+	return toReturn
+}
+
+func (states *AliasCheckStates) GenerateTestAddresses() () {
+	for _, check := range states.checks {
+		check.GenerateTestAddress()
+	}
+}
+
+func (states *AliasCheckStates) GetAllFound() (bool) {
+	return states.GetChecksCount() == states.GetFoundCount()
+}
+
+func (states *AliasCheckStates) GetAliasedNetworks() ([]*net.IPNet, error) {
+	if !states.GetAllFound() {
+		return nil, errors.New("attempted to get aliased networks from an AliasCheckStates when not all checks were found")
+	}
+	var toReturn []*net.IPNet
+	for _, check := range states.checks {
+		aliasedNet, err := check.GetAliasedNetwork()
+		if err != nil {
+			return nil, err
+		}
+		toReturn = append(toReturn, aliasedNet)
+	}
+	return toReturn, nil
+}
+
+func (states *AliasCheckStates) Update(foundAddrs map[string]*Empty) () {
+	for _, check := range states.checks {
+		check.Update(foundAddrs)
+	}
+}
+
+func (states *AliasCheckStates) PrintAliasedNetworks() (error) {
+	networks, err := states.GetAliasedNetworks()
+	if err != nil {
+		return err
+	}
+	for i, network := range networks {
+		log.Printf("Network %d: %s", i, network)
+	}
+	return nil
 }
