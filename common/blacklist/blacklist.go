@@ -30,7 +30,7 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	}
 
 	// Build the per-length masks
-	for l := 0; l < 128; l++ {
+	for l := 0; l < 129; l++ {
 		toReturn.masks[l] = &[2]uint64{}
 		if l <= 64 {
 			toReturn.masks[l][1] = 0
@@ -113,7 +113,7 @@ func (blacklist *NetworkBlacklist) AddNetwork(toAdd *net.IPNet) (bool) {
 func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
 	for i, curClean := range toClean {
-		if i % emitFreq == 0 {
+		if i % emitFreq == 0 && i != 0 {
 			log.Printf("Cleaning entry %d out of %d.", i, len(toClean))
 		}
 		if !blacklist.IsIPBlacklisted(curClean) {
