@@ -15,9 +15,8 @@ const (
 	GEN_ADDRESSES	State = iota
 	PING_SCAN_ADDR
 	NETWORK_GROUP
-	GEN_NET_ADDRS
-	PING_SCAN_NET
-	PROCESS_BL_CHECK_RESULTS
+	SEEK_ALIASED_NETWORKS
+	PROCESS_ALIASED_NETWORKS
 	REM_BAD_ADDR
 	UPDATE_MODEL
 	UPDATE_ADDR_FILE
@@ -115,21 +114,15 @@ func RunStateMachine(conf *config.Configuration) (error) {
 			if err != nil {
 				return err
 			}
-		case GEN_NET_ADDRS:
-			// Generate addresses from the network ranges assembled in the previous step
-			err := generateNetworkAddresses(conf) // Looking gr8
+		case SEEK_ALIASED_NETWORKS:
+			// Seek out aliased networks
+			err := seekAliasedNetworks(conf) // Looking gr8
 			if err != nil {
 				return err
 			}
-		case PING_SCAN_NET:
-			// Test each of the network ranges to see if the range responds to every IP address
-			err := zmapScanNetworkRanges(conf) // Looking gr8
-			if err != nil {
-				return err
-			}
-		case PROCESS_BL_CHECK_RESULTS:
-			// Process the results of the network range ping scans and update the blacklist
-			err := processBlacklistScanResults(conf) // Looking gr8
+		case PROCESS_ALIASED_NETWORKS:
+			// Process the results of aliased network seeking (add to blacklist and de-dupe)
+			err := processAliasedNetworks(conf) // Looking gr8
 			if err != nil {
 				return err
 			}

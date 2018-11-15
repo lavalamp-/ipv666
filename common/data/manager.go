@@ -28,6 +28,40 @@ var curCleanPingResults []*net.IP
 var curCleanPingResultsPath string
 var curBloomFilter *bloom.BloomFilter
 var curBloomFilterPath string
+var curAliasedNetworks []*net.IPNet
+var curAliasedNetworksPath string
+
+
+func UpdateAliasedNetworks(nets []*net.IPNet, filePath string) {
+	curAliasedNetworks = nets
+	curAliasedNetworksPath = filePath
+}
+
+func GetAliasedNetworks(conf *config.Configuration) ([]*net.IPNet, error) {
+	aliasedDir := conf.GetAliasedNetworkDirPath()
+	log.Printf("Attempting to retrieve most recent aliased networks from directory '%s'.", aliasedDir)
+	fileName, err := fs.GetMostRecentFileFromDirectory(aliasedDir)
+	if err != nil {
+		log.Printf("Error thrown when retrieving aliased networks from directory '%s': %s", aliasedDir, err)
+		return nil, err
+	} else if fileName == "" {
+		log.Printf("The directory at '%s' was empty.", aliasedDir)
+		return nil, errors.New(fmt.Sprintf("No aliased networks were found in directory %s.", aliasedDir))
+	}
+	filePath := filepath.Join(aliasedDir, fileName)
+	log.Printf("Most recent aliased networks file is at path '%s'.", filePath)
+	if filePath == curAliasedNetworksPath {
+		log.Printf("Already have aliased networks from path '%s' loaded in memory. Returning.", filePath)
+		return curAliasedNetworks, nil
+	} else {
+		log.Printf("Loading aliased networks from path '%s'.", filePath)
+		toReturn, err := addressing.ReadIPv6NetworksFromFile(filePath)
+		if err != nil {
+			UpdateAliasedNetworks(toReturn, filePath)
+		}
+		return toReturn, err
+	}
+}
 
 func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
 	curBloomFilter = filter

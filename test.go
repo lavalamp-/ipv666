@@ -1,50 +1,62 @@
 package main
 
 import (
-	"log"
-	"github.com/lavalamp-/ipv666/common/addressing"
-
-	"github.com/lavalamp-/ipv666/common/zrandom"
-	"math/rand"
-	"time"
-	"path/filepath"
-	"os"
-	"fmt"
 	"net"
-	"github.com/willf/bloom"
-	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common/blacklist"
+	"fmt"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 func main() {
+	ip_1 := net.ParseIP("aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff:ffff")
+
+	addressing.FlipBitsInAddress(&ip_1, 12, 35)
+
+	_, netty, _ := net.ParseCIDR("ffff::/16")
+	fmt.Printf("WHATTTTT: %s\n", netty)
+	bl := blacklist.NewNetworkBlacklist([]*net.IPNet{netty})
+	ip_2 := net.ParseIP("ffff::32")
+	fmt.Printf("HEREEEE: %s\n", ip_2)
+	fmt.Printf("UMMMM: %t\n", netty.Contains(ip_2))
+	supahfly := bl.GetBlacklistingNetworkFromIP(&ip_2)
+	fmt.Printf("Got this: %s", supahfly)
+
+	fmt.Printf("Hereee: %s", fs.GetTemporaryFilePath())
+
+	//var i uint8
+	//for i = 8; i < 32; i++ {
+	//	addressing.FlipBitsInAddress(ip_1, 8, i)
+	//}
 	//statemachine.SetStateFile("ipv6results/state.txt", statemachine.NETWORK_GROUP)
 	//log.Fatal("LULZ!")
-	rand.Seed(time.Now().UTC().UnixNano())
-	log.Printf("Hello world")
-	log.Printf("%d", 65 % 8)
-	var i uint
-	for i = 0; i < 9; i++ {
-		curByte := addressing.GetByteWithBitsMasked(i)
-		log.Printf("Here (%d): %x", i, curByte)
-	}
+	//rand.Seed(time.Now().UTC().UnixNano())
+	//log.Printf("Hello world")
+	//log.Printf("%d", 65 % 8)
+	//var i uint
+	//for i = 0; i < 9; i++ {
+	//	curByte := addressing.GetByteWithBitsMasked(i)
+	//	log.Printf("Here (%d): %x", i, curByte)
+	//}
 	//byteMask := addressing.GetByteMask(66)
 	//log.Printf("Here: %x", byteMask)
-	for i := 0; i < 129; i++ {
-		hostBits := zrandom.GenerateHostBits(i)
-		log.Printf("Here (%d): %08b", i, hostBits)
-		//byteMask := addressing.GetByteMask(i)
-		//log.Printf("Here (%d): %x", i, byteMask)
-	}
-	var files []string
-	err := filepath.Walk("ipv6results", func(path string, info os.FileInfo, err error) (error) {
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	for _, file := range files {
-		fmt.Println(file)
-	}
+	//for i := 0; i < 129; i++ {
+	//	hostBits := zrandom.GenerateHostBits(i)
+	//	log.Printf("Here (%d): %08b", i, hostBits)
+	//	//byteMask := addressing.GetByteMask(i)
+	//	//log.Printf("Here (%d): %x", i, byteMask)
+	//}
+	//var files []string
+	//err := filepath.Walk("ipv6results", func(path string, info os.FileInfo, err error) (error) {
+	//	files = append(files, path)
+	//	return nil
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
+	//for _, file := range files {
+	//	fmt.Println(file)
+	//}
 	//addrs, err := addressing.ReadIPsFromBinaryFile("ipv6_addresses_2.bin")
 	//if err != nil {
 	//	panic(err)
@@ -61,45 +73,45 @@ func main() {
 	//} else {
 	//	log.Printf("Nope")
 	//}
-	_, ipnet1, _ := net.ParseCIDR("2001:db8::/32")
+	//_, ipnet1, _ := net.ParseCIDR("2001:db8::/32")
 	//randAddrs := addressing.GenerateRandomAddressesInNetwork(ipnet1, 20)
 	//log.Printf("Here: %s", randAddrs)
-	_, ipnet2, _ := net.ParseCIDR("2002:db8::/32")
-	_, ipnet3, _ := net.ParseCIDR("2003:db8::/32")
-	_, ipnet4, _ := net.ParseCIDR("2001:db8::/32")
-	_, ipnet5, _ := net.ParseCIDR("2002:db8::/32")
-	_, ipnet6, _ := net.ParseCIDR("2003:db8::/32")
-	ipnets := []*net.IPNet{ipnet1, ipnet2, ipnet3, ipnet4, ipnet5, ipnet6}
-	othernets := addressing.GetUniqueNetworks(ipnets, 100)
-	log.Printf("Othernets: %s", othernets)
-	filter := bloom.New(10000000000, 7)
-	model, err := data.GetProbabilisticAddressModel("ipv6results/models")
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Generating addresses")
-	addrs := model.GenerateMultiIP(2,10000000, 100000)
-	log.Printf("Updating filter")
-	for i, addr := range addrs {
-		if i % 100000 == 0 {
-			log.Printf("Here: %d out of %d", i, len(addrs))
-		}
-		addrBytes := ([]byte)(*addr)
-		filter.Add(addrBytes)
-	}
-	log.Printf("Updated filter with 10m addresses.")
-	file, err := os.OpenFile("tester.bin", os.O_WRONLY | os.O_CREATE, 0600)
-	if err != nil {
-		panic(err)
-	}
-	bytesWritten, err := filter.WriteTo(file)
-	if err != nil {
-		panic(err)
-	}
-	if bytesWritten <= 0 {
-		panic(fmt.Sprintf("Dog wtf: %d", bytesWritten))
-	}
-	log.Printf("WE DID IT WOOOO")
+	//_, ipnet2, _ := net.ParseCIDR("2002:db8::/32")
+	//_, ipnet3, _ := net.ParseCIDR("2003:db8::/32")
+	//_, ipnet4, _ := net.ParseCIDR("2001:db8::/32")
+	//_, ipnet5, _ := net.ParseCIDR("2002:db8::/32")
+	//_, ipnet6, _ := net.ParseCIDR("2003:db8::/32")
+	//ipnets := []*net.IPNet{ipnet1, ipnet2, ipnet3, ipnet4, ipnet5, ipnet6}
+	//othernets := addressing.GetUniqueNetworks(ipnets, 100)
+	//log.Printf("Othernets: %s", othernets)
+	//filter := bloom.New(10000000000, 7)
+	//model, err := data.GetProbabilisticAddressModel("ipv6results/models")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//log.Printf("Generating addresses")
+	//addrs := model.GenerateMultiIP(2,10000000, 100000)
+	//log.Printf("Updating filter")
+	//for i, addr := range addrs {
+	//	if i % 100000 == 0 {
+	//		log.Printf("Here: %d out of %d", i, len(addrs))
+	//	}
+	//	addrBytes := ([]byte)(*addr)
+	//	filter.Add(addrBytes)
+	//}
+	//log.Printf("Updated filter with 10m addresses.")
+	//file, err := os.OpenFile("tester.bin", os.O_WRONLY | os.O_CREATE, 0600)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//bytesWritten, err := filter.WriteTo(file)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//if bytesWritten <= 0 {
+	//	panic(fmt.Sprintf("Dog wtf: %d", bytesWritten))
+	//}
+	//log.Printf("WE DID IT WOOOO")
 	//falsePositiveRate := filter.EstimateFalsePositiveRate(100000000)
 	//log.Printf("False positive rate: %f", falsePositiveRate)
 	//err := addressing.WriteIPv6NetworksToFile("test_networks", ipnets)

@@ -18,7 +18,7 @@
   "AddressFilterSize": 1000000000,
   "AddressFilterHashCount": 2,
   "BloomEmptyMultiple": 2.0,
-  "NetworkGroupingSize": 64,
+  "NetworkGroupingSize": 96,
   "NetworkPingCount": 8,
   "NetworkBlacklistPercent": 0.6,
   "BlacklistFlushInterval": 500000,
@@ -52,5 +52,7 @@
   "InputEntropyBitLength": 64,
   "InputMinAddresses": 100000,
   "InputEmitFreq": 250000,
-  "ForceAcceptPrompts": false
+  "ForceAcceptPrompts": false,
+  "AliasLeftIndexStart": 0,
+  "AliasDuplicateScanCount": 4
 }

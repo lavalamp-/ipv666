@@ -6,6 +6,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
 	"os"
+	"sort"
 	"bufio"
 )
 
@@ -16,18 +17,18 @@ type ipNets struct {
 }
 
 type NetworkBlacklist struct {
-	Networks map[string]*net.IPNet
-	nets     map[int]*ipNets
-	masks    map[int]*[2]uint64
-	checks   map[uint64]blacklistPlaceholder
+	nets			map[int]*ipNets
+	masks			map[int]*[2]uint64
+	maskLengths		[]int
+	count			int
 }
 
 func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	toReturn := &NetworkBlacklist{
-		Networks: make(map[string]*net.IPNet),
-		nets:     make(map[int]*ipNets),
-		checks:   make(map[uint64]blacklistPlaceholder),
-		masks:    make(map[int]*[2]uint64),
+		nets:			make(map[int]*ipNets),
+		masks:			make(map[int]*[2]uint64),
+		maskLengths:	[]int{},
+		count:			0,
 	}
 
 	// Build the per-length masks
@@ -53,62 +54,63 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	return toReturn
 }
 
-func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
+func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) (int, int) {
+	addedCount, skippedCount := 0, 0
 	for _, curNet := range toAdd {
-		// log.Printf("%d out of %d", i, len(toAdd))
-		blacklist.AddNetwork(*curNet)
+		added := blacklist.AddNetwork(curNet)
+		if added {
+			addedCount++
+		} else {
+			skippedCount++
+		}
 	}
+	return addedCount, skippedCount
 }
 
-func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
+func (blacklist *NetworkBlacklist) AddNetwork(toAdd *net.IPNet) (bool) {
 
-	networkString := addressing.GetBaseAddressString(&toAdd)
-	if _, ok := blacklist.Networks[networkString]; !ok {
-		blacklist.Networks[networkString] = &toAdd
-
-		// Compute the length of the network
-		netLen := 0
-		for x := 15; x >= 0; x-- {
-			if toAdd.Mask[x] > 0 {
-				netLen = x*8
-				for y := 0; y < 8; y++ {
-					mask := byte(1 << uint(y))
-					if toAdd.Mask[x] & mask == mask {
-						netLen += 8 - y
-						break
-					}
-				}
-				break
-			}
-		}
-
-		// New len?
-		if _, ok := blacklist.nets[netLen]; !ok {
-			blacklist.nets[netLen] = &ipNets{}
-			blacklist.nets[netLen].nets = map[[2]uint64]struct{}{}
-		}
-
-		// Add this network
-		ip := [2]uint64{}
-		ip[0] = binary.LittleEndian.Uint64(toAdd.IP[0:8])
-		ip[1] = binary.LittleEndian.Uint64(toAdd.IP[8:16])
-		blacklist.nets[netLen].nets[ip] = struct{}{}
-
+	if blacklist.IsNetworkBlacklisted(toAdd) {
+		return false
 	}
 
-	//  // Legacy logic
-	// networkString := addressing.GetBaseAddressString(&toAdd)
-	// if _, ok := blacklist.Networks[networkString]; !ok {
-	// 	blacklist.Networks[networkString] = &toAdd
-	// 	netBytes := addressing.GetFirst64BitsOfNetwork(&toAdd)
-	// 	blacklist.checks[netBytes] = blacklistPlaceholder{}
-	// }
+	// Compute the length of the network
+	netLen := 0
+	for x := 15; x >= 0; x-- {
+		if toAdd.Mask[x] > 0 {
+			netLen = x*8
+			for y := 0; y < 8; y++ {
+				mask := byte(1 << uint(y))
+				if toAdd.Mask[x] & mask == mask {
+					netLen += 8 - y
+					break
+				}
+			}
+			break
+		}
+	}
+
+	// New len?
+	if _, ok := blacklist.nets[netLen]; !ok {
+		blacklist.nets[netLen] = &ipNets{}
+		blacklist.nets[netLen].nets = map[[2]uint64]struct{}{}
+		blacklist.updateMaskLengths(netLen)
+	}
+
+	// Add this network
+	ip := [2]uint64{}
+	ip[0] = binary.BigEndian.Uint64(toAdd.IP[0:8])
+	ip[1] = binary.BigEndian.Uint64(toAdd.IP[8:16])
+	blacklist.nets[netLen].nets[ip] = struct{}{}
+
+	blacklist.count++
+	return true
+
 }
 
 func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
 	for i, curClean := range toClean {
-		if i % emitFreq == 0 {
+		if i % emitFreq == 0 && i != 0 {
 			log.Printf("Cleaning entry %d out of %d.", i, len(toClean))
 		}
 		if !blacklist.IsIPBlacklisted(curClean) {
@@ -118,34 +120,107 @@ func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) 
 	return toReturn
 }
 
-func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
+func (blacklist *NetworkBlacklist) updateMaskLengths(maskLength int) () {
+	blacklist.maskLengths = append(blacklist.maskLengths, maskLength)
+	sort.Ints(blacklist.maskLengths)
+}
+
+func (blacklist *NetworkBlacklist) getNetworkFromAddress(toTest *net.IP) ([2]uint64, int, bool) {
 
 	ipUints := [2]uint64{
-		binary.LittleEndian.Uint64((*toTest)[0:8]),
-		binary.LittleEndian.Uint64((*toTest)[8:16]),
+		binary.BigEndian.Uint64((*toTest)[0:8]),
+		binary.BigEndian.Uint64((*toTest)[8:16]),
 	}
 
 	// Check the IP against each network length
-	for l := range blacklist.nets {
+	for _, maskLength := range blacklist.maskLengths {
 		ipMask := [2]uint64{}
-		if l <= 64 {
+		if maskLength <= 64 {
 			ipMask[1] = 0
-			ipMask[0] = ipUints[0] & blacklist.masks[l][0]
+			ipMask[0] = ipUints[0] & blacklist.masks[maskLength][0]
 		} else {
-			ipMask[1] = ipUints[1] & blacklist.masks[l][1]
-			ipMask[0] = ipUints[0] & blacklist.masks[l][0]
+			ipMask[1] = ipUints[1] & blacklist.masks[maskLength][1]
+			ipMask[0] = ipUints[0] & blacklist.masks[maskLength][0]
 		}
 
-		if _, ok := blacklist.nets[l].nets[ipMask]; ok {
-			return true
+		if _, ok := blacklist.nets[maskLength].nets[ipMask]; ok {
+			return ipMask, maskLength, true
 		}
 	}
 
-	return false
+	return [2]uint64{0,0}, -1, false
 
-	// first64 := addressing.GetFirst64BitsOfIP(toTest)
-	// _, ok := blacklist.checks[first64]
-	// return ok
+}
+
+func (blacklist *NetworkBlacklist) IsNetworkBlacklisted(toTest *net.IPNet) (bool) {
+	//TODO make sure this logic isn't flawed. I'm fairly certain that if both the top and bottom of the network
+	// are blacklisted then the network is, in its entirety, blacklisted as well.
+	top, bottom := addressing.GetBorderAddressesFromNetwork(toTest)
+	return blacklist.IsIPBlacklisted(top) && blacklist.IsIPBlacklisted(bottom)
+}
+
+func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
+	_, _, found := blacklist.getNetworkFromAddress(toTest)
+	return found
+}
+
+func (blacklist *NetworkBlacklist) GetBlacklistingNetworkFromIP(toTest *net.IP) (*net.IPNet) {
+	uints, length, found := blacklist.getNetworkFromAddress(toTest)
+	if !found {
+		return nil
+	} else {
+		return addressing.GetNetworkFromUints(uints, length)
+	}
+}
+
+func (blacklist *NetworkBlacklist) GetBlacklistingNetworkFromNetwork(toTest *net.IPNet) (*net.IPNet) {
+	base, top := addressing.GetBorderAddressesFromNetwork(toTest)
+	baseNetwork := blacklist.GetBlacklistingNetworkFromIP(base)
+	if baseNetwork == nil {
+		return nil
+	}
+	topNetwork := blacklist.GetBlacklistingNetworkFromIP(top)
+	if topNetwork == nil {
+		return nil
+	} else {
+		return topNetwork
+	}
+}
+
+func (blacklist *NetworkBlacklist) GetCount() (int) {
+	return blacklist.count
+}
+
+func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
+	var newNetworks []*net.IPNet
+	numCleaned := 0
+	loopCount := 0
+
+	for _, maskLength := range blacklist.maskLengths {
+		for curNet := range blacklist.nets[maskLength].nets {
+			ipNet := addressing.GetNetworkFromUints(curNet, maskLength)
+			blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(ipNet)
+			if blacklistNetwork != nil {
+				ones, _ := blacklistNetwork.Mask.Size()
+				if ones == maskLength {
+					newNetworks = append(newNetworks, blacklistNetwork)
+				} else {
+					numCleaned++
+				}
+			}
+			loopCount++
+			if loopCount % emitFreq == 0 {
+				log.Printf("Processing %d out of %d in blacklist cleaning.", loopCount, blacklist.count)
+			}
+		}
+	}
+
+	blacklist.nets = make(map[int]*ipNets)
+	blacklist.count = 0
+	blacklist.maskLengths = nil
+
+	blacklist.AddNetworks(newNetworks)
+	return numCleaned
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
@@ -166,12 +241,18 @@ func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (
 	}
 	writer := bufio.NewWriter(file)
 	defer file.Close()
-	for _, network := range blacklist.Networks {
-		writer.Write(network.IP)
-		ones, _ := network.Mask.Size()
-		length := uint8(ones)
-		writer.Write([]byte{length})
+
+	writeBytes := make([]byte, 8)
+	for maskLength, ipnets := range blacklist.nets {
+		for netBytes := range ipnets.nets {
+			binary.BigEndian.PutUint64(writeBytes, netBytes[0])
+			writer.Write(writeBytes)
+			binary.BigEndian.PutUint64(writeBytes, netBytes[1])
+			writer.Write(writeBytes)
+			writer.Write([]byte{uint8(maskLength)})
+		}
 	}
 	writer.Flush()
+	
 	return nil
 }

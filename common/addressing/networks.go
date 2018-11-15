@@ -11,6 +11,7 @@ import (
 	"log"
 	"io/ioutil"
 	"strings"
+	"encoding/binary"
 )
 
 func getFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
@@ -180,3 +181,32 @@ func GetByteWithBitsMasked(bitMaskLength uint) (byte) {
 	return (byte)(^(0xff >> bitMaskLength))
 }
 
+func GetNetworkFromUints(uints [2]uint64, length int) (*net.IPNet) {
+	//TODO there has to be a better way to do this, esp with the creating a mask approach
+	var addrBytes []byte
+	processBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(processBytes, uints[0])
+	addrBytes = append(addrBytes, processBytes...)
+	binary.BigEndian.PutUint64(processBytes, uints[1])
+	addrBytes = append(addrBytes, processBytes...)
+	maskBytes := GetByteMask(uint8(length))
+	for i := range addrBytes {
+		addrBytes[i] = addrBytes[i] & maskBytes[i]
+	}
+	return &net.IPNet{
+		IP:		addrBytes,
+		Mask:	maskBytes,
+	}
+}
+
+func GetBorderAddressesFromNetwork(network *net.IPNet) (*net.IP, *net.IP) {
+	var baseAddrBytes []byte
+	var topAddrBytes []byte
+	for i := range network.IP {
+		baseAddrBytes = append(baseAddrBytes, network.IP[i] & network.Mask[i])
+		topAddrBytes = append(topAddrBytes, baseAddrBytes[i] | ^network.Mask[i])
+	}
+	baseAddr := net.IP(baseAddrBytes)
+	topAddr := net.IP(topAddrBytes)
+	return &baseAddr, &topAddr
+}
