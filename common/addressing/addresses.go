@@ -12,6 +12,7 @@ import (
 	"encoding/binary"
 	"github.com/lavalamp-/ipv666/common/zrandom"
 	"github.com/lavalamp-/ipv666/common"
+	"bufio"
 )
 
 func GetIPSet(ips []*net.IP) (map[string]*common.Empty) {
@@ -64,13 +65,15 @@ func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 
 func WriteIPsToHexFile(filePath string, addrs []*net.IP) (error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	for _, addr := range addrs {
-		file.WriteString(fmt.Sprintf("%s\n", addr.String()))
+		writer.WriteString(fmt.Sprintf("%s\n", addr.String()))
 	}
+	writer.Flush()
 	return nil
 }
 
@@ -84,6 +87,7 @@ func GetTextLinesFromIPs(addrs []*net.IP) (string) {
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 	file, err := os.Open(filePath)
+	// reader := bufio.NewReader(file)
 	if err != nil {
 		return nil, err
 	}
@@ -116,13 +120,15 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 
 func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) (error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	for _, addr := range addrs {
-		file.Write(*addr)
+		writer.Write(*addr)
 	}
+	writer.Flush()
 	return nil
 }
 

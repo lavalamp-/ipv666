@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"bufio"
 )
 
 type blacklistPlaceholder struct {}
@@ -238,18 +239,20 @@ func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (
 	if err != nil {
 		return err
 	}
+	writer := bufio.NewWriter(file)
 	defer file.Close()
 
 	writeBytes := make([]byte, 8)
 	for maskLength, ipnets := range blacklist.nets {
 		for netBytes := range ipnets.nets {
 			binary.BigEndian.PutUint64(writeBytes, netBytes[0])
-			file.Write(writeBytes)
+			writer.Write(writeBytes)
 			binary.BigEndian.PutUint64(writeBytes, netBytes[1])
-			file.Write(writeBytes)
-			file.Write([]byte{uint8(maskLength)})
+			writer.Write(writeBytes)
+			writer.Write([]byte{uint8(maskLength)})
 		}
 	}
-
+	writer.Flush()
+	
 	return nil
 }
