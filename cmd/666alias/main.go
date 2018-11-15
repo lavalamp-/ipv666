@@ -81,7 +81,7 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP, conf *config.Confi
 
 	loopCount := 0
 	for {
-		log.Printf("Now starting loop %d.")
+		log.Printf("Now starting loop %d.", loopCount)
 		log.Print("Generating test addresses...")
 		testAddrs := acs.GetTestAddresses()
 		if len(testAddrs) == 0 {
@@ -126,6 +126,7 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP, conf *config.Confi
 		foundAddrSet := addressing.GetIPSet(foundAddrs)
 		log.Printf("Updating check list with results from Zmap scan.")
 		acs.Update(foundAddrSet)
+		acs.PrintStates()
 		if acs.GetAllFound() {
 			nets, err := acs.GetAliasedNetworks()
 			if err != nil {
@@ -139,7 +140,6 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP, conf *config.Confi
 			break
 		} else {
 			log.Printf("Did not find aliased network on loop %d. Let's do this again!", loopCount)
-			acs.PrintStates()
 			loopCount++
 		}
 	}

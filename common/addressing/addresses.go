@@ -11,12 +11,12 @@ import (
 	"log"
 	"encoding/binary"
 	"github.com/lavalamp-/ipv666/common/zrandom"
-	"github.com/lavalamp-/ipv666/common/blacklist"
+	"github.com/lavalamp-/ipv666/common"
 )
 
-func GetIPSet(ips []*net.IP) (map[string]*blacklist.Empty) {
-	toReturn := make(map[string]*blacklist.Empty)
-	blacklistEntry := &blacklist.Empty{}
+func GetIPSet(ips []*net.IP) (map[string]*common.Empty) {
+	toReturn := make(map[string]*common.Empty)
+	blacklistEntry := &common.Empty{}
 	for _, ip := range ips {
 		toReturn[ip.String()] = blacklistEntry
 	}

@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
+	"github.com/lavalamp-/ipv666/common"
 )
-
-type Empty struct {}
 
 type AliasCheckState struct {
 	baseAddress			*net.IP
@@ -111,7 +110,7 @@ func (state *AliasCheckState) GenerateTestAddress() () {
 	state.testAddr = addressing.FlipBitsInAddress(state.baseAddress, state.GetLeftTestIndex(), state.GetRightTestIndex())
 }
 
-func (state *AliasCheckState) Update(foundAddrs map[string]*Empty) () {
+func (state *AliasCheckState) Update(foundAddrs map[string]*common.Empty) () {
 	//// TODO for set membership checks, i'm guessing strings are expensive. how about 128bit int?
 	//// TODO by only checking for a single address, we risk marking ranges as aliased when they aren't. small amount of error, but could be a lot of effort to fix.
 
@@ -215,7 +214,7 @@ func (states *AliasCheckStates) GetAliasedNetworks() ([]*net.IPNet, error) {
 	return toReturn, nil
 }
 
-func (states *AliasCheckStates) Update(foundAddrs map[string]*Empty) () {
+func (states *AliasCheckStates) Update(foundAddrs map[string]*common.Empty) () {
 	for _, check := range states.checks {
 		check.Update(foundAddrs)
 	}
@@ -237,7 +236,11 @@ func (states *AliasCheckStates) PrintStates() () {
 	log.Printf("Alias check states (%d total, %d found):", states.GetChecksCount(), states.GetFoundCount())
 	log.Println()
 	for i, check := range states.checks {
-		log.Printf("\t%d:\t%s\tL: %d\tR: %d", i, check.baseAddress, check.leftPosition, check.rightPosition)
+		foundString := ""
+		if check.found {
+			foundString = "FOUND"
+		}
+		log.Printf("\t%d:\t%s\tL: %d\tR: %d\t%s", i, check.baseAddress, check.leftPosition, check.rightPosition, foundString)
 	}
 	log.Println()
 }

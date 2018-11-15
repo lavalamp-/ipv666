@@ -5,6 +5,7 @@ import (
 	"net"
 	"github.com/stretchr/testify/assert"
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common"
 )
 
 func getTestAddress() (*net.IP) {
@@ -21,9 +22,9 @@ func getTestAddresses() ([]*net.IP) {
 	return []*net.IP{getTestAddress(), getTestAddress2()}
 }
 
-func getFoundAddrsMap(toInclude []*net.IP, addrCount int) (map[string]*Empty) {
-	toReturn := make(map[string]*Empty)
-	placeholder := &Empty{}
+func getFoundAddrsMap(toInclude []*net.IP, addrCount int) (map[string]*common.Empty) {
+	toReturn := make(map[string]*common.Empty)
+	placeholder := &common.Empty{}
 	for _, curInclude := range toInclude {
 		toReturn[curInclude.String()] = placeholder
 	}

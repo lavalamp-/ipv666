@@ -16,6 +16,8 @@ import (
 	"os"
 )
 
+type Empty struct {}
+
 var curAddressModel *modeling.ProbabilisticAddressModel
 var curAddressModelPath string
 var curCandidatePingResults []*net.IP

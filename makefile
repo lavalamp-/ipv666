@@ -23,12 +23,20 @@ build-clean:
 build-clean-linux:
 	env GOOS=linux GOARCH=amd64 $(GOBUILD) -v -o build/666clean cmd/666clean/main.go
 
+build-alias:
+	$(GOBUILD) -v -o build/666alias cmd/666alias/main.go
+
+build-alias-linux:
+	env GOOS=linux GOARCH=amd64 $(GOBUILD) -v -o build/666alias cmd/666alias/main.go
+
 build-all:
 	make build-scan
 	make build-blgen
 	make build-clean
+	make build-alias
 
 build-all-linux:
 	make build-scan-linux
 	make build-blgen-linux
 	make build-clean-linux
+	make build-alias-linux
