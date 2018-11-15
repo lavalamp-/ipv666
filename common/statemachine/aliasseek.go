@@ -90,6 +90,8 @@ func seekAliasedNetworks(conf *config.Configuration) (error) {
 		return err
 	}
 
+	data.UpdateAliasedNetworks(uniqueNets, outputPath)
+
 	log.Printf("Successfully found %d aliased networks and wrote results to disk.", len(uniqueNets))
 
 	return nil

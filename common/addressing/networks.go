@@ -194,3 +194,15 @@ func GetNetworkFromUints(uints [2]uint64, length int) (*net.IPNet) {
 		Mask:	maskBytes,
 	}
 }
+
+func GetBorderAddressesFromNetwork(network *net.IPNet) (*net.IP, *net.IP) {
+	var baseAddrBytes []byte
+	var topAddrBytes []byte
+	for i := range network.IP {
+		baseAddrBytes = append(baseAddrBytes, network.IP[i] & network.Mask[i])
+		topAddrBytes = append(topAddrBytes, baseAddrBytes[i] | ^network.Mask[i])
+	}
+	baseAddr := net.IP(baseAddrBytes)
+	topAddr := net.IP(topAddrBytes)
+	return &baseAddr, &topAddr
+}

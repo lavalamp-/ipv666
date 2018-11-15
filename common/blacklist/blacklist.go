@@ -52,18 +52,29 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	return toReturn
 }
 
-func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) {
+func (blacklist *NetworkBlacklist) AddNetworks(toAdd []*net.IPNet) (int, int) {
+	addedCount, skippedCount := 0, 0
 	for _, curNet := range toAdd {
-		// log.Printf("%d out of %d", i, len(toAdd))
-		blacklist.AddNetwork(*curNet)
+		added := blacklist.AddNetwork(curNet)
+		if added {
+			addedCount++
+		} else {
+			skippedCount++
+		}
 	}
+	return addedCount, skippedCount
 }
 
-func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
+func (blacklist *NetworkBlacklist) AddNetwork(toAdd *net.IPNet) (bool) {
 
-	networkString := addressing.GetBaseAddressString(&toAdd)
+	if blacklist.IsNetworkBlacklisted(toAdd) {
+		return false
+	}
+
+	networkString := addressing.GetBaseAddressString(toAdd)
+	//TODO now that we have network membership check (above) I think we can strip out this string set check
 	if _, ok := blacklist.Networks[networkString]; !ok {
-		blacklist.Networks[networkString] = &toAdd
+		blacklist.Networks[networkString] = toAdd
 
 		// Compute the length of the network
 		netLen := 0
@@ -94,6 +105,8 @@ func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
 		blacklist.nets[netLen].nets[ip] = struct{}{}
 
 	}
+
+	return true
 
 }
 
@@ -135,6 +148,13 @@ func (blacklist *NetworkBlacklist) getNetworkFromAddress(toTest *net.IP) ([2]uin
 
 	return [2]uint64{0,0}, -1, false
 
+}
+
+func (blacklist *NetworkBlacklist) IsNetworkBlacklisted(toTest *net.IPNet) (bool) {
+	//TODO make sure this logic isn't flawed. I'm fairly certain that if both the top and bottom of the network
+	// are blacklisted then the network is, in its entirety, blacklisted as well.
+	top, bottom := addressing.GetBorderAddressesFromNetwork(toTest)
+	return blacklist.IsIPBlacklisted(top) && blacklist.IsIPBlacklisted(bottom)
 }
 
 func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {

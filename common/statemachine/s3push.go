@@ -21,6 +21,8 @@ func init() {
 	metrics.Register("s3push.s3_push_bytes.count", s3BytesPushedCounter)
 }
 
+//TODO remove S3 functionality?
+
 func pushFilesToS3(conf *config.Configuration) (error) {
 	allDirs := conf.GetAllExportDirectories()
 	log.Printf("Now starting to push all non-most-recent files from %d directories.", len(allDirs))

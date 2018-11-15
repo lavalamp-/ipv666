@@ -71,7 +71,8 @@ func main() {
 
 	log.Printf("Adding %d network ranges to blacklist (starting with %d addresses).", len(uniqueNetworks), len(newBlacklist.Networks))
 
-	newBlacklist.AddNetworks(uniqueNetworks)
+	added, skipped := newBlacklist.AddNetworks(uniqueNetworks)
+	log.Printf("%d addresses were added and %d were skipped.", added, skipped)
 	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 
 	log.Printf("Writing network blacklist with %d network ranges to file at path '%s'.", len(uniqueNetworks), outputPath)
