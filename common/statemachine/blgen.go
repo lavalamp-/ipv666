@@ -10,6 +10,7 @@ import (
 	"time"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"os"
+	"bufio"
 )
 
 var blacklistCandGenDuration = metrics.NewTimer()
@@ -36,6 +37,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		log.Printf("Error thrown when opening output file at path '%s': %e", outputPath, err)
 	}
+	writer := bufio.NewWriter(file)
 	defer file.Close()
 	for i, networks := range nets {
 		if i % conf.LogLoopEmitFreq == 0 {
@@ -45,7 +47,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 		if len(addrs) >= conf.BlacklistFlushInterval {
 			start := time.Now()
 			toWrite := addressing.GetTextLinesFromIPs(addrs)
-			_, err := file.WriteString(toWrite)
+			_, err := writer.WriteString(toWrite)
 			if err != nil {
 				log.Printf("Error thrown when flushing blacklist candidates to disk: %e", err)
 				return err
@@ -58,7 +60,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	if len(addrs) > 0 {
 		start := time.Now()
 		toWrite := addressing.GetTextLinesFromIPs(addrs)
-		_, err := file.WriteString(toWrite)
+		_, err := writer.WriteString(toWrite)
 		if err != nil {
 			log.Printf("Error thrown when flushing blacklist candidates to disk: %e", err)
 			return err
@@ -74,5 +76,6 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
+	writer.Flush()
 	return nil
 }

@@ -1,6 +1,7 @@
 package addressing
 
 import (
+	"bufio"
 	"net"
 	"os"
 	"errors"
@@ -84,16 +85,18 @@ func checkNetworkEquality(first *net.IPNet, second *net.IPNet) (bool) {
 
 func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	for _, network := range networks {
-		file.Write(network.IP)
+		writer.Write(network.IP)
 		ones, _ := network.Mask.Size()
 		foo := uint8(ones)
-		file.Write([]byte{foo})
+		writer.Write([]byte{foo})
 	}
+	writer.Flush()
 	return nil
 }
 
@@ -124,6 +127,7 @@ func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
 	if err != nil {
 		return nil, err
 	}
+	reader := bufio.NewReader(file)
 	defer file.Close()
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -136,7 +140,7 @@ func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
 	buffer := make([]byte, 17)
 	var toReturn []*net.IPNet
 	for {
-		_, err := file.Read(buffer)
+		_, err := reader.Read(buffer)
 		if err != nil {
 			if err != io.EOF {
 				return nil, err

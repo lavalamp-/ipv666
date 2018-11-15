@@ -6,6 +6,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
 	"os"
+	"bufio"
 )
 
 type blacklistPlaceholder struct {}
@@ -30,7 +31,7 @@ func NewNetworkBlacklist(nets []*net.IPNet) (*NetworkBlacklist) {
 	}
 
 	// Build the per-length masks
-	for l := 0; l < 128; l++ {
+	for l := 0; l < 129; l++ {
 		toReturn.masks[l] = &[2]uint64{}
 		if l <= 64 {
 			toReturn.masks[l][1] = 0
@@ -163,12 +164,14 @@ func WriteNetworkBlacklistToFile(filePath string, blacklist *NetworkBlacklist) (
 	if err != nil {
 		return err
 	}
+	writer := bufio.NewWriter(file)
 	defer file.Close()
 	for _, network := range blacklist.Networks {
-		file.Write(network.IP)
+		writer.Write(network.IP)
 		ones, _ := network.Mask.Size()
 		length := uint8(ones)
-		file.Write([]byte{length})
+		writer.Write([]byte{length})
 	}
+	writer.Flush()
 	return nil
 }

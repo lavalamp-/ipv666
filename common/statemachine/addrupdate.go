@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	"bufio"
 )
 
 var addressUpdateTimer = metrics.NewTimer()
@@ -25,6 +26,7 @@ func updateAddressFile(conf *config.Configuration) (error) {
 	outputPath := conf.GetOutputFilePath()
 	log.Printf("Updating file at path '%s' with %d newly-found IP addresses.", outputPath, len(cleanPings))
 	file, err := os.OpenFile(outputPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
@@ -35,14 +37,15 @@ func updateAddressFile(conf *config.Configuration) (error) {
 			log.Printf("Unexpected file format for output (%s). Defaulting to text.", conf.OutputFileType)
 		}
 		for _, addr := range cleanPings {
-			file.WriteString(fmt.Sprintf("%s\n", addr))
+			writer.WriteString(fmt.Sprintf("%s\n", addr))
 		}
 	} else {
 		for _, addr := range cleanPings {
 			toWrite := ([]byte)(*addr)
-			file.Write(toWrite)
+			writer.Write(toWrite)
 		}
 	}
+	writer.Flush()
 	elapsed := time.Since(start)
 	addressUpdateTimer.Update(elapsed)
 	log.Printf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
