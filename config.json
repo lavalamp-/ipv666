@@ -52,5 +52,7 @@
   "InputEntropyBitLength": 64,
   "InputMinAddresses": 100000,
   "InputEmitFreq": 250000,
-  "ForceAcceptPrompts": false
+  "ForceAcceptPrompts": false,
+  "AliasLeftIndexStart": 0,
+  "AliasDuplicateScanCount": 4
 }

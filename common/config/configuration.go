@@ -108,6 +108,11 @@ type Configuration struct {
 
 	ForceAcceptPrompts			bool	// Whether or not to bypass prompts by force accepting them
 
+	// Alias Detection
+
+	AliasLeftIndexStart			uint8	// The left-most index for CIDR mask lengths where aliased network detection should start
+	AliasDuplicateScanCount		uint8	// The number of times a single address should be scanned when checking for aliased networks
+
 }
 
 func LoadFromFile(filePath string) (Configuration, error) {

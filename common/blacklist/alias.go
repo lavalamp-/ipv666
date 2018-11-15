@@ -178,8 +178,22 @@ func (states *AliasCheckStates) GetFoundCount() (int) {
 
 func (states *AliasCheckStates) GenerateTestAddresses() () {
 	for _, check := range states.checks {
-		check.GenerateTestAddress()
+		if !check.found {
+			check.GenerateTestAddress()
+		}
 	}
+}
+
+//TODO unit test
+func (states *AliasCheckStates) GetTestAddresses() ([]*net.IP) {
+	states.GenerateTestAddresses()
+	var toReturn []*net.IP
+	for _, check := range states.checks {
+		if !check.found {
+			toReturn = append(toReturn, check.GetTestAddr())
+		}
+	}
+	return toReturn
 }
 
 func (states *AliasCheckStates) GetAllFound() (bool) {
@@ -216,4 +230,14 @@ func (states *AliasCheckStates) PrintAliasedNetworks() (error) {
 		log.Printf("Network %d: %s", i, network)
 	}
 	return nil
+}
+
+func (states *AliasCheckStates) PrintStates() () {
+	log.Println()
+	log.Printf("Alias check states (%d total, %d found):", states.GetChecksCount(), states.GetFoundCount())
+	log.Println()
+	for i, check := range states.checks {
+		log.Printf("\t%d:\t%s\tL: %d\tR: %d", i, check.baseAddress, check.leftPosition, check.rightPosition)
+	}
+	log.Println()
 }
