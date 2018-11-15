@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"github.com/google/uuid"
 )
 
 func CreateDirectoryIfNotExist(dirPath string) (error) {
@@ -154,4 +155,17 @@ func DeleteAllFilesInDirectory(dirPath string) (int, error) {
 func GetTimedFilePath(baseDir string) (string) {
 	curTime := strconv.FormatInt(time.Now().Unix(), 10)
 	return filepath.Join(baseDir, curTime)
+}
+
+func GetTemporaryFilePath() (string) {
+	fileName := uuid.New().String()
+	return filepath.Join("/tmp/", fileName)
+}
+
+func CheckIfFileExists(filePath string) (bool) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return false
+	} else {
+		return true
+	}
 }

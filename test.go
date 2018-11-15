@@ -5,6 +5,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
 
 func main() {
@@ -18,8 +19,10 @@ func main() {
 	ip_2 := net.ParseIP("ffff::32")
 	fmt.Printf("HEREEEE: %s\n", ip_2)
 	fmt.Printf("UMMMM: %t\n", netty.Contains(ip_2))
-	supahfly := bl.GetBlacklistingNetwork(&ip_2)
+	supahfly := bl.GetBlacklistingNetworkFromIP(&ip_2)
 	fmt.Printf("Got this: %s", supahfly)
+
+	fmt.Printf("Hereee: %s", fs.GetTemporaryFilePath())
 
 	//var i uint8
 	//for i = 8; i < 32; i++ {

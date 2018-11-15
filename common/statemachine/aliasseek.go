@@ -276,7 +276,7 @@ func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *confi
 		if i % conf.LogLoopEmitFreq == 0 {
 			log.Printf("Checking address %d out of %d.", i, len(addrs))
 		}
-		addrNetwork := netList.GetBlacklistingNetwork(addr)
+		addrNetwork := netList.GetBlacklistingNetworkFromIP(addr)
 		if addrNetwork != nil {
 			netString := addrNetwork.String()
 			if _, ok := presenceTracker[netString]; !ok {

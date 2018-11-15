@@ -14,12 +14,16 @@ var aliasProcessAddedCount = metrics.NewCounter()
 var aliasProcessSkippedCount = metrics.NewCounter()
 var aliasProcessTime = metrics.NewTimer()
 var aliasBlacklistWriteTime = metrics.NewTimer()
+var aliasBlacklistCleanTime = metrics.NewTimer()
+var aliasBlacklistCleanCount = metrics.NewCounter()
 
 func init() {
 	metrics.Register("aliasprocess.process.added.count", aliasProcessAddedCount)
 	metrics.Register("aliasprocess.process.skipped.count", aliasProcessSkippedCount)
 	metrics.Register("aliasprocess.process.time", aliasProcessTime)
 	metrics.Register("aliasprocess.blacklist.write.time", aliasBlacklistWriteTime)
+	metrics.Register("aliasprocess.blacklist.clean.time", aliasBlacklistCleanTime)
+	metrics.Register("aliasprocess.blacklist.clean.count", aliasBlacklistCleanCount)
 }
 
 func processAliasedNetworks(conf *config.Configuration) (error) {
@@ -46,6 +50,13 @@ func processAliasedNetworks(conf *config.Configuration) (error) {
 
 	log.Printf("Successfully processed %d aliased networks in %s. %d were added, %d were skipped.", len(aliasedNets), elapsed, added, skipped)
 
+	log.Printf("Cleaning blacklist now. Blacklist is starting at capacity %d.", curBlacklist.GetCount())
+	start = time.Now()
+	numCleaned := curBlacklist.Clean(conf.LogLoopEmitFreq)
+	aliasBlacklistCleanTime.Update(time.Since(start))
+	aliasBlacklistCleanCount.Inc(int64(numCleaned))
+	log.Printf("%d networks were cleaned from the blacklist (down to %d capacity).", numCleaned, curBlacklist.GetCount())
+
 	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 	log.Printf("Writing new blacklist to file at path '%s'.", outputPath)
 	start = time.Now()
@@ -58,7 +69,6 @@ func processAliasedNetworks(conf *config.Configuration) (error) {
 
 	data.UpdateBlacklist(curBlacklist, outputPath)
 
-	//TODO run through blacklist and de-dupe?
 	log.Print("Successfully updated blacklist based on the results of the aliased network checking.")
 
 	return nil

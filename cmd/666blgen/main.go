@@ -69,7 +69,7 @@ func main() {
 	uniqueNetworks := addressing.GetUniqueNetworks(networks, conf.LogLoopEmitFreq)
 	log.Printf("%d networks trimmed down to %d unique networks.", len(networks), len(uniqueNetworks))
 
-	log.Printf("Adding %d network ranges to blacklist (starting with %d addresses).", len(uniqueNetworks), len(newBlacklist.Networks))
+	log.Printf("Adding %d network ranges to blacklist (starting with %d addresses).", len(uniqueNetworks), newBlacklist.GetCount())
 
 	added, skipped := newBlacklist.AddNetworks(uniqueNetworks)
 	log.Printf("%d addresses were added and %d were skipped.", added, skipped)
@@ -83,6 +83,6 @@ func main() {
 		log.Fatalf("Error thrown when writing blacklist to file '%s': %e", outputPath, err)
 	}
 
-	log.Printf("Successfully generated blacklist file at path '%s' using input addresses from file '%s' (list was %d long).", outputPath, inputPath, len(newBlacklist.Networks))
+	log.Printf("Successfully generated blacklist file at path '%s' using input addresses from file '%s' (list was %d long).", outputPath, inputPath, newBlacklist.GetCount())
 
 }

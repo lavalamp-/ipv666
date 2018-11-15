@@ -25,7 +25,7 @@ func cleanBlacklistedAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
-	log.Printf("Cleaning addresses using blacklist with %d entries.", len(blacklist.Networks))
+	log.Printf("Cleaning addresses using blacklist with %d entries.", blacklist.GetCount())
 	addrs, err := data.GetCandidatePingResults(conf.GetPingResultDirPath())
 	if err != nil {
 		return err

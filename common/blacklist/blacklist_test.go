@@ -4,9 +4,8 @@ import (
 	"testing"
 	"net"
 	"github.com/stretchr/testify/assert"
+	"github.com/lavalamp-/ipv666/common/fs"
 )
-
-//TODO fill this out
 
 func TestNetworkBlacklist_AddNetworksAddedNoDupes(t *testing.T) {
 	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
@@ -94,9 +93,9 @@ func TestNetworkBlacklist_AddNetworkReturnsFalse(t *testing.T) {
 func TestNetworkBlacklist_AddNetworkAddsNetwork(t *testing.T) {
 	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
 	blacklist := NewNetworkBlacklist([]*net.IPNet{})
-	startVal := len(blacklist.Networks)
+	startVal := blacklist.GetCount()
 	blacklist.AddNetwork(net1)
-	assert.EqualValues(t, startVal + 1, len(blacklist.Networks))
+	assert.EqualValues(t, startVal + 1, blacklist.GetCount())
 }
 
 func TestNetworkBlacklist_CleanIPListAllBlacklisted(t *testing.T) {
@@ -222,7 +221,7 @@ func TestNetworkBlacklist_IsIPBlacklistedMaxRange(t *testing.T) {
 	assert.True(t, blacklisted)
 }
 
-func TestNetworkBlacklist_GetBlacklistingNetworkNil(t *testing.T) {
+func TestNetworkBlacklist_GetBlacklistingNetworkFromIPNil(t *testing.T) {
 	ip1 := net.ParseIP("ffff:ffff:ffff:fffb::1")
 	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
 	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
@@ -230,11 +229,11 @@ func TestNetworkBlacklist_GetBlacklistingNetworkNil(t *testing.T) {
 	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
 	nets := []*net.IPNet{net1, net2, net3, net4}
 	blacklist := NewNetworkBlacklist(nets)
-	blacklistNetwork := blacklist.GetBlacklistingNetwork(&ip1)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromIP(&ip1)
 	assert.Nil(t, blacklistNetwork)
 }
 
-func TestNetworkBlacklist_GetBlacklistingNetworkPrecision(t *testing.T) {
+func TestNetworkBlacklist_GetBlacklistingNetworkFromIPPrecision(t *testing.T) {
 	ip1 := net.ParseIP("ffff:ffff:ffff:ffff::1")
 	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
 	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/65")
@@ -242,11 +241,11 @@ func TestNetworkBlacklist_GetBlacklistingNetworkPrecision(t *testing.T) {
 	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/67")
 	nets := []*net.IPNet{net1, net2, net3, net4}
 	blacklist := NewNetworkBlacklist(nets)
-	blacklistNetwork := blacklist.GetBlacklistingNetwork(&ip1)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromIP(&ip1)
 	assert.Equal(t, net1, blacklistNetwork)
 }
 
-func TestNetworkBlacklist_GetBlacklistingNetwork(t *testing.T) {
+func TestNetworkBlacklist_GetBlacklistingNetworkFromIP(t *testing.T) {
 	ip1 := net.ParseIP("ffff:ffff:ffff:ffff::1")
 	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
 	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
@@ -254,6 +253,141 @@ func TestNetworkBlacklist_GetBlacklistingNetwork(t *testing.T) {
 	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
 	nets := []*net.IPNet{net1, net2, net3, net4}
 	blacklist := NewNetworkBlacklist(nets)
-	blacklistNetwork := blacklist.GetBlacklistingNetwork(&ip1)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromIP(&ip1)
 	assert.Equal(t, net1, blacklistNetwork)
+}
+
+func TestNetworkBlacklist_GetBlacklistingNetworkFromNetworkNil(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	_, net5, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/60")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(net5)
+	assert.Nil(t, blacklistNetwork)
+}
+
+func TestNetworkBlacklist_GetBlacklistingNetworkFromNetworkPrecision(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/65")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/66")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/67")
+	_, net5, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/68")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(net5)
+	assert.Equal(t, net1, blacklistNetwork)
+}
+
+func TestNetworkBlacklist_GetBlacklistingNetworkFromNetwork(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	_, net5, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(net5)
+	assert.Equal(t, net1, blacklistNetwork)
+}
+
+func TestNetworkBlacklist_GetCount(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	assert.EqualValues(t, 4, blacklist.GetCount())
+}
+
+func TestNetworkBlacklist_CleanNoChange(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	blacklist.Clean(9999)
+	assert.EqualValues(t, 4, blacklist.GetCount())
+}
+
+func TestNetworkBlacklist_CleanAllChange(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/63")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/62")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/61")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	blacklist.Clean(9999)
+	assert.EqualValues(t, 1, blacklist.GetCount())
+}
+
+func TestWriteNetworkBlacklistToFileNoError(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	err := WriteNetworkBlacklistToFile(fs.GetTemporaryFilePath(), blacklist)
+	assert.Nil(t, err)
+}
+
+func TestWriteNetworkBlacklistToFileWrites(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	filePath := fs.GetTemporaryFilePath()
+	WriteNetworkBlacklistToFile(filePath, blacklist)
+	exists := fs.CheckIfFileExists(filePath)
+	assert.True(t, exists)
+}
+
+func TestWriteNetworkBlacklistToFileLength(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	filePath := fs.GetTemporaryFilePath()
+	WriteNetworkBlacklistToFile(filePath, blacklist)
+	size, _ := fs.CountFileSize(filePath)
+	assert.Zero(t, size % 17)
+}
+
+func TestReadNetworkBlacklistFromFileNoError(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	filePath := fs.GetTemporaryFilePath()
+	WriteNetworkBlacklistToFile(filePath, blacklist)
+	_, err := ReadNetworkBlacklistFromFile(filePath)
+	assert.Nil(t, err)
+}
+
+func TestReadNetworkBlacklistFromFileContent(t *testing.T) {
+	_, net1, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/64")
+	_, net2, _ := net.ParseCIDR("ffff:ffff:ffff:fffe::/64")
+	_, net3, _ := net.ParseCIDR("ffff:ffff:ffff:fffd::/64")
+	_, net4, _ := net.ParseCIDR("ffff:ffff:ffff:fffc::/64")
+	nets := []*net.IPNet{net1, net2, net3, net4}
+	blacklist := NewNetworkBlacklist(nets)
+	filePath := fs.GetTemporaryFilePath()
+	WriteNetworkBlacklistToFile(filePath, blacklist)
+	newBlacklist, _ := ReadNetworkBlacklistFromFile(filePath)
+	net1Check := newBlacklist.IsNetworkBlacklisted(net1)
+	net2Check := newBlacklist.IsNetworkBlacklisted(net2)
+	net3Check := newBlacklist.IsNetworkBlacklisted(net3)
+	net4Check := newBlacklist.IsNetworkBlacklisted(net4)
+	assert.True(t, net1Check && net2Check && net3Check && net4Check)
 }
