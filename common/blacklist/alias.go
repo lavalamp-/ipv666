@@ -111,8 +111,9 @@ func (state *AliasCheckState) GenerateTestAddress() () {
 }
 
 func (state *AliasCheckState) Update(foundAddrs map[string]*common.Empty) () {
-	//// TODO for set membership checks, i'm guessing strings are expensive. how about 128bit int?
-	//// TODO by only checking for a single address, we risk marking ranges as aliased when they aren't. small amount of error, but could be a lot of effort to fix.
+	// TODO for set membership checks, i'm guessing strings are expensive. how about 128bit int?
+	// TODO by only checking for a single address, we risk marking ranges as aliased when they aren't. small amount of error, but could be a lot of effort to fix.
+	// TODO as we iterate checking different values we're going to duplicate work (as /96s that are unique at first are both part of the same /64, etc)
 
 	if _, ok := foundAddrs[state.testAddr.String()]; ok {
 		// The bit flipped address responded, meaning the range is aliased

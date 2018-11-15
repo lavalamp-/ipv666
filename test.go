@@ -3,12 +3,23 @@ package main
 import (
 	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common/blacklist"
+	"fmt"
 )
 
 func main() {
 	ip_1 := net.ParseIP("aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff:ffff")
 
 	addressing.FlipBitsInAddress(&ip_1, 12, 35)
+
+	_, netty, _ := net.ParseCIDR("ffff::/16")
+	fmt.Printf("WHATTTTT: %s\n", netty)
+	bl := blacklist.NewNetworkBlacklist([]*net.IPNet{netty})
+	ip_2 := net.ParseIP("ffff::32")
+	fmt.Printf("HEREEEE: %s\n", ip_2)
+	fmt.Printf("UMMMM: %t\n", netty.Contains(ip_2))
+	supahfly := bl.GetBlacklistingNetwork(&ip_2)
+	fmt.Printf("Got this: %s", supahfly)
 
 	//var i uint8
 	//for i = 8; i < 32; i++ {

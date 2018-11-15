@@ -35,6 +35,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	file, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		log.Printf("Error thrown when opening output file at path '%s': %e", outputPath, err)
+		return err
 	}
 	defer file.Close()
 	for i, networks := range nets {

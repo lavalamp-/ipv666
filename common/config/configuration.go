@@ -22,6 +22,7 @@ type Configuration struct {
 	NetworkScanResultsDirectory	string	// Subdirectory where the results of scanning blacklist candidate networks are kept
 	NetworkBlacklistDirectory	string	// Subdirectory where network range blacklists are kept
 	CleanPingResultDirectory	string	// Subdirectory where cleaned ping results are kept
+	AliasedNetworkDirectory		string	// Subdirectory where aliased network results are kept
 	BloomFilterDirectory		string	// Subdirectory where the Bloom filter is kept
 	StateFileName				string	// The file name for the file that contains the current state
 
@@ -173,6 +174,10 @@ func (config *Configuration) GetCleanPingDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.CleanPingResultDirectory)
 }
 
+func (config *Configuration) GetAliasedNetworkDirPath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.AliasedNetworkDirectory)
+}
+
 func (config *Configuration) GetBloomDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.BloomFilterDirectory)
 }
@@ -188,6 +193,7 @@ func (config *Configuration) GetAllDirectories() ([]string) {
 		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
+		config.GetAliasedNetworkDirPath(),
 		config.GetBloomDirPath(),
 	}
 }
@@ -202,6 +208,7 @@ func (config *Configuration) GetAllExportDirectories() ([]string) {
 		config.GetNetworkScanResultsDirPath(),
 		config.GetNetworkBlacklistDirPath(),
 		config.GetCleanPingDirPath(),
+		config.GetAliasedNetworkDirPath(),
 		config.GetBloomDirPath(),
 	}
 }

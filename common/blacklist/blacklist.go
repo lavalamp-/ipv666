@@ -89,19 +89,12 @@ func (blacklist *NetworkBlacklist) AddNetwork(toAdd net.IPNet) {
 
 		// Add this network
 		ip := [2]uint64{}
-		ip[0] = binary.LittleEndian.Uint64(toAdd.IP[0:8])
-		ip[1] = binary.LittleEndian.Uint64(toAdd.IP[8:16])
+		ip[0] = binary.BigEndian.Uint64(toAdd.IP[0:8])
+		ip[1] = binary.BigEndian.Uint64(toAdd.IP[8:16])
 		blacklist.nets[netLen].nets[ip] = struct{}{}
 
 	}
 
-	//  // Legacy logic
-	// networkString := addressing.GetBaseAddressString(&toAdd)
-	// if _, ok := blacklist.Networks[networkString]; !ok {
-	// 	blacklist.Networks[networkString] = &toAdd
-	// 	netBytes := addressing.GetFirst64BitsOfNetwork(&toAdd)
-	// 	blacklist.checks[netBytes] = blacklistPlaceholder{}
-	// }
 }
 
 func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) ([]*net.IP) {
@@ -117,11 +110,11 @@ func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) 
 	return toReturn
 }
 
-func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
+func (blacklist *NetworkBlacklist) getNetworkFromAddress(toTest *net.IP) ([2]uint64, int, bool) {
 
 	ipUints := [2]uint64{
-		binary.LittleEndian.Uint64((*toTest)[0:8]),
-		binary.LittleEndian.Uint64((*toTest)[8:16]),
+		binary.BigEndian.Uint64((*toTest)[0:8]),
+		binary.BigEndian.Uint64((*toTest)[8:16]),
 	}
 
 	// Check the IP against each network length
@@ -136,15 +129,26 @@ func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
 		}
 
 		if _, ok := blacklist.nets[l].nets[ipMask]; ok {
-			return true
+			return ipMask, l, true
 		}
 	}
 
-	return false
+	return [2]uint64{0,0}, -1, false
 
-	// first64 := addressing.GetFirst64BitsOfIP(toTest)
-	// _, ok := blacklist.checks[first64]
-	// return ok
+}
+
+func (blacklist *NetworkBlacklist) IsIPBlacklisted(toTest *net.IP) (bool) {
+	_, _, found := blacklist.getNetworkFromAddress(toTest)
+	return found
+}
+
+func (blacklist *NetworkBlacklist) GetBlacklistingNetwork(toTest *net.IP) (*net.IPNet) {
+	uints, length, found := blacklist.getNetworkFromAddress(toTest)
+	if !found {
+		return nil
+	} else {
+		return addressing.GetNetworkFromUints(uints, length)
+	}
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
