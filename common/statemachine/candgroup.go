@@ -27,11 +27,11 @@ func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
 	log.Printf("Loaded ping scan results, now converting down to networks.")
 	var nets []*net.IPNet
 	for _, curAddr := range addrs {
-		byteMask := addressing.GetByteMask(conf.NetworkGroupingSize)
-		nets = append(nets, &net.IPNet{
-			IP:		*curAddr,
-			Mask:	byteMask,
-		})
+		newNet, err := addressing.GetIPv6NetworkFromBytes(*curAddr, conf.NetworkGroupingSize)
+		if err != nil {
+			return err
+		}
+		nets = append(nets, newNet)
 	}
 	nets = addressing.GetUniqueNetworks(nets, conf.LogLoopEmitFreq)
 	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), conf.NetworkGroupingSize)

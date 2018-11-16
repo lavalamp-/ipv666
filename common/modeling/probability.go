@@ -6,6 +6,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/persist"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
+	"github.com/lavalamp-/ipv666/common/config"
 )
 
 type ProbabilisticAddressModel struct {
@@ -14,10 +15,10 @@ type ProbabilisticAddressModel struct {
 	NybbleModels 	[31]*ProbabilisticNybbleModel 	`json:"models"`
 }
 
-func NewAddressModel(name string) (*ProbabilisticAddressModel) {
+func NewAddressModel(name string, conf *config.Configuration) (*ProbabilisticAddressModel) {
 	var models [31]*ProbabilisticNybbleModel
 	for i := 0; i < 31; i++ {
-		models[i] = newNybbleModel()
+		models[i] = newNybbleModel(conf)
 	}
 	return &ProbabilisticAddressModel{
 		name,
@@ -32,11 +33,11 @@ type ProbabilisticNybbleModel struct {
 	DefaultProbabilityMap 	*NybbleProbabilityMap 			`json:"defaultprobmap"`
 }
 
-func newNybbleModel() (*ProbabilisticNybbleModel) {
+func newNybbleModel(conf *config.Configuration) (*ProbabilisticNybbleModel) {
 	return &ProbabilisticNybbleModel{
 		0,
 		make(map[uint8]*NybbleProbabilityMap),
-		newProbabilityMap(),
+		newProbabilityMap(conf),
 	}
 }
 
@@ -47,13 +48,18 @@ type NybbleProbabilityMap struct {
 	Distribution 	[]uint8 			`json:"dist"`
 }
 
-func newProbabilityMap() (*NybbleProbabilityMap) {
-	return &NybbleProbabilityMap{
+func newProbabilityMap(conf *config.Configuration) (*NybbleProbabilityMap) {
+	toReturn := &NybbleProbabilityMap{
 		0,
 		0,
 		make(map[uint8]uint64),
 		nil,
 	}
+	var i uint8
+	for i = 0; i < 16; i++ {
+		toReturn.TimesSeen[i] = conf.ModelDefaultWeight
+	}
+	return toReturn
 }
 
 func GetProbabilisticModelFromFile(filePath string) (*ProbabilisticAddressModel, error) {
@@ -96,28 +102,28 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIP(fromNybble uint8) (
 	return &newIP
 }
 
-func generateAddressModel(ips []*net.IP, name string, updateInterval int) (*ProbabilisticAddressModel) {
-	toReturn := NewAddressModel(name)
-	toReturn.UpdateMultiIP(ips, updateInterval)
+func generateAddressModel(ips []*net.IP, name string, updateInterval int, conf *config.Configuration) (*ProbabilisticAddressModel) {
+	toReturn := NewAddressModel(name, conf)
+	toReturn.UpdateMultiIP(ips, updateInterval, conf)
 	return toReturn
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateInterval int) () {
+func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateInterval int, conf *config.Configuration) () {
 	log.Printf("Updating model %s with %d addresses.", addrModel.Name, len(ips))
 	for i, ip := range ips {
 		if i % updateInterval == 0 {
 			log.Printf("Processing address %d out of %d.", i, len(ips))
 		}
-		addrModel.UpdateSingleIP(ip)
+		addrModel.UpdateSingleIP(ip, conf)
 	}
 	log.Printf("Successfully updated model %s with %d addresses.", addrModel.Name, len(ips))
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP) () {
+func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP, conf *config.Configuration) () {
 	fromNybble := addressing.GetNybbleFromIP(ip, 0)
 	for i, nybbleModel := range addrModel.NybbleModels {
 		toNybble := addressing.GetNybbleFromIP(ip, i+1)
-		nybbleModel.update(fromNybble, toNybble)
+		nybbleModel.update(fromNybble, toNybble, conf)
 		fromNybble = toNybble
 	}
 	addrModel.DigestCount += 1
@@ -131,11 +137,11 @@ func (nybbleModel *ProbabilisticNybbleModel) predictNextNybble(fromNybble uint8)
 	}
 }
 
-func (nybbleModel *ProbabilisticNybbleModel) update(fromNybble uint8, toNybble uint8) () {
+func (nybbleModel *ProbabilisticNybbleModel) update(fromNybble uint8, toNybble uint8, conf *config.Configuration) () {
 	if val, ok := nybbleModel.Probabilities[fromNybble]; ok {
 		val.update(toNybble)
 	} else {
-		newMap := newProbabilityMap()
+		newMap := newProbabilityMap(conf)
 		newMap.update(toNybble)
 		nybbleModel.Probabilities[fromNybble] = newMap
 	}
@@ -178,4 +184,16 @@ func (probMap *NybbleProbabilityMap) buildDistribution () {
 	}
 	probMap.Distribution = newDistribution
 	probMap.LastUpdatedAt = probMap.DigestCount
+}
+
+func CreateBlankModel(name string, outputPath string, conf *config.Configuration) (error) {
+	log.Printf("Now creating a blank statistical model.")
+	model := NewAddressModel(name, conf)
+	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
+	err := model.Save(outputPath)
+	if err != nil {
+		log.Printf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
+		return err
+	}
+	return nil
 }

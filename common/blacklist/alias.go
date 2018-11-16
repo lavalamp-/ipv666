@@ -217,7 +217,9 @@ func (states *AliasCheckStates) GetAliasedNetworks() ([]*net.IPNet, error) {
 
 func (states *AliasCheckStates) Update(foundAddrs map[string]*common.Empty) () {
 	for _, check := range states.checks {
-		check.Update(foundAddrs)
+		if !check.found {
+			check.Update(foundAddrs)
+		}
 	}
 }
 

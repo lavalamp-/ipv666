@@ -23,13 +23,9 @@ func GenerateRandomNetworks(toGenerate int, minMaskLen int32) ([]*net.IPNet) {
 	var toReturn []*net.IPNet
 	for len(toReturn) < toGenerate {
 		addrBytes := zrandom.GenerateRandomBits(128)
-		curIP := net.IP(addrBytes)
-		maskLen := rand.Int31n(128 - minMaskLen) + minMaskLen
-		maskBytes := GetByteMask(uint8(maskLen))
-		toReturn = append(toReturn, &net.IPNet{
-			IP: 	curIP,
-			Mask:	maskBytes,
-		})
+		maskLen := uint8(rand.Int31n(128 - minMaskLen) + minMaskLen)
+		newNet, _ := GetIPv6NetworkFromBytes(addrBytes, maskLen)
+		toReturn = append(toReturn, newNet)
 	}
 	return toReturn
 }
@@ -168,13 +164,12 @@ func ReadIPv6NetworksFromHexFile(filePath string) ([]*net.IPNet, error) {
 	return networks, nil
 }
 
-func GetIPv6NetworkFromBytes(toProcess []byte) (*net.IPNet, error) {
-	if len(toProcess) != 17 {
-		return nil, errors.New(fmt.Sprintf("IPv6 network binary representation must be 17 bytes long (got %d).", len(toProcess)))
+func GetIPv6NetworkFromBytes(toProcess []byte, maskLength uint8) (*net.IPNet, error) {
+	if len(toProcess) != 16 {
+		return nil, errors.New(fmt.Sprintf("IPv6 network binary representation must be 16 bytes long (got %d).", len(toProcess)))
 	}
 	ipBytes := make([]byte, 16)
 	copy(ipBytes, toProcess)
-	maskLength := uint8(toProcess[16])
 	byteMask := GetByteMask(maskLength)
 	for i := range ipBytes {
 		ipBytes[i] &= byteMask[i]
@@ -184,6 +179,16 @@ func GetIPv6NetworkFromBytes(toProcess []byte) (*net.IPNet, error) {
 		Mask:		byteMask,
 	}
 	return toReturn, nil
+}
+
+func GetIPv6NetworkFromBytesIncLength(toProcess []byte) (*net.IPNet, error) {
+	if len(toProcess) != 17 {
+		return nil, errors.New(fmt.Sprintf("IPv6 network binary representation must be 17 bytes long (got %d).", len(toProcess)))
+	}
+	ipBytes := make([]byte, 16)
+	copy(ipBytes, toProcess)
+	maskLength := uint8(toProcess[16])
+	return GetIPv6NetworkFromBytes(ipBytes, maskLength)
 }
 
 func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
@@ -210,7 +215,7 @@ func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
 			}
 			break
 		}
-		newNetwork, err := GetIPv6NetworkFromBytes(buffer)
+		newNetwork, err := GetIPv6NetworkFromBytesIncLength(buffer)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +245,7 @@ func GetByteWithBitsMasked(bitMaskLength uint) (byte) {
 	return (byte)(^(0xff >> bitMaskLength))
 }
 
-func GetNetworkFromUints(uints [2]uint64, length int) (*net.IPNet) {
+func GetNetworkFromUints(uints [2]uint64, length uint8) (*net.IPNet) {
 	//TODO there has to be a better way to do this, esp with the creating a mask approach
 	var addrBytes []byte
 	processBytes := make([]byte, 8)
@@ -248,14 +253,8 @@ func GetNetworkFromUints(uints [2]uint64, length int) (*net.IPNet) {
 	addrBytes = append(addrBytes, processBytes...)
 	binary.BigEndian.PutUint64(processBytes, uints[1])
 	addrBytes = append(addrBytes, processBytes...)
-	maskBytes := GetByteMask(uint8(length))
-	for i := range addrBytes {
-		addrBytes[i] = addrBytes[i] & maskBytes[i]
-	}
-	return &net.IPNet{
-		IP:		addrBytes,
-		Mask:	maskBytes,
-	}
+	toReturn, _ := GetIPv6NetworkFromBytes(addrBytes, length)
+	return toReturn
 }
 
 func GetBorderAddressesFromNetwork(network *net.IPNet) (*net.IP, *net.IP) {

@@ -1,28 +1,32 @@
 package main
 
 import (
-	"net"
-	"github.com/lavalamp-/ipv666/common/addressing"
-	"github.com/lavalamp-/ipv666/common/blacklist"
 	"fmt"
-	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/modeling"
 )
 
 func main() {
-	ip_1 := net.ParseIP("aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff:ffff")
+	//ip_1 := net.ParseIP("aaaa:aaaa:aaaa:ffff:ffff:ffff:ffff:ffff")
+	//
+	//addressing.FlipBitsInAddress(&ip_1, 12, 35)
+	//
+	//_, netty, _ := net.ParseCIDR("ffff::/16")
+	//fmt.Printf("WHATTTTT: %s\n", netty)
+	//bl := blacklist.NewNetworkBlacklist([]*net.IPNet{netty})
+	//ip_2 := net.ParseIP("ffff::32")
+	//fmt.Printf("HEREEEE: %s\n", ip_2)
+	//fmt.Printf("UMMMM: %t\n", netty.Contains(ip_2))
+	//supahfly := bl.GetBlacklistingNetworkFromIP(&ip_2)
+	//fmt.Printf("Got this: %s", supahfly)
+	//
+	//fmt.Printf("Hereee: %s", fs.GetTemporaryFilePath())
 
-	addressing.FlipBitsInAddress(&ip_1, 12, 35)
+	conf, _ := config.LoadFromFile("config.json")
+	fmt.Printf("Here: %s", conf.GetAllExportDirectories())
 
-	_, netty, _ := net.ParseCIDR("ffff::/16")
-	fmt.Printf("WHATTTTT: %s\n", netty)
-	bl := blacklist.NewNetworkBlacklist([]*net.IPNet{netty})
-	ip_2 := net.ParseIP("ffff::32")
-	fmt.Printf("HEREEEE: %s\n", ip_2)
-	fmt.Printf("UMMMM: %t\n", netty.Contains(ip_2))
-	supahfly := bl.GetBlacklistingNetworkFromIP(&ip_2)
-	fmt.Printf("Got this: %s", supahfly)
+	modeling.CreateBlankModel("Golden Model", "data/goldenmodel2", &conf)
 
-	fmt.Printf("Hereee: %s", fs.GetTemporaryFilePath())
 
 	//var i uint8
 	//for i = 8; i < 32; i++ {

@@ -34,6 +34,10 @@ type Configuration struct {
 	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
 	ModelUpdateFreq				int		// The interval upon which to emit to a log file during model updates
 
+	// Modeling
+
+	ModelDefaultWeight			uint64	// The default weight to give to model probability maps
+
 	// Existing address bloom filter
 
 	AddressFilterSize			uint	// The size of the Bloom filter to use for identifying already guessed addresses

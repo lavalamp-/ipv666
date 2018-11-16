@@ -153,7 +153,7 @@ func (blacklist *NetworkBlacklist) GetBlacklistingNetworkFromIP(toTest *net.IP) 
 	if !found {
 		return nil
 	} else {
-		return addressing.GetNetworkFromUints(uints, length)
+		return addressing.GetNetworkFromUints(uints, uint8(length))
 	}
 }
 
@@ -183,7 +183,7 @@ func (blacklist *NetworkBlacklist) GetNetworks() ([]*net.IPNet) {
 	var toReturn []*net.IPNet
 	for _, maskLength := range blacklist.maskLengths {
 		for curNet := range blacklist.nets[maskLength].nets {
-			toReturn = append(toReturn, addressing.GetNetworkFromUints(curNet, maskLength))
+			toReturn = append(toReturn, addressing.GetNetworkFromUints(curNet, uint8(maskLength)))
 		}
 	}
 	return toReturn
@@ -196,7 +196,7 @@ func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
 
 	for _, maskLength := range blacklist.maskLengths {
 		for curNet := range blacklist.nets[maskLength].nets {
-			ipNet := addressing.GetNetworkFromUints(curNet, maskLength)
+			ipNet := addressing.GetNetworkFromUints(curNet, uint8(maskLength))
 			blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(ipNet)
 			if blacklistNetwork != nil {
 				ones, _ := blacklistNetwork.Mask.Size()
