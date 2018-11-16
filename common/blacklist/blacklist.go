@@ -10,8 +10,6 @@ import (
 	"bufio"
 )
 
-type blacklistPlaceholder struct {}
-
 type ipNets struct {
 	nets map[[2]uint64]struct{}
 }
@@ -73,21 +71,7 @@ func (blacklist *NetworkBlacklist) AddNetwork(toAdd *net.IPNet) (bool) {
 		return false
 	}
 
-	// Compute the length of the network
-	netLen := 0
-	for x := 15; x >= 0; x-- {
-		if toAdd.Mask[x] > 0 {
-			netLen = x*8
-			for y := 0; y < 8; y++ {
-				mask := byte(1 << uint(y))
-				if toAdd.Mask[x] & mask == mask {
-					netLen += 8 - y
-					break
-				}
-			}
-			break
-		}
-	}
+	netLen, _ := toAdd.Mask.Size()
 
 	// New len?
 	if _, ok := blacklist.nets[netLen]; !ok {
@@ -169,7 +153,7 @@ func (blacklist *NetworkBlacklist) GetBlacklistingNetworkFromIP(toTest *net.IP) 
 	if !found {
 		return nil
 	} else {
-		return addressing.GetNetworkFromUints(uints, length)
+		return addressing.GetNetworkFromUints(uints, uint8(length))
 	}
 }
 
@@ -191,6 +175,20 @@ func (blacklist *NetworkBlacklist) GetCount() (int) {
 	return blacklist.count
 }
 
+func (blacklist *NetworkBlacklist) GetMaskLengths() ([]int) {
+	return blacklist.maskLengths
+}
+
+func (blacklist *NetworkBlacklist) GetNetworks() ([]*net.IPNet) {
+	var toReturn []*net.IPNet
+	for _, maskLength := range blacklist.maskLengths {
+		for curNet := range blacklist.nets[maskLength].nets {
+			toReturn = append(toReturn, addressing.GetNetworkFromUints(curNet, uint8(maskLength)))
+		}
+	}
+	return toReturn
+}
+
 func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
 	var newNetworks []*net.IPNet
 	numCleaned := 0
@@ -198,7 +196,7 @@ func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
 
 	for _, maskLength := range blacklist.maskLengths {
 		for curNet := range blacklist.nets[maskLength].nets {
-			ipNet := addressing.GetNetworkFromUints(curNet, maskLength)
+			ipNet := addressing.GetNetworkFromUints(curNet, uint8(maskLength))
 			blacklistNetwork := blacklist.GetBlacklistingNetworkFromNetwork(ipNet)
 			if blacklistNetwork != nil {
 				ones, _ := blacklistNetwork.Mask.Size()

@@ -161,7 +161,7 @@ func cleanUpWorkingDirectories(conf *config.Configuration) (error) {
 
 func createBlankModel(inputFilePath string, conf *config.Configuration) (error) {
 	log.Printf("Now creating a blank statistical model.")
-	model := modeling.NewAddressModel(fmt.Sprintf("Model from %s", inputFilePath))
+	model := modeling.NewAddressModel(fmt.Sprintf("Model from %s", inputFilePath), conf)
 	outputPath := fs.GetTimedFilePath(conf.GetGeneratedModelDirPath())
 	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
 	err := model.Save(outputPath)

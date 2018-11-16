@@ -122,14 +122,13 @@ func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair, conf *config.Config
 			return nil, err
 		}
 		if acs.GetAllFound() {
-			toReturn, err := acs.GetAliasedNetworks()
+			toReturn, err = acs.GetAliasedNetworks()
 			if err != nil {
 				log.Printf("Error thrown when retrieving aliased networks from AliasCheckStates: %e", err)
 				return nil, err
 			} else if len(toReturn) == 0 {
 				return nil, errors.New("no aliased network returned in call to GetAliasedNetworks (length 0)")
 			}
-			log.Printf("It looks like we've found the aliased network border. Aliased network is %s.", toReturn)
 			break
 		} else {
 			log.Printf("Did not find aliased network on loop %d. Let's do this again!", loopCount)
@@ -213,7 +212,7 @@ func checkNetworksForAliased(nets []*net.IPNet, conf *config.Configuration) ([]*
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Successfull scanned alias candidates to file '%s'.", zmapPath)
+	log.Printf("Successfully scanned alias candidates to file '%s'.", zmapPath)
 
 	foundAddrs, err := addressing.ReadIPsFromHexFile(zmapPath)
 	if err != nil {
