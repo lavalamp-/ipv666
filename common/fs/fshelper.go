@@ -11,7 +11,23 @@ import (
 	"strconv"
 	"time"
 	"github.com/google/uuid"
+	"bufio"
+	"fmt"
 )
+
+func WriteStringsToFile(toWrite []string, filePath string) (error) {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	writer := bufio.NewWriter(file)
+	defer file.Close()
+	for _, curWrite := range toWrite {
+		writer.WriteString(fmt.Sprintf("%s\n", curWrite))
+	}
+	writer.Flush()
+	return nil
+}
 
 func CreateDirectoryIfNotExist(dirPath string) (error) {
 	log.Printf("Making sure that directory at '%s' exists.", dirPath)

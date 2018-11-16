@@ -80,7 +80,7 @@ func main() {
 
 	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
 
-	log.Printf("Writing network blacklist with %d network ranges to file at path '%s'.", len(uniqueNetworks), outputPath)
+	log.Printf("Writing network blacklist with %d network ranges to file at path '%s'.", newBlacklist.GetCount(), outputPath)
 
 	err = blacklist.WriteNetworkBlacklistToFile(outputPath, newBlacklist)
 

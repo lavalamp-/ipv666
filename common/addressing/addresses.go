@@ -15,6 +15,19 @@ import (
 	"bufio"
 )
 
+func GetIPsFromStrings(toParse []string) ([]*net.IP) {
+	var toReturn []*net.IP
+	for _, curParse := range toParse {
+		newIP := net.ParseIP(curParse)
+		if newIP == nil {
+			log.Printf("Could not parse IP from string '%s'.", curParse)
+		} else {
+			toReturn = append(toReturn, &newIP)
+		}
+	}
+	return toReturn
+}
+
 func GetIPSet(ips []*net.IP) (map[string]*common.Empty) {
 	toReturn := make(map[string]*common.Empty)
 	blacklistEntry := &common.Empty{}
