@@ -7,6 +7,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
 	"github.com/lavalamp-/ipv666/common/config"
+	"math"
 )
 
 type addrFilterFunc func(*net.IP) bool
@@ -75,7 +76,26 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 	return persist.Save(filePath, addrModel)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint8) (*net.IP) {
+func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwork *net.IPNet, count int, updateFreq int, fn addrFilterFunc) ([]*net.IP) {
+	var toReturn []*net.IP
+	netLength, _ := fromNetwork.Mask.Size()
+	nybbleCount := int(math.Ceil(float64(netLength) / 4.0))
+	fromNybbles := addressing.GetNybblesFromIP(&fromNetwork.IP, nybbleCount)
+	totalCount := 0
+	for len(toReturn) < count {
+		newIP := addrModel.GenerateSingleIPFromNybbles(fromNybbles, uint(netLength))
+		if !fn(newIP) {
+			toReturn = append(toReturn, newIP)
+		}
+		totalCount++
+		if totalCount % updateFreq == 0 {
+			log.Printf("Generated %d IP addresses from network %s. %d were valid (need %d).", totalCount, fromNetwork, len(toReturn), count)
+		}
+	}
+	return toReturn
+}
+
+func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint) (*net.IP) {
 	//TODO this will throw an exception if offset < 4
 	//TODO if offset does not correspond with length of fromNybbles this will error
 	var mustMatch bool
