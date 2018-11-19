@@ -71,19 +71,21 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	var addresses []*net.IP
 	var blacklistCount, totalBloomCount, curBloomCount, madeCount = 0, 0, 0, 0
 	var bloomEmptyThreshold = int(conf.BloomEmptyMultiple * float64(conf.GenerateAddressCount))
-	start := time.Now()
-	for len(addresses) < conf.GenerateAddressCount {
-		newIP := model.GenerateSingleIPFromNybble(conf.GenerateFirstNybble)
-		ipBytes := ([]byte)(*newIP)
-		if blacklist.IsIPBlacklisted(newIP) {
+
+	addrFilterFunc := func(toCheck *net.IP) (bool, error) {
+		ipBytes := ([]byte)(*toCheck)
+		var toReturn bool
+		if blacklist.IsIPBlacklisted(toCheck) {
 			blacklistCount++
+			toReturn = true
 		} else if bloom.Test(ipBytes) {
 			curBloomCount++
 			totalBloomCount++
+			toReturn = true
 		} else {
 			madeCount++
-			addresses = append(addresses, newIP)
 			bloom.Add(ipBytes)
+			toReturn = false
 		}
 		if (madeCount + blacklistCount + totalBloomCount) % conf.LogLoopEmitFreq == 0 {
 			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount, madeCount, blacklistCount, totalBloomCount)
@@ -93,11 +95,24 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 			bloom, err = remakeBloomFilter(conf, addresses)
 			if err != nil {
 				log.Printf("Error thrown when remaking Bloom filter: %e", err)
-				return err
+				return false, err
 			}
 			curBloomCount = 0
 			bloomEmptyCount.Inc(1)
 		}
+		return toReturn, nil
+	}
+
+	start := time.Now()
+	targetNetwork, err = conf.GetTargetNetwork()
+	if err != nil {
+		log.Printf("Error thrown when getting target network from config: %e", err)
+		return err
+	}
+	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, conf.GenerateAddressCount, conf.LogLoopEmitFreq, addrFilterFunc)
+	if err != nil {
+		log.Printf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
+		return err
 	}
 	elapsed := time.Since(start)
 	generateDurationTimer.Update(elapsed)

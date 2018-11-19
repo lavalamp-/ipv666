@@ -10,7 +10,7 @@ import (
 	"math"
 )
 
-type addrFilterFunc func(*net.IP) bool
+type addrProcessFunc func(*net.IP) (bool, error)
 
 type ProbabilisticAddressModel struct {
 	Name 			string 							`json:"name"`
@@ -76,7 +76,7 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 	return persist.Save(filePath, addrModel)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwork *net.IPNet, count int, updateFreq int, fn addrFilterFunc) ([]*net.IP) {
+func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwork *net.IPNet, count int, updateFreq int, fn addrProcessFunc) ([]*net.IP, error) {
 	var toReturn []*net.IP
 	netLength, _ := fromNetwork.Mask.Size()
 	nybbleCount := int(math.Ceil(float64(netLength) / 4.0))
@@ -84,7 +84,10 @@ func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwo
 	totalCount := 0
 	for len(toReturn) < count {
 		newIP := addrModel.GenerateSingleIPFromNybbles(fromNybbles, uint(netLength))
-		if !fn(newIP) {
+		isFiltered, err := fn(newIP)
+		if err != nil {
+			return nil, err
+		} else if !isFiltered {
 			toReturn = append(toReturn, newIP)
 		}
 		totalCount++
@@ -92,7 +95,7 @@ func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwo
 			log.Printf("Generated %d IP addresses from network %s. %d were valid (need %d).", totalCount, fromNetwork, len(toReturn), count)
 		}
 	}
-	return toReturn
+	return toReturn, nil
 }
 
 func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint) (*net.IP) {

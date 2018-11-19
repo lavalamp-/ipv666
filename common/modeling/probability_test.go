@@ -26,11 +26,11 @@ func getNewAddressModel() (*ProbabilisticAddressModel) {
 	return NewAddressModel("Testing Model", conf)
 }
 
-func getFilterFunc() (addrFilterFunc) {
+func getFilterFunc() (addrProcessFunc) {
 	checker := 0
-	return func(toCheck *net.IP) (bool) {
+	return func(toCheck *net.IP) (bool, error) {
 		checker++
-		return checker % 2 == 0
+		return checker % 2 == 0, nil
 	}
 }
 
@@ -38,15 +38,15 @@ func TestProbabilisticAddressModel_GenerateMultiIPFromNetworkCount(t *testing.T)
 	model := getNewAddressModel()
 	filterFunc := getFilterFunc()
 	_, fromNetwork, _ := net.ParseCIDR("2000::/4")
-	results := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
+	results, _ := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
 	assert.EqualValues(t, 20, len(results))
 }
 
 func TestProbabilisticAddressModel_GenerateMultiIPFromNetworkFilters(t *testing.T) {
 	isChecked := false
-	checkFunc := func(toCheck *net.IP) (bool) {
+	checkFunc := func(toCheck *net.IP) (bool, error) {
 		isChecked = true
-		return false
+		return false, nil
 	}
 	model := getNewAddressModel()
 	_, fromNetwork, _ := net.ParseCIDR("2000::/4")
@@ -58,7 +58,7 @@ func TestProbabilisticAddressModel_GenerateMultiIPFromNetworkContentNoMatch(t *t
 	model := getNewAddressModel()
 	filterFunc := getFilterFunc()
 	_, fromNetwork, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/16")
-	newIPs := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
+	newIPs, _ := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
 	expected := []byte{0x0f, 0x0f, 0x0f, 0x0f}
 	for _, newIP := range newIPs {
 		newIPBytes := addressing.GetNybblesFromIP(newIP, 4)
@@ -70,7 +70,7 @@ func TestProbabilisticAddressModel_GenerateMultiIPFromNetworkContentMustMatchLow
 	model := getNewAddressModel()
 	filterFunc := getFilterFunc()
 	_, fromNetwork, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/14")
-	newIPs := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
+	newIPs, _ := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
 	expected := []byte{0x0f, 0x0f, 0x0f, 0x0c}
 	for _, newIP := range newIPs {
 		newIPBytes := addressing.GetNybblesFromIP(newIP, 4)
@@ -83,7 +83,7 @@ func TestProbabilisticAddressModel_GenerateMultiIPFromNetworkContentMustMatchHig
 	model := getNewAddressModel()
 	filterFunc := getFilterFunc()
 	_, fromNetwork, _ := net.ParseCIDR("ffff:ffff:ffff:ffff::/18")
-	newIPs := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
+	newIPs, _ := model.GenerateMultiIPFromNetwork(fromNetwork, 20, 9999, filterFunc)
 	expected := []byte{0x0f, 0x0f, 0x0f, 0x0f, 0x0c}
 	for _, newIP := range newIPs {
 		newIPBytes := addressing.GetNybblesFromIP(newIP, 5)
