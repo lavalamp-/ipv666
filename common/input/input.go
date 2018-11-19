@@ -6,7 +6,6 @@ import (
 	"github.com/lavalamp-/ipv666/common/shell"
 	"log"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/modeling"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
 	"github.com/lavalamp-/ipv666/common/zrandom"
@@ -48,11 +47,6 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	}
 	// Delete all existing files in all directories
 	err = cleanUpWorkingDirectories(conf)
-	if err != nil {
-		return err
-	}
-	// Create an empty model and write to disk
-	err = createBlankModel(inputFilePath, conf)
 	if err != nil {
 		return err
 	}
@@ -152,24 +146,11 @@ func removeDuplicateIPs(ips []*net.IP, conf *config.Configuration) ([]*net.IP) {
 
 func cleanUpWorkingDirectories(conf *config.Configuration) (error) {
 	log.Printf("Now deleting all regular files (recursively) starting in directory '%s'.", conf.BaseOutputDirectory)
-	numDeleted, err := fs.DeleteAllFilesInDirectory(conf.BaseOutputDirectory)
+	numDeleted, numSkipped, err := fs.DeleteAllFilesInDirectory(conf.BaseOutputDirectory, conf.GetSafeFilePaths())
 	if err != nil {
 		log.Printf("Error thrown when deleting files under directory '%s': %e", conf.BaseOutputDirectory, err)
 		return err
 	}
-	log.Printf("Successfully deleted %d files.", numDeleted)
-	return nil
-}
-
-func createBlankModel(inputFilePath string, conf *config.Configuration) (error) {
-	log.Printf("Now creating a blank statistical model.")
-	model := modeling.NewAddressModel(fmt.Sprintf("Model from %s", inputFilePath), conf)
-	outputPath := fs.GetTimedFilePath(conf.GetGeneratedModelDirPath())
-	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
-	err := model.Save(outputPath)
-	if err != nil {
-		log.Printf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
-		return err
-	}
+	log.Printf("Successfully deleted %d files (%d skipped).", numDeleted, numSkipped)
 	return nil
 }

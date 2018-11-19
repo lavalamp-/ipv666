@@ -217,3 +217,19 @@ func (config *Configuration) GetAllExportDirectories() ([]string) {
 func (config *Configuration) GetGraphiteEmitDuration() (time.Duration) {
 	return time.Duration(config.GraphiteEmitFreq) * time.Second
 }
+
+func (config *Configuration) GetGoldenModelFilePath() (string) {
+	return filepath.Join(config.GetGeneratedModelDirPath(), "default")
+}
+
+func (config *Configuration) GetGoldenBlacklistFilePath() (string) {
+	return filepath.Join(config.GetNetworkBlacklistDirPath(), "default")
+}
+
+func (config *Configuration) GetSafeFilePaths() ([]string) {
+	return []string{
+		config.GetStateFilePath(),
+		config.GetGoldenModelFilePath(),
+		config.GetGoldenBlacklistFilePath(),
+	}
+}
