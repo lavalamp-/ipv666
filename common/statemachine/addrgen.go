@@ -13,6 +13,8 @@ import (
 	"github.com/lavalamp-/ipv666/common/filtering"
 	bloom2 "github.com/willf/bloom"
 	"os"
+	"errors"
+	"fmt"
 )
 
 var generateDurationTimer = metrics.NewTimer()
@@ -47,22 +49,31 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
+	targetNetwork, err := conf.GetTargetNetwork()
+	if err != nil {
+		return err
+	}
+
+	if blacklist.IsNetworkBlacklisted(targetNetwork) {
+		blacklistNet := blacklist.GetBlacklistingNetworkFromNetwork(targetNetwork)
+		return errors.New(fmt.Sprintf("The target network range (%s) is blaclisted (blacklisting network of %s).", targetNetwork, blacklistNet))
+	}
 
 	// Generate all of the addresses and filter out based on Bloom filter and blacklist
 
 	log.Printf(
-		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Starting nybble is %d.",
+		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Network range is %s.",
 		conf.GenerateAddressCount,
 		model.Name,
 		model.DigestCount,
-		conf.GenerateFirstNybble,
+		targetNetwork,
 	)
 	var addresses []*net.IP
 	var blacklistCount, totalBloomCount, curBloomCount, madeCount = 0, 0, 0, 0
 	var bloomEmptyThreshold = int(conf.BloomEmptyMultiple * float64(conf.GenerateAddressCount))
 	start := time.Now()
 	for len(addresses) < conf.GenerateAddressCount {
-		newIP := model.GenerateSingleIP(conf.GenerateFirstNybble)
+		newIP := model.GenerateSingleIPFromNybble(conf.GenerateFirstNybble)
 		ipBytes := ([]byte)(*newIP)
 		if blacklist.IsIPBlacklisted(newIP) {
 			blacklistCount++

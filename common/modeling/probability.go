@@ -9,6 +9,8 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 )
 
+type addrFilterFunc func(*net.IP) bool
+
 type ProbabilisticAddressModel struct {
 	Name 			string 							`json:"name"`
 	DigestCount 	uint64 							`json:"digest"`
@@ -59,6 +61,7 @@ func newProbabilityMap(conf *config.Configuration) (*NybbleProbabilityMap) {
 	for i = 0; i < 16; i++ {
 		toReturn.TimesSeen[i] = conf.ModelDefaultWeight
 	}
+	toReturn.DigestCount = conf.ModelDefaultWeight * 16
 	return toReturn
 }
 
@@ -72,20 +75,59 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 	return persist.Save(filePath, addrModel)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateMultiIP(fromNybble uint8, count int, updateFreq int) ([]*net.IP) {
+func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint8) (*net.IP) {
+	//TODO this will throw an exception if offset < 4
+	//TODO if offset does not correspond with length of fromNybbles this will error
+	var mustMatch bool
+	addrNybles := make([]byte, len(fromNybbles))
+	copy(addrNybles, fromNybbles)
+	if offset % 4 == 0 {
+		mustMatch = false
+	} else {
+		mustMatch = true
+	}
+	modelOffset := (offset / 4) - 1
+	curNybble := addrNybles[modelOffset]
+	for len(addrNybles) < 32 {
+		nybbleModel := addrModel.NybbleModels[modelOffset]
+		nextNybble := nybbleModel.predictNextNybble(curNybble)
+		if mustMatch {
+			// Check to make sure the predicted nybble starts with the expected bits
+			if (^(0xff >> (offset % 4) + 4) & nextNybble) ^ addrNybles[modelOffset + 1] == 0 {
+				addrNybles[modelOffset + 1] = nextNybble
+				curNybble = nextNybble
+				mustMatch = false
+				modelOffset++
+			}
+		} else {
+			addrNybles = append(addrNybles, nextNybble)
+			curNybble = nextNybble
+			modelOffset++
+		}
+	}
+	var addrBytes [16]byte
+	for i := 0; i < 16; i++ {
+		nybbleIndex := i * 2
+		addrBytes[i] = (addrNybles[nybbleIndex] << 4) | addrNybles[nybbleIndex + 1]
+	}
+	var newIP = (net.IP)(addrBytes[:])
+	return &newIP
+}
+
+func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNybble(fromNybble uint8, count int, updateFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
 	log.Printf("Generating %d IP addresses using model %s.", count, addrModel.Name)
 	for i := 0; i < count; i++ {
 		if i % updateFreq == 0 {
 			log.Printf("Generating %d addresses out of %d.", i, count)
 		}
-		toReturn = append(toReturn, addrModel.GenerateSingleIP(fromNybble))
+		toReturn = append(toReturn, addrModel.GenerateSingleIPFromNybble(fromNybble))
 	}
 	log.Printf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
 	return toReturn
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateSingleIP(fromNybble uint8) (*net.IP) {
+func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybble(fromNybble uint8) (*net.IP) {
 	addrNybbles := []uint8{fromNybble}
 	curNybble := fromNybble
 	for _, nybbleModel := range addrModel.NybbleModels {
@@ -166,11 +208,7 @@ func (probMap *NybbleProbabilityMap) predictNextNybble() (uint8) {
 }
 
 func (probMap *NybbleProbabilityMap) isModelUpdated() (bool) {
-	if probMap.DigestCount != probMap.LastUpdatedAt {
-		return false
-	} else {
-		return true
-	}
+	return probMap.DigestCount == probMap.LastUpdatedAt
 }
 
 func (probMap *NybbleProbabilityMap) buildDistribution () {

@@ -16,6 +16,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/input"
 	"net"
 	"github.com/cyberdelia/go-metrics-graphite"
+	"github.com/lavalamp-/ipv666/common/validation"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -96,12 +97,14 @@ func main() {
 	var outputFile string
 	var outputType string
 	var forceAccept bool
+	var targetNetworkString string
 
 	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
 	flag.StringVar(&inputFile, "input", "", "An input file containing IPv6 addresses to initiate scanning from.")
 	flag.StringVar(&inputType, "input-type", "txt", "The type of file pointed to by the 'input' argument (bin or txt).")
 	flag.StringVar(&outputFile, "output", "", "The path to the file where discovered addresses should be written.")
 	flag.StringVar(&outputType, "output-type", "txt", "The type of output to write to the output file (txt or bin).")
+	flag.StringVar(&targetNetworkString, "network", "", "The target IPv6 network range to scan in. If empty, defaults to 2000::/4")
 	flag.BoolVar(&forceAccept, "force", false, "Whether or not to force accept all prompts (useful for daemonized scanning).")
 
 	flag.Parse()
@@ -145,6 +148,20 @@ func main() {
 		}
 
 	}
+
+	var targetNetwork *net.IPNet
+	if targetNetworkString != "" {
+		targetNetwork, err = validation.ValidateIPv6NetworkStringForScanning(targetNetworkString, &conf)
+		if err != nil {
+			log.Fatalf("The target network of '%s' was not valid: %e", targetNetworkString, err)
+		}
+	} else {
+		targetNetwork, err = conf.GetTargetNetwork()
+		if err != nil {
+			log.Fatalf("Error thrown when creating default target network: %e", err)
+		}
+	}
+	log.Printf("Target network to scan will be %s.", targetNetwork)
 
 	if !conf.LogToFile {
 		log.Printf("Not configured to log to file. Logging to stdout instead.")

@@ -51,6 +51,7 @@
   "InputEntropyThreshold": 0.9,
   "InputEntropyBitLength": 64,
   "InputMinAddresses": 100000,
+  "InputMinTargetCount": 30,
   "ForceAcceptPrompts": false,
   "AliasLeftIndexStart": 0,
   "AliasDuplicateScanCount": 3
