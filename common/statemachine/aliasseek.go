@@ -13,6 +13,7 @@ import (
 	"errors"
 	"github.com/rcrowley/go-metrics"
 	"time"
+	"bufio"
 )
 
 var aliasCheckTimer = metrics.NewTimer()
@@ -165,20 +166,13 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 			scanAddrs = append(scanAddrs, testAddr)
 		}
 	}
-	toWrite := addressing.GetTextLinesFromIPs(scanAddrs)
 	targetsPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
 	log.Printf("Writing %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
-	targetsFile, err := os.OpenFile(targetsPath, os.O_WRONLY|os.O_CREATE, 0644)
+	err := addressing.WriteIPsToHexFile(targetsPath, scanAddrs)
 	if err != nil {
-		log.Printf("Error thrown when opening output file at path '%s': %e", targetsPath, err)
+		log.Printf("Error thrown when writing %d addresses to file '%s': %e", len(scanAddrs), targetsPath, err)
 		return err
 	}
-	_, err = targetsFile.WriteString(toWrite)
-	if err != nil {
-		log.Printf("Error thrown when flushing blacklist candidates to disk: %e", err)
-		return err
-	}
-	targetsFile.Close()
 	log.Printf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
 	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 	log.Printf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
@@ -243,6 +237,7 @@ func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (str
 		return "", err
 	}
 	defer file.Close()
+	writer := bufio.NewWriter(file)
 
 	for i, networks := range nets {
 		if i % conf.LogLoopEmitFreq == 0 {
@@ -250,7 +245,7 @@ func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (str
 		}
 		addrs = append(addrs, addressing.GenerateRandomAddressesInNetwork(networks, conf.NetworkPingCount)...)
 		if len(addrs) >= conf.BlacklistFlushInterval {
-			err := flushAddressesToDisk(addrs, file)
+			err := flushAddressesToDisk(addrs, writer)
 			if err != nil {
 				return "", err
 			}
@@ -258,11 +253,12 @@ func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (str
 		}
 	}
 	if len(addrs) > 0 {
-		err := flushAddressesToDisk(addrs, file)
+		err := flushAddressesToDisk(addrs, writer)
 		if err != nil {
 			return "", err
 		}
 	}
+	writer.Flush()
 
 	log.Printf("Alias candidates successfully written to file '%s'.", outputPath)
 	return outputPath, nil
@@ -306,8 +302,8 @@ func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *confi
 	return toReturn
 }
 
-func flushAddressesToDisk(addrs []*net.IP, f *os.File) (error) {
+func flushAddressesToDisk(addrs []*net.IP, w *bufio.Writer) (error) {
 	toWrite := addressing.GetTextLinesFromIPs(addrs)
-	_, err := f.WriteString(toWrite)
+	_, err := w.WriteString(toWrite)
 	return err
 }

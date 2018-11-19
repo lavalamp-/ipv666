@@ -7,7 +7,6 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"os"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"errors"
@@ -95,20 +94,13 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP, conf *config.Confi
 				scanAddrs = append(scanAddrs, testAddr)
 			}
 		}
-		toWrite := addressing.GetTextLinesFromIPs(scanAddrs)
 		targetsPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
 		log.Printf("Writing %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
-		targetsFile, err := os.OpenFile(targetsPath, os.O_WRONLY|os.O_CREATE, 0644)
+		err := addressing.WriteIPsToHexFile(targetsPath, scanAddrs)
 		if err != nil {
-			log.Printf("Error thrown when opening output file at path '%s': %e", targetsPath, err)
+			log.Printf("Error thrown when writing %d addresses to file '%s': %e", len(scanAddrs), targetsPath, err)
 			return nil, err
 		}
-		_, err = targetsFile.WriteString(toWrite)
-		if err != nil {
-			log.Printf("Error thrown when flushing blacklist candidates to disk: %e", err)
-			return nil, err
-		}
-		targetsFile.Close()
 		log.Printf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
 		zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 		log.Printf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
@@ -159,17 +151,9 @@ func checkNetworkForAliased(inputNet *net.IPNet, conf *config.Configuration) (*n
 
 	log.Printf("Writing %d test addresses to file at path '%s'.", len(addrs), addrsPath)
 
-	file, err := os.OpenFile(addrsPath, os.O_WRONLY|os.O_CREATE, 0644)
+	err := addressing.WriteIPsToHexFile(addrsPath, addrs)
 	if err != nil {
-		log.Printf("Error thrown when opening output file at path '%s': %e", addrsPath, err)
-		return nil, false, err
-	}
-	defer file.Close()
-
-	toWrite := addressing.GetTextLinesFromIPs(addrs)
-	_, err = file.WriteString(toWrite)
-	if err != nil {
-		log.Printf("Error thrown when flushing blacklist candidates to disk: %e", err)
+		log.Printf("Error thrown when writing %d addresses to file '%s': %e", len(addrs), addrsPath, err)
 		return nil, false, err
 	}
 
