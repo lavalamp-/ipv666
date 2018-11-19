@@ -74,6 +74,10 @@ func SetStateFile(filePath string, curState State) (error) {
 	return ioutil.WriteFile(filePath, b, 0644)
 }
 
+func ResetStateFile(filePath string) (error) {
+	return SetStateFile(filePath, FIRST_STATE)
+}
+
 func InitStateFile(filePath string) (error) {
 	return SetStateFile(filePath, FIRST_STATE)
 }

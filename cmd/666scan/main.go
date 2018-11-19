@@ -17,6 +17,7 @@ import (
 	"net"
 	"github.com/cyberdelia/go-metrics-graphite"
 	"github.com/lavalamp-/ipv666/common/validation"
+	"github.com/lavalamp-/ipv666/common/data"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -162,6 +163,24 @@ func main() {
 		}
 	}
 	log.Printf("Target network to scan will be %s.", targetNetwork)
+
+	mostRecentNetworkString, err := data.GetMostRecentTargetNetworkString(&conf)
+	if err != nil {
+		log.Fatalf("Error thrown when reading most recent network string: %e", err)
+	}
+	if mostRecentNetworkString != targetNetwork.String() {
+		log.Printf("Target network (%s) is not the most recently scanned network (%s). Resetting state machine accordingly.", targetNetwork, mostRecentNetworkString)
+		err := statemachine.ResetStateFile(conf.GetStateFilePath())
+		if err != nil {
+			log.Fatalf("Error thrown when resetting state file: %e", err)
+		}
+		err = data.WriteMostRecentTargetNetwork(targetNetwork, &conf)
+		if err != nil {
+			log.Fatalf("Error thrown when writing most recent target network: %e", err)
+		}
+	} else {
+		log.Printf("The network %s is the last network that was targeted. Picking up from where we left off.", targetNetwork)
+	}
 
 	if !conf.LogToFile {
 		log.Printf("Not configured to log to file. Logging to stdout instead.")

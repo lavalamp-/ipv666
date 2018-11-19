@@ -26,6 +26,7 @@ type Configuration struct {
 	AliasedNetworkDirectory		string		// Subdirectory where aliased network results are kept
 	BloomFilterDirectory		string		// Subdirectory where the Bloom filter is kept
 	StateFileName				string		// The file name for the file that contains the current state
+	TargetNetworkFileName		string		// The file name for the file that contains the last network that was targeted
 
 	// Candidate address generation
 
@@ -146,6 +147,10 @@ func (config *Configuration) GetStateFilePath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.StateFileName)
 }
 
+func (config *Configuration) GetTargetNetworkFilePath() (string) {
+	return filepath.Join(config.BaseOutputDirectory, config.TargetNetworkFileName)
+}
+
 func (config *Configuration) GetGeneratedModelDirPath() (string) {
 	return filepath.Join(config.BaseOutputDirectory, config.GeneratedModelDirectory)
 }
@@ -231,7 +236,6 @@ func (config *Configuration) GetGoldenBlacklistFilePath() (string) {
 
 func (config *Configuration) GetSafeFilePaths() ([]string) {
 	return []string{
-		config.GetStateFilePath(),
 		config.GetGoldenModelFilePath(),
 		config.GetGoldenBlacklistFilePath(),
 	}

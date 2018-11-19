@@ -14,6 +14,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/filtering"
 	"os"
+	"io/ioutil"
 )
 
 var curAddressModel *modeling.ProbabilisticAddressModel
@@ -31,6 +32,25 @@ var curBloomFilterPath string
 var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
 
+
+func GetMostRecentTargetNetworkString(conf *config.Configuration) (string, error) {
+	if !fs.CheckIfFileExists(conf.GetTargetNetworkFilePath()) {
+		return "", nil
+	}
+	content, err := ioutil.ReadFile(conf.GetTargetNetworkFilePath())
+	if err != nil {
+		return "", nil
+	}
+	network, err := addressing.GetIPv6NetworkFromBytesIncLength(content)
+	if err != nil {
+		return "", err
+	}
+	return network.String(), nil
+}
+
+func WriteMostRecentTargetNetwork(toWrite *net.IPNet, conf *config.Configuration) (error) {
+	return addressing.WriteIPv6NetworksToFile(conf.GetTargetNetworkFilePath(), []*net.IPNet{toWrite})
+}
 
 func UpdateAliasedNetworks(nets []*net.IPNet, filePath string) {
 	curAliasedNetworks = nets
