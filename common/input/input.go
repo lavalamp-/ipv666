@@ -29,6 +29,8 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	if err != nil {
 		return err
 	}
+	// Remove IPv4 addresses
+	addrs = addressing.FilterIPv4FromList(addrs)
 	// Unique addresses
 	addrs = removeDuplicateIPs(addrs, conf)
 	// Filter out PSLAAC addresses
