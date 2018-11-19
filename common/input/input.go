@@ -128,7 +128,7 @@ func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.
 	log.Printf("Now removing high entropy IP addresses from list of length %d (%f threshold, %d bits).", len(ips), conf.InputEntropyThreshold, conf.InputEntropyBitLength)
 	var toReturn []*net.IP
 	for i, ip := range ips {
-		if i % conf.InputEmitFreq == 0 {
+		if i % conf.LogLoopEmitFreq == 0 {
 			log.Printf("Processing %d out of %d for high entropy IPs.", i, len(ips))
 		}
 		ipBytes := ([]byte)(*ip)
@@ -143,7 +143,7 @@ func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.
 
 func removeDuplicateIPs(ips []*net.IP, conf *config.Configuration) ([]*net.IP) {
 	log.Printf("Now removing duplicates from list of IP addresses of length %d.", len(ips))
-	toReturn := addressing.GetUniqueIPs(ips, conf.InputEmitFreq)
+	toReturn := addressing.GetUniqueIPs(ips, conf.LogLoopEmitFreq)
 	log.Printf("Resulting list is %d long (removed %d duplicates).", len(toReturn), len(ips) - len(toReturn))
 	return toReturn
 }

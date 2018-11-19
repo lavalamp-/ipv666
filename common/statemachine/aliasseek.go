@@ -64,6 +64,11 @@ func seekAliasedNetworks(conf *config.Configuration) (error) {
 	seekPairs, err := checkNetworksForAliased(scanNets, conf)
 	aliasSeekPairsCounter.Inc(int64(len(seekPairs)))
 
+	if len(seekPairs) == 0 {
+		log.Print("None of the tested networks appeared to be aliased!")
+		return nil
+	}
+
 	if err != nil {
 		log.Printf("Error thrown when checking networks for aliased properties: %e", err)
 		return err
@@ -151,7 +156,7 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 	log.Print("Generating test addresses...")
 	testAddrs := acs.GetTestAddresses()
 	if len(testAddrs) == 0 {
-		return errors.New("did not generate any test addresses in loop %d")
+		return errors.New("did not generate any test addresses in loop")
 	}
 	log.Printf("%d addresses generated.", len(testAddrs))
 	var scanAddrs []*net.IP

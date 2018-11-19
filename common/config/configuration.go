@@ -30,8 +30,6 @@ type Configuration struct {
 
 	GenerateAddressCount		int		// How many addressing to generate in a given iteration
 	GenerateFirstNybble			uint8	// The first nybble of IPv6 addressing to generate
-	GenerateUpdateFreq			int		// The interval upon which to emit to a log file during address generation
-	GenWriteUpdateFreq			int		// The interval upon which to emit to a log file during writing address files
 	ModelUpdateFreq				int		// The interval upon which to emit to a log file during model updates
 
 	// Modeling
@@ -107,7 +105,6 @@ type Configuration struct {
 	InputEntropyThreshold		float64	// The threshold upon which addresses having more entropy will be removed
 	InputEntropyBitLength		int		// The number of bits within IP addresses to calculate entropy based on
 	InputMinAddresses			int		// The recommended minimum number of addresses to require for a given statistical model
-	InputEmitFreq				int		// The interval upon which to emit log updates when processing input files
 
 	// Runtime
 

@@ -74,7 +74,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 			addresses = append(addresses, newIP)
 			bloom.Add(ipBytes)
 		}
-		if (madeCount + blacklistCount + totalBloomCount) % conf.GenerateUpdateFreq == 0 {
+		if (madeCount + blacklistCount + totalBloomCount) % conf.LogLoopEmitFreq == 0 {
 			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount, madeCount, blacklistCount, totalBloomCount)
 		}
 		if curBloomCount >= bloomEmptyThreshold {
