@@ -76,7 +76,7 @@ func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
 	return persist.Save(filePath, addrModel)
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwork *net.IPNet, count int, updateFreq int, fn addrProcessFunc) ([]*net.IP, error) {
+func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwork *net.IPNet, count int, fn addrProcessFunc) ([]*net.IP, error) {
 	var toReturn []*net.IP
 	netLength, _ := fromNetwork.Mask.Size()
 	nybbleCount := int(math.Ceil(float64(netLength) / 4.0))
@@ -91,9 +91,6 @@ func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwo
 			toReturn = append(toReturn, newIP)
 		}
 		totalCount++
-		if totalCount % updateFreq == 0 {
-			log.Printf("Generated %d IP addresses from network %s. %d were valid (need %d).", totalCount, fromNetwork, len(toReturn), count)
-		}
 	}
 	return toReturn, nil
 }

@@ -28,7 +28,7 @@ func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
 	}
 	log.Printf("Updating model %s with %d addresses.", model.Name, len(cleanPings))
 	start := time.Now()
-	model.UpdateMultiIP(cleanPings, conf.ModelUpdateFreq, conf)
+	model.UpdateMultiIP(cleanPings, conf.LogLoopEmitFreq, conf)
 	elapsed := time.Since(start)
 	modelUpdateCounter.Inc(int64(len(cleanPings)))
 	modelUpdateDurationTimer.Update(elapsed)

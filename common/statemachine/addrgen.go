@@ -72,7 +72,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	var blacklistCount, totalBloomCount, curBloomCount, madeCount = 0, 0, 0, 0
 	var bloomEmptyThreshold = int(conf.BloomEmptyMultiple * float64(conf.GenerateAddressCount))
 
-	addrFilterFunc := func(toCheck *net.IP) (bool, error) {
+	addrProcessFunc := func(toCheck *net.IP) (bool, error) {
 		ipBytes := ([]byte)(*toCheck)
 		var toReturn bool
 		if blacklist.IsIPBlacklisted(toCheck) {
@@ -109,7 +109,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 		log.Printf("Error thrown when getting target network from config: %e", err)
 		return err
 	}
-	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, conf.GenerateAddressCount, conf.LogLoopEmitFreq, addrFilterFunc)
+	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, conf.GenerateAddressCount, addrProcessFunc)
 	if err != nil {
 		log.Printf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
 		return err

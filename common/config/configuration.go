@@ -32,7 +32,6 @@ type Configuration struct {
 
 	GenerateAddressCount		int			// How many addressing to generate in a given iteration
 	GenerateFirstNybble			uint8		// The first nybble of IPv6 addressing to generate
-	ModelUpdateFreq				int			// The interval upon which to emit to a log file during model updates
 
 	// Modeling
 
