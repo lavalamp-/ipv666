@@ -152,7 +152,7 @@ Usage of ./build/666scan:
 
 ### Examples
 
-Scan the global IPv6 address space using the configuration values in the file `/foo/bar/config.json`:
+Scan the global IPv6 address space using the configuration values in the file `/foo/bar/config.json` and write the results to `discovered_addrs.txt`:
 
 ```$xslt
 ./build/666scan -config /foo/bar/config.json
