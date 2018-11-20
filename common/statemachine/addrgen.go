@@ -13,6 +13,8 @@ import (
 	"github.com/lavalamp-/ipv666/common/filtering"
 	bloom2 "github.com/willf/bloom"
 	"os"
+	"errors"
+	"fmt"
 )
 
 var generateDurationTimer = metrics.NewTimer()
@@ -47,46 +49,70 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 	if err != nil {
 		return err
 	}
+	targetNetwork, err := conf.GetTargetNetwork()
+	if err != nil {
+		return err
+	}
+
+	if blacklist.IsNetworkBlacklisted(targetNetwork) {
+		blacklistNet := blacklist.GetBlacklistingNetworkFromNetwork(targetNetwork)
+		return errors.New(fmt.Sprintf("The target network range (%s) is blaclisted (blacklisting network of %s).", targetNetwork, blacklistNet))
+	}
 
 	// Generate all of the addresses and filter out based on Bloom filter and blacklist
 
 	log.Printf(
-		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Starting nybble is %d.",
+		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Network range is %s.",
 		conf.GenerateAddressCount,
 		model.Name,
 		model.DigestCount,
-		conf.GenerateFirstNybble,
+		targetNetwork,
 	)
 	var addresses []*net.IP
 	var blacklistCount, totalBloomCount, curBloomCount, madeCount = 0, 0, 0, 0
 	var bloomEmptyThreshold = int(conf.BloomEmptyMultiple * float64(conf.GenerateAddressCount))
-	start := time.Now()
-	for len(addresses) < conf.GenerateAddressCount {
-		newIP := model.GenerateSingleIP(conf.GenerateFirstNybble)
-		ipBytes := ([]byte)(*newIP)
-		if blacklist.IsIPBlacklisted(newIP) {
+
+	addrProcessFunc := func(toCheck *net.IP) (bool, error) {
+		ipBytes := ([]byte)(*toCheck)
+		var toReturn bool
+		if blacklist.IsIPBlacklisted(toCheck) {
 			blacklistCount++
+			toReturn = true
 		} else if bloom.Test(ipBytes) {
 			curBloomCount++
 			totalBloomCount++
+			toReturn = true
 		} else {
 			madeCount++
-			addresses = append(addresses, newIP)
 			bloom.Add(ipBytes)
+			toReturn = false
 		}
-		if (madeCount + blacklistCount + totalBloomCount) % conf.GenerateUpdateFreq == 0 {
-			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount, madeCount, blacklistCount, totalBloomCount)
+		if (madeCount + blacklistCount + totalBloomCount) % conf.LogLoopEmitFreq == 0 {
+			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount + totalBloomCount, madeCount, blacklistCount, totalBloomCount)
 		}
 		if curBloomCount >= bloomEmptyThreshold {
 			log.Printf("Bloom filter rejection rate currently exceeds threshold of %d (%d rejected). Emptying and recreating.", bloomEmptyThreshold, curBloomCount)
 			bloom, err = remakeBloomFilter(conf, addresses)
 			if err != nil {
 				log.Printf("Error thrown when remaking Bloom filter: %e", err)
-				return err
+				return false, err
 			}
 			curBloomCount = 0
 			bloomEmptyCount.Inc(1)
 		}
+		return toReturn, nil
+	}
+
+	start := time.Now()
+	targetNetwork, err = conf.GetTargetNetwork()
+	if err != nil {
+		log.Printf("Error thrown when getting target network from config: %e", err)
+		return err
+	}
+	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, conf.GenerateAddressCount, addrProcessFunc)
+	if err != nil {
+		log.Printf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
+		return err
 	}
 	elapsed := time.Since(start)
 	generateDurationTimer.Update(elapsed)

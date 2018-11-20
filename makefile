@@ -5,6 +5,12 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
+test:
+	$(GOTEST) ./...
+
+test-verbose:
+	$(GOTEST) -v ./...
+
 build-scan:
 	$(GOBUILD) -v -o build/666scan cmd/666scan/main.go
 

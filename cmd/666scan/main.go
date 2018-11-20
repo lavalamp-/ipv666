@@ -16,6 +16,8 @@ import (
 	"github.com/lavalamp-/ipv666/common/input"
 	"net"
 	"github.com/cyberdelia/go-metrics-graphite"
+	"github.com/lavalamp-/ipv666/common/validation"
+	"github.com/lavalamp-/ipv666/common/data"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -96,12 +98,14 @@ func main() {
 	var outputFile string
 	var outputType string
 	var forceAccept bool
+	var targetNetworkString string
 
 	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
 	flag.StringVar(&inputFile, "input", "", "An input file containing IPv6 addresses to initiate scanning from.")
 	flag.StringVar(&inputType, "input-type", "txt", "The type of file pointed to by the 'input' argument (bin or txt).")
 	flag.StringVar(&outputFile, "output", "", "The path to the file where discovered addresses should be written.")
 	flag.StringVar(&outputType, "output-type", "txt", "The type of output to write to the output file (txt or bin).")
+	flag.StringVar(&targetNetworkString, "network", "", "The target IPv6 network range to scan in. If empty, defaults to 2000::/4")
 	flag.BoolVar(&forceAccept, "force", false, "Whether or not to force accept all prompts (useful for daemonized scanning).")
 
 	flag.Parse()
@@ -144,6 +148,47 @@ func main() {
 			log.Printf("Force accept configured. Not asking for permission to append to file '%s'.", conf.GetOutputFilePath())
 		}
 
+	}
+
+	var targetNetwork *net.IPNet
+	if targetNetworkString != "" {
+		targetNetwork, err = validation.ValidateIPv6NetworkStringForScanning(targetNetworkString, &conf)
+		if err != nil {
+			log.Fatalf("The target network of '%s' was not valid: %e", targetNetworkString, err)
+		}
+		conf.SetTargetNetwork(targetNetwork)
+	} else {
+		targetNetwork, err = conf.GetTargetNetwork()
+		if err != nil {
+			log.Fatalf("Error thrown when creating default target network: %e", err)
+		}
+	}
+	log.Printf("Target network to scan will be %s.", targetNetwork)
+
+	mostRecentNetworkString, err := data.GetMostRecentTargetNetworkString(&conf)
+	if err != nil {
+		log.Fatalf("Error thrown when reading most recent network string: %e", err)
+	}
+	if mostRecentNetworkString != targetNetwork.String() {
+		if mostRecentNetworkString == "" {
+			log.Printf("No prior record of a scanned network exists. Resetting state machine to scan %s appropriately.", targetNetwork)
+		} else {
+			log.Printf("Target network (%s) is not the most recently scanned network (%s). Resetting state machine and Bloom filter accordingly.", targetNetwork, mostRecentNetworkString)
+		}
+		err := statemachine.ResetStateFile(conf.GetStateFilePath())
+		if err != nil {
+			log.Fatalf("Error thrown when resetting state file: %e", err)
+		}
+		_, _, err = fs.DeleteAllFilesInDirectory(conf.GetBloomDirPath(), []string{})
+		if err != nil {
+			log.Fatalf("Error thrown when deleting Bloom directory files (path '%s'): %e", conf.GetBloomDirPath(), err)
+		}
+		err = data.WriteMostRecentTargetNetwork(targetNetwork, &conf)
+		if err != nil {
+			log.Fatalf("Error thrown when writing most recent target network: %e", err)
+		}
+	} else {
+		log.Printf("The network %s is the last network that was targeted. Picking up from where we left off.", targetNetwork)
 	}
 
 	if !conf.LogToFile {

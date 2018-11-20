@@ -74,13 +74,17 @@ func SetStateFile(filePath string, curState State) (error) {
 	return ioutil.WriteFile(filePath, b, 0644)
 }
 
+func ResetStateFile(filePath string) (error) {
+	return SetStateFile(filePath, FIRST_STATE)
+}
+
 func InitStateFile(filePath string) (error) {
 	return SetStateFile(filePath, FIRST_STATE)
 }
 
 func RunStateMachine(conf *config.Configuration) (error) {
 
-	log.Print("Now starting to run the state machine... Hold on to your butts.")
+	log.Print("Now starting to run the state machine.")
 
 	state, err := fetchStateFromFile(conf.GetStateFilePath())
 

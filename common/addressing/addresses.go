@@ -15,6 +15,20 @@ import (
 	"bufio"
 )
 
+func FilterIPv4FromList(toParse []*net.IP) ([]*net.IP) {
+	var toReturn []*net.IP
+	for _, curIP := range toParse {
+		if curIP.To4() == nil {
+			toReturn = append(toReturn, curIP)
+		}
+	}
+	return toReturn
+}
+
+func IsAddressIPv4(toCheck *net.IP) (bool) {
+	return toCheck.To4() != nil
+}
+
 func GetIPsFromStrings(toParse []string) ([]*net.IP) {
 	var toReturn []*net.IP
 	for _, curParse := range toParse {
@@ -100,7 +114,6 @@ func GetTextLinesFromIPs(addrs []*net.IP) (string) {
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 	file, err := os.Open(filePath)
-	// reader := bufio.NewReader(file)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +168,14 @@ func GetNybbleFromIP(ip *net.IP, index int) (uint8) {
 	} else {
 		return addrByte & 0xf
 	}
+}
+
+func GetNybblesFromIP(ip *net.IP, nybbleCount int) ([]uint8) {
+	var toReturn []uint8
+	for i := 0; i < nybbleCount; i++ {
+		toReturn = append(toReturn, GetNybbleFromIP(ip, i))
+	}
+	return toReturn
 }
 
 func GenerateRandomAddress() (*net.IP) {

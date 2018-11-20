@@ -97,21 +97,6 @@ func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
 	return toReturn
 }
 
-func checkNetworkEquality(first *net.IPNet, second *net.IPNet) (bool) {
-	//TODO fix this - checking IPs can fail in this way as the IPNet struct doesn't mask out the address
-	for i := range first.IP {
-		if first.IP[i] != second.IP[i] {
-			return false
-		}
-	}
-	for i := range first.Mask {
-		if first.Mask[i] != second.Mask[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
 	writer := bufio.NewWriter(file)

@@ -6,7 +6,6 @@ import (
 	"github.com/lavalamp-/ipv666/common/shell"
 	"log"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/modeling"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"net"
 	"github.com/lavalamp-/ipv666/common/zrandom"
@@ -29,6 +28,8 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	if err != nil {
 		return err
 	}
+	// Remove IPv4 addresses
+	addrs = addressing.FilterIPv4FromList(addrs)
 	// Unique addresses
 	addrs = removeDuplicateIPs(addrs, conf)
 	// Filter out PSLAAC addresses
@@ -46,11 +47,6 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	}
 	// Delete all existing files in all directories
 	err = cleanUpWorkingDirectories(conf)
-	if err != nil {
-		return err
-	}
-	// Create an empty model and write to disk
-	err = createBlankModel(inputFilePath, conf)
 	if err != nil {
 		return err
 	}
@@ -128,7 +124,7 @@ func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.
 	log.Printf("Now removing high entropy IP addresses from list of length %d (%f threshold, %d bits).", len(ips), conf.InputEntropyThreshold, conf.InputEntropyBitLength)
 	var toReturn []*net.IP
 	for i, ip := range ips {
-		if i % conf.InputEmitFreq == 0 {
+		if i % conf.LogLoopEmitFreq == 0 {
 			log.Printf("Processing %d out of %d for high entropy IPs.", i, len(ips))
 		}
 		ipBytes := ([]byte)(*ip)
@@ -143,31 +139,18 @@ func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.
 
 func removeDuplicateIPs(ips []*net.IP, conf *config.Configuration) ([]*net.IP) {
 	log.Printf("Now removing duplicates from list of IP addresses of length %d.", len(ips))
-	toReturn := addressing.GetUniqueIPs(ips, conf.InputEmitFreq)
+	toReturn := addressing.GetUniqueIPs(ips, conf.LogLoopEmitFreq)
 	log.Printf("Resulting list is %d long (removed %d duplicates).", len(toReturn), len(ips) - len(toReturn))
 	return toReturn
 }
 
 func cleanUpWorkingDirectories(conf *config.Configuration) (error) {
 	log.Printf("Now deleting all regular files (recursively) starting in directory '%s'.", conf.BaseOutputDirectory)
-	numDeleted, err := fs.DeleteAllFilesInDirectory(conf.BaseOutputDirectory)
+	numDeleted, numSkipped, err := fs.DeleteAllFilesInDirectory(conf.BaseOutputDirectory, conf.GetSafeFilePaths())
 	if err != nil {
 		log.Printf("Error thrown when deleting files under directory '%s': %e", conf.BaseOutputDirectory, err)
 		return err
 	}
-	log.Printf("Successfully deleted %d files.", numDeleted)
-	return nil
-}
-
-func createBlankModel(inputFilePath string, conf *config.Configuration) (error) {
-	log.Printf("Now creating a blank statistical model.")
-	model := modeling.NewAddressModel(fmt.Sprintf("Model from %s", inputFilePath), conf)
-	outputPath := fs.GetTimedFilePath(conf.GetGeneratedModelDirPath())
-	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
-	err := model.Save(outputPath)
-	if err != nil {
-		log.Printf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
-		return err
-	}
+	log.Printf("Successfully deleted %d files (%d skipped).", numDeleted, numSkipped)
 	return nil
 }

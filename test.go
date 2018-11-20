@@ -94,7 +94,7 @@ func main() {
 	//	panic(err)
 	//}
 	//log.Printf("Generating addresses")
-	//addrs := model.GenerateMultiIP(2,10000000, 100000)
+	//addrs := model.GenerateMultiIPFromNybble(2,10000000, 100000)
 	//log.Printf("Updating filter")
 	//for i, addr := range addrs {
 	//	if i % 100000 == 0 {

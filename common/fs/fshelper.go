@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"bufio"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/comparison"
 )
 
 func WriteStringsToFile(toWrite []string, filePath string) (error) {
@@ -147,8 +148,9 @@ func CountFileSize(filePath string) (int64, error) {
 	return fileInfo.Size(), nil
 }
 
-func DeleteAllFilesInDirectory(dirPath string) (int, error) {
+func DeleteAllFilesInDirectory(dirPath string, omitPaths []string) (int, int, error) {
 	var files []string
+	numDeleted, numSkipped := 0, 0
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) (error) {
 		mode := info.Mode()
 		if mode.IsRegular() {
@@ -157,15 +159,20 @@ func DeleteAllFilesInDirectory(dirPath string) (int, error) {
 		return nil
 	})
 	if err != nil {
-		return -1, err
+		return -1, -1, err
 	}
 	for _, filePath := range files {
-		err := os.Remove(filePath)
-		if err != nil {
-			return -1, err
+		if comparison.StringInSlice(filePath, omitPaths) {
+			numSkipped++
+		} else {
+			err := os.Remove(filePath)
+			if err != nil {
+				return -1, -1, err
+			}
+			numDeleted++
 		}
 	}
-	return len(files), nil
+	return numDeleted, numSkipped, nil
 }
 
 func GetTimedFilePath(baseDir string) (string) {
