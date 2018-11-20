@@ -2,9 +2,9 @@ package config
 
 import (
 	"testing"
-	"github.com/prometheus/common/log"
 	"net"
 	"github.com/stretchr/testify/assert"
+	"log"
 )
 
 func getTestingConfig() (*Configuration) {

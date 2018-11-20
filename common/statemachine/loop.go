@@ -102,44 +102,44 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		switch state {
 		case GEN_ADDRESSES:
 			// Generate the candidate addressing to scan from the most recent model
-			err := generateCandidateAddresses(conf) // Looking gr8
+			err := generateCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
 			// Perform a Zmap scan of the candidate addressing that were generated
-			err := zmapScanCandidateAddresses(conf) // Looking gr8
+			err := zmapScanCandidateAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case NETWORK_GROUP:
 			// Process results of Zmap scan into a set of network ranges
-			err := generateScanResultsNetworkRanges(conf) // Looking gr8
+			err := generateScanResultsNetworkRanges(conf)
 			if err != nil {
 				return err
 			}
 		case SEEK_ALIASED_NETWORKS:
 			// Seek out aliased networks
-			err := seekAliasedNetworks(conf) // Looking gr8
+			err := seekAliasedNetworks(conf)
 			if err != nil {
 				return err
 			}
 		case PROCESS_ALIASED_NETWORKS:
 			// Process the results of aliased network seeking (add to blacklist and de-dupe)
-			err := processAliasedNetworks(conf) // Looking gr8
+			err := processAliasedNetworks(conf)
 			if err != nil {
 				return err
 			}
 		case REM_BAD_ADDR:
 			// Remove all the addressing from the Zmap results that are in ranges that failed
 			// the test in the previous step
-			err := cleanBlacklistedAddresses(conf) // Looking gr8
+			err := cleanBlacklistedAddresses(conf)
 			if err != nil {
 				return err
 			}
 		case UPDATE_MODEL:
 			// Update the statistical model with the valid IPv6 results we have left over
-			err := updateModelWithSuccessfulHosts(conf) // Looking gr8
+			err := updateModelWithSuccessfulHosts(conf)
 			if err != nil {
 				return err
 			}

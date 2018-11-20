@@ -47,7 +47,7 @@
   "GraphitePort": 2003,
   "GraphiteEmitFreq": 60,
   "OutputFileName": "discovered_addrs",
-  "OutputFileType": "bin",
+  "OutputFileType": "txt",
   "InputEntropyThreshold": 0.9,
   "InputEntropyBitLength": 64,
   "InputMinAddresses": 100000,

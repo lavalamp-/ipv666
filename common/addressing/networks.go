@@ -98,7 +98,7 @@ func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
 }
 
 func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 }
 
 func WriteIPv6NetworksToHexFile(filePath string, networks []*net.IPNet) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err

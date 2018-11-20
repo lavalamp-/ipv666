@@ -17,7 +17,7 @@ import (
 )
 
 func WriteStringsToFile(toWrite []string, filePath string) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}

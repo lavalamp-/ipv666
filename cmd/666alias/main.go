@@ -11,6 +11,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"errors"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/setup"
 )
 
 func main() {
@@ -38,6 +39,12 @@ func main() {
 
 	if err != nil {
 		log.Fatal("Can't proceed without loading valid configuration file.")
+	}
+
+	err = setup.InitFilesystem(&conf)
+
+	if err != nil {
+		log.Fatal("Error thrown during filesystem initialization: ", err)
 	}
 
 	log.Printf("All systems are green. Now testing IPv6 range %s for aliased state.", cidrRange)
