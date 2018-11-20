@@ -11,6 +11,10 @@ test:
 test-verbose:
 	$(GOTEST) -v ./...
 
+get-deps:
+	$(GOGET) -d ./...
+	$(GOGET) -d github.com/stretchr/testify/assert
+
 build-scan:
 	$(GOBUILD) -v -o build/666scan cmd/666scan/main.go
 

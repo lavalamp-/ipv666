@@ -29,7 +29,7 @@ func GetBloomFilterFromFile(filePath string, filterSize uint, keyCount uint) (*b
 }
 
 func WriteBloomFilterToFile(filePath string, filter *bloom.BloomFilter) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/data"
 	"log"
+	"github.com/lavalamp-/ipv666/common/setup"
 )
 
 func main() {
@@ -54,6 +55,12 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Can't proceed without loading valid configuration file: %e", err)
+	}
+
+	err = setup.InitFilesystem(&conf)
+
+	if err != nil {
+		log.Fatal("Error thrown during filesystem initialization: ", err)
 	}
 
 	log.Printf("Loading IP addresses from file '%s'.", inputPath)

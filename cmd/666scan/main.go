@@ -18,6 +18,7 @@ import (
 	"github.com/cyberdelia/go-metrics-graphite"
 	"github.com/lavalamp-/ipv666/common/validation"
 	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/lavalamp-/ipv666/common/setup"
 )
 
 var mainLoopRunTimer = metrics.NewTimer()
@@ -39,28 +40,6 @@ func setupLogging(conf *config.Configuration) {
   		Compress:   conf.CompressLogFiles,
   	})
 	log.Print("Logging set up successfully.")
-}
-  
-func initFilesystem(conf *config.Configuration) (error) {
-	log.Print("Now initializing filesystem for IPv6 address discovery process...")
-	for _, dirPath := range conf.GetAllDirectories() {
-		err := fs.CreateDirectoryIfNotExist(dirPath)
-		if err != nil {
-			return err
-		}
-	}
-	log.Printf("Initializing state file at '%s'.", conf.GetStateFilePath())
-	if _, err := os.Stat(conf.GetStateFilePath()); os.IsNotExist(err) {
-		log.Printf("State file does not exist at path '%s'. Creating now.", conf.GetStateFilePath())
-		err = statemachine.InitStateFile(conf.GetStateFilePath())
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Printf("State file already exists at path '%s'.", conf.GetStateFilePath())
-	}
-	log.Print("Local filesystem initialized for IPv6 address discovery process.")
-	return nil
 }
 
 func initMetrics(conf *config.Configuration) (error) {
@@ -197,10 +176,10 @@ func main() {
 		setupLogging(&conf)
 	}
 
-	err = initFilesystem(&conf)
+	err = setup.InitFilesystem(&conf)
 
 	if err != nil {
-		log.Fatal("Error thrown during initialization: ", err)
+		log.Fatal("Error thrown during filesystem initialization: ", err)
 	}
 
 	zmapAvailable, err := shell.IsZmapAvailable(&conf)

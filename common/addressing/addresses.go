@@ -91,7 +91,7 @@ func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 }
 
 func WriteIPsToHexFile(filePath string, addrs []*net.IP) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 }
 
 func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) (error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
