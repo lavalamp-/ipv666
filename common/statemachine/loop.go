@@ -84,7 +84,7 @@ func InitStateFile(filePath string) (error) {
 
 func RunStateMachine(conf *config.Configuration) (error) {
 
-	log.Print("Now starting to run the state machine... Hold on to your butts.")
+	log.Print("Now starting to run the state machine.")
 
 	state, err := fetchStateFromFile(conf.GetStateFilePath())
 
