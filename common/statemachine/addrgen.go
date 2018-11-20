@@ -88,7 +88,7 @@ func generateCandidateAddresses(conf *config.Configuration) (error) {
 			toReturn = false
 		}
 		if (madeCount + blacklistCount + totalBloomCount) % conf.LogLoopEmitFreq == 0 {
-			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount, madeCount, blacklistCount, totalBloomCount)
+			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount + totalBloomCount, madeCount, blacklistCount, totalBloomCount)
 		}
 		if curBloomCount >= bloomEmptyThreshold {
 			log.Printf("Bloom filter rejection rate currently exceeds threshold of %d (%d rejected). Emptying and recreating.", bloomEmptyThreshold, curBloomCount)
