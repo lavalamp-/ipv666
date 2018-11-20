@@ -1,17 +1,17 @@
 # ipv666
 
-ipv666 is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
+`ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
 If you're interested in how these tools work please refer to *this blog post*.
 
 The tools included in this codebase are as follows:
 
-* [`666scan`]($666scan) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
+* [`666scan`](#666scan) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
 * [`666alias`](#666alias) - Tests a single IPv6 network range to see if the network range is aliased
 * [`666blgen`](#666blgen) - Adds the contents of a file containing IPv6 network ranges to the aliased network blacklist
 * [`666clean`](#666clean) - Cleans the contents of a file containing IPv6 addresses based on an aliased network blacklist
 
-Unless you're doing more complicated IPv6 research it is likely that the [`666scan`]($666scan) tool is what you're looking for. 
+Unless you're doing more complicated IPv6 research it is likely that the [`666scan`](#666scan) tool is what you're looking for. 
 
 To get started check out the [Installation](#installation) section first and then head to whichever section details the tool you're looking to use.
 
@@ -24,7 +24,7 @@ This software is brought to you free of charge by [@_lavalamp](https://twitter.c
 
 ## Installation
 
-ipv666 is largely self-contained but it does rely on the IPv6 ZMap port authored by a research group out of the TUM Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
+`ipv666` is largely self-contained but it does rely on the IPv6 ZMap port authored by a research group out of the TUM Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
 
 On a host that has at least one IPv6 interface available pull down the `ZMapv6` code from [GitHub](https://github.com/tumi8/zmap):
 
