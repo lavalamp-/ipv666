@@ -2,7 +2,7 @@
 
 `ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
-If you're interested in how these tools work please refer to *this blog post*.
+If you're interested in how these tools work please refer to [this blog post](https://l.avala.mp/?p=285).
 
 The tools included in this codebase are as follows:
 
@@ -126,7 +126,7 @@ Once the configuration file is updated you should be good to go with any of the 
 
 ## 666scan
 
-The `666scan` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found *in this blog post*.
+The `666scan` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
 
 Please note that any networks that you scan with this tool will receive a considerable amount of traffic for a significant variety of IPv6 addresses. In some cases the networking infrastructure that is carrying your traffic will be unhappy and may either fall over and/or block you. We recommend exercising caution when using this tool (especially for targeted network scans) and turning down the `ZmapBandwidth` value in the configuration file as needed.
 
