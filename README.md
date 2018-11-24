@@ -24,7 +24,7 @@ This software is brought to you free of charge by [@_lavalamp](https://twitter.c
 
 ## Installation
 
-`ipv666` is largely self-contained but it does rely on the IPv6 `ZMap` port authored by a research group out of the TUM Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
+`ipv666` is largely self-contained but it does rely on the IPv6 `ZMap` port authored by a research group out of the Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
 
 On a host that has at least one IPv6 interface available pull down the `ZMapv6` code from [GitHub](https://github.com/tumi8/zmap):
 
