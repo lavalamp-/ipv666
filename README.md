@@ -24,7 +24,7 @@ This software is brought to you free of charge by [@_lavalamp](https://twitter.c
 
 ## Installation
 
-`ipv666` is largely self-contained but it does rely on the IPv6 ZMap port authored by a research group out of the TUM Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
+`ipv666` is largely self-contained but it does rely on the IPv6 `ZMap` port authored by a research group out of the Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
 
 On a host that has at least one IPv6 interface available pull down the `ZMapv6` code from [GitHub](https://github.com/tumi8/zmap):
 
@@ -32,7 +32,7 @@ On a host that has at least one IPv6 interface available pull down the `ZMapv6` 
 git clone https://github.com/tumi8/zmap.git
 ```
 
-[Follow the instructions found here](https://github.com/tumi8/zmap/blob/master/INSTALL.md) to install `ZMapv6` from source. The exact commands will differ depending on your OS (we've done the following and everything works pretty easily on Ubuntu 16.04 x64).
+[Follow the instructions found here](https://github.com/tumi8/zmap/blob/master/INSTALL.md) to install `ZMapv6` from source. The exact commands will differ depending on your OS. We've done the following and everything works pretty easily on Ubuntu 16.04 x64:
 
 ```$xslt
 sudo apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config libunistring-dev
@@ -262,7 +262,7 @@ We invite people to contribute to the codebase, fork it, do whatever you'd like!
 
 ## Thanks
 
-Many thanks to the following people for their contributions, inspirations, and help.
+Many thanks to the following people for their contributions, inspiration, and help.
 
 * Vasyl Pihur
 * Zakir Durumeric
