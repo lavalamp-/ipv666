@@ -1,5 +1,7 @@
 # ipv666
 
+**NOTE** - This software was previously licensed under GPLv3 and has since been updated to BSD.
+
 `ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
 If you're interested in how these tools work please refer to [this blog post](https://l.avala.mp/?p=285).
@@ -32,7 +34,7 @@ On a host that has at least one IPv6 interface available pull down the `ZMapv6` 
 git clone https://github.com/tumi8/zmap.git
 ```
 
-[Follow the instructions found here](https://github.com/tumi8/zmap/blob/master/INSTALL.md) to install `ZMapv6` from source. The exact commands will differ depending on your OS (we've done the following and everything works pretty easily on Ubuntu 16.04 x64).
+[Follow the instructions found here](https://github.com/tumi8/zmap/blob/master/INSTALL.md) to install `ZMapv6` from source. The exact commands will differ depending on your OS. We've done the following and everything works pretty easily on Ubuntu 16.04 x64:
 
 ```$xslt
 sudo apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config libunistring-dev
@@ -262,7 +264,7 @@ We invite people to contribute to the codebase, fork it, do whatever you'd like!
 
 ## Thanks
 
-Many thanks to the following people for their contributions, inspirations, and help.
+Many thanks to the following people for their contributions, inspiration, and help.
 
 * Vasyl Pihur
 * Zakir Durumeric
