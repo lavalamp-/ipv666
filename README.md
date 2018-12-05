@@ -1,5 +1,7 @@
 # ipv666
 
+**NOTE** - This software was previously licensed under GPLv3 and has since been updated to BSD.
+
 `ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
 If you're interested in how these tools work please refer to *this blog post*.
