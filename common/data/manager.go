@@ -1,20 +1,24 @@
 package data
 
 import (
-	"github.com/lavalamp-/ipv666/common/modeling"
-	"log"
+	"bytes"
+	"compress/zlib"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"net"
 	"github.com/lavalamp-/ipv666/common/blacklist"
-	"github.com/willf/bloom"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/filtering"
-	"os"
+	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/modeling"
+	"github.com/willf/bloom"
 	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"path/filepath"
 )
 
 var curAddressModel *modeling.ProbabilisticAddressModel
@@ -31,7 +35,7 @@ var curBloomFilter *bloom.BloomFilter
 var curBloomFilterPath string
 var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
-
+var packedBox = packr.New("box","../../assets")
 
 func GetMostRecentTargetNetworkString(conf *config.Configuration) (string, error) {
 	if !fs.CheckIfFileExists(conf.GetTargetNetworkFilePath()) {
@@ -76,7 +80,7 @@ func GetAliasedNetworks(conf *config.Configuration) ([]*net.IPNet, error) {
 	} else {
 		log.Printf("Loading aliased networks from path '%s'.", filePath)
 		toReturn, err := addressing.ReadIPv6NetworksFromFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateAliasedNetworks(toReturn, filePath)
 		}
 		return toReturn, err
@@ -130,7 +134,7 @@ func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {
 	} else {
 		log.Printf("Loading Bloom filter from path '%s'.", filePath)
 		toReturn, err := filtering.GetBloomFilterFromFile(filePath, conf.AddressFilterSize, conf.AddressFilterHashCount)
-		if err != nil {
+		if err == nil {
 			UpdateBloomFilter(toReturn, filePath)
 		}
 		return toReturn, err
@@ -160,7 +164,7 @@ func GetCleanPingResults(resultsDir string) ([]*net.IP, error) {
 	} else {
 		log.Printf("Loading cleaned ping results from path '%s'.", filePath)
 		toReturn, err := addressing.ReadIPsFromBinaryFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateCleanPingResults(toReturn, filePath)
 		}
 		return toReturn, err
@@ -179,9 +183,18 @@ func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
 		log.Printf("Error thrown when retrieving blacklist from directory '%s': %s", blacklistDir, err)
 		return nil, err
 	} else if fileName == "" {
-		log.Printf("The directory at '%s' was empty. Returning a new, empty blacklist.", blacklistDir)
-		emptyNets := make([]*net.IPNet, 0)
-		return blacklist.NewNetworkBlacklist(emptyNets), nil
+		log.Printf("The directory at '%s' was empty.", blacklistDir)
+		if curBlacklist != nil {
+			log.Printf("Already have a blacklist loaded from box. Using it.")
+			return curBlacklist, nil
+		}
+		log.Printf("Loading blacklist from box.")
+		toReturn, err := getBlacklistFromBox()
+		if err != nil {
+			return nil, err
+		}
+		UpdateBlacklist(toReturn, "")
+		return toReturn, nil
 	}
 	filePath := filepath.Join(blacklistDir, fileName)
 	log.Printf("Most recent blacklist file is at path '%s'.", filePath)
@@ -190,12 +203,35 @@ func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
 		return curBlacklist, nil
 	} else {
 		toReturn, err := blacklist.ReadNetworkBlacklistFromFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateBlacklist(toReturn, filePath)
 		}
 		return toReturn, err
 	}
 }
+
+func getBlacklistFromBox() (*blacklist.NetworkBlacklist, error) {
+	content, err := packedBox.Find("blacklist.zlib")
+	if err != nil {
+		return nil, err
+	}
+	b := bytes.NewReader(content)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	defer z.Close()
+	decompressed, err := ioutil.ReadAll(z)
+	if err != nil {
+		return nil, err
+	}
+	nets, err := addressing.BytesToIPv6Networks(decompressed)
+	if err != nil {
+		return nil, err
+	}
+	return blacklist.NewNetworkBlacklist(nets), nil
+}
+
 
 func UpdateScanResultsNetworkRanges(networks []*net.IPNet, filePath string) {
 	curScanResultsNetworkRanges = networks
@@ -220,7 +256,7 @@ func GetScanResultsNetworkRanges(scanResultsDir string) ([]*net.IPNet, error) {
 	} else {
 		log.Printf("Loading candidate ping networks from path '%s'.", filePath)
 		toReturn, err := addressing.ReadIPv6NetworksFromFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateScanResultsNetworkRanges(toReturn, filePath)
 		}
 		return toReturn, err
@@ -250,7 +286,7 @@ func GetCandidatePingResults(pingResultsDir string) ([]*net.IP, error) {
 	} else {
 		log.Printf("Loading candidate ping results from path '%s'.", filePath)
 		toReturn, err := addressing.ReadIPsFromHexFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateCandidatePingResults(toReturn, filePath)
 		}
 		return toReturn, err
@@ -270,7 +306,17 @@ func GetProbabilisticAddressModel(modelDir string) (*modeling.ProbabilisticAddre
 		return &modeling.ProbabilisticAddressModel{}, err
 	} else if fileName == "" {
 		log.Printf("The directory at '%s' was empty.", modelDir)
-		return &modeling.ProbabilisticAddressModel{}, errors.New(fmt.Sprintf("No model files were found in directory %s.", modelDir))
+		if curAddressModel != nil {
+			log.Printf("Already have a model loaded from box. Using it.")
+			return curAddressModel, nil
+		}
+		log.Printf("Loading model from box.")
+		toReturn, err := getModelFromBox()
+		if err != nil {
+			return &modeling.ProbabilisticAddressModel{}, err
+		}
+		UpdateProbabilisticAddressModel(toReturn, "")
+		return toReturn, nil
 	}
 	filePath := filepath.Join(modelDir, fileName)
 	log.Printf("Most recent probabilistic address model is at path '%s'.", filePath)
@@ -280,12 +326,33 @@ func GetProbabilisticAddressModel(modelDir string) (*modeling.ProbabilisticAddre
 	} else {
 		log.Printf("Loading probabilistic address model from path '%s'.", filePath)
 		toReturn, err := modeling.GetProbabilisticModelFromFile(filePath)
-		if err != nil {
+		if err == nil {
 			UpdateProbabilisticAddressModel(toReturn, filePath)
 		}
 		return toReturn, err
 	}
 }
+
+func getModelFromBox() (*modeling.ProbabilisticAddressModel, error) {
+	content, err := packedBox.Find("model.zlib")
+	if err != nil {
+		return &modeling.ProbabilisticAddressModel{}, err
+	}
+	b := bytes.NewReader(content)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return &modeling.ProbabilisticAddressModel{}, err
+	}
+	defer z.Close()
+	var toReturn modeling.ProbabilisticAddressModel
+	err = json.NewDecoder(z).Decode(&toReturn)
+	if err != nil {
+		return &modeling.ProbabilisticAddressModel{}, err
+	} else {
+		return &toReturn, nil
+	}
+}
+
 
 func GetMostRecentFilePathFromDir(candidateDir string) (string, error) {
 	log.Printf("Attempting to find most recent file path in directory '%s'.", candidateDir)

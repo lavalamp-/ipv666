@@ -1,13 +1,13 @@
 package blacklist
 
 import (
+	"bufio"
 	"encoding/binary"
-	"net"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"log"
+	"net"
 	"os"
 	"sort"
-	"bufio"
 )
 
 type ipNets struct {

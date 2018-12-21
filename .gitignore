@@ -25,3 +25,5 @@ main
 ipv666-scan
 build
 data
+test.go
+bin

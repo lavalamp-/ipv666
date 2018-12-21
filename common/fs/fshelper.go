@@ -192,3 +192,44 @@ func CheckIfFileExists(filePath string) (bool) {
 		return true
 	}
 }
+
+func UnzipBytes(data []byte) ([]byte, error) {
+	b := bytes.NewReader(data)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	defer z.Close()
+	unzipped, err := ioutil.ReadAll(z)
+	if err != nil {
+		return nil, err
+	}
+	return unzipped, nil
+}
+
+func ZLibCompress(inputPath string, outputPath string) error {
+	content, err := ioutil.ReadFile(inputPath)
+	if err != nil {
+		return err
+	}
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
+	_, err = w.Write(content)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	outFile, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+	_, err = outFile.Write(b.Bytes())
+	if err != nil {
+		return err
+	}
+	return nil
+}

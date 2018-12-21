@@ -176,6 +176,21 @@ func GetIPv6NetworkFromBytesIncLength(toProcess []byte) (*net.IPNet, error) {
 	return GetIPv6NetworkFromBytes(ipBytes, maskLength)
 }
 
+func BytesToIPv6Networks(toParse []byte) ([]*net.IPNet, error) {
+	if len(toParse) % 17 != 0 {
+		return nil, fmt.Errorf("expected bytes to parse to be a multiple of 17 (got %d length)", len(toParse))
+	}
+	var toReturn []*net.IPNet
+	for i := 0; i < len(toParse); i += 17 {
+		newNetwork, err := GetIPv6NetworkFromBytesIncLength(toParse[i:i+17])
+		if err != nil {
+			return nil, err
+		}
+		toReturn = append(toReturn, newNetwork)
+	}
+	return toReturn, nil
+}
+
 func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
