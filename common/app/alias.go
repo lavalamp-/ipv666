@@ -1,68 +1,33 @@
-package main
+package app
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/setup"
 	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"log"
 	"net"
 )
 
-func main() {
+func RunAlias() {
 
-	var inputRange string
-	var configPath string
+	targetNetwork, _ := config.GetTargetNetwork()
 
-	flag.StringVar(&inputRange,"net", "", "An IPv6 CIDR range to test as an aliased network.")
-	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
-	flag.Parse()
-
-	if inputRange == "" {
-		log.Fatal("Please provide an input IPv6 CIDR range.")
-	}
-
-	_, cidrRange, err := net.ParseCIDR(inputRange)
-
-	if err != nil {
-		log.Fatalf("Error thrown when parsing CIDR range from '%s': %e", inputRange, err)
-	} else if cidrRange == nil {
-		log.Fatalf("No valid CIDR range was parsed from the value '%s'.", inputRange)
-	}
-
-	// TODO handle with Cobra
-
-	//conf, err := config.LoadFromFile(configPath)
-	//
-	//if err != nil {
-	//	log.Fatal("Can't proceed without loading valid configuration file.")
-	//}
-
-	err = setup.InitFilesystem()
-
-	if err != nil {
-		log.Fatal("Error thrown during filesystem initialization: ", err)
-	}
-
-	log.Printf("All systems are green. Now testing IPv6 range %s for aliased state.", cidrRange)
-
-	ip, aliased, err := checkNetworkForAliased(cidrRange)
+	ip, aliased, err := checkNetworkForAliased(targetNetwork)
 
 	if err != nil {
 		log.Fatal(err)
 	} else if !aliased {
-		log.Fatalf("Your input range of %s does not appear to be aliased based on your current configured settings. Exiting.", inputRange)
+		log.Fatalf("Your input range of %s does not appear to be aliased based on your current configured settings. Exiting.", targetNetwork.String())
 	}
 
 	log.Print("As the initial network appears to be aliased, we will now seek out the network length.")
 
-	aliasedNet, err := seekAliasedNetwork(cidrRange, ip)
+	aliasedNet, err := seekAliasedNetwork(targetNetwork, ip)
 
 	if err != nil {
 		log.Fatal(err)
@@ -194,3 +159,4 @@ func checkNetworkForAliased(inputNet *net.IPNet) (*net.IP, bool, error) {
 	}
 
 }
+

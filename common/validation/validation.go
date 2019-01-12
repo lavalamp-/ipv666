@@ -43,3 +43,11 @@ func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 	}
 	return network, nil
 }
+
+func ValidateOutputFileType(toCheck string) error {
+	if toCheck == "txt" || toCheck == "bin" {
+		return nil
+	} else {
+		return fmt.Errorf("%s is not a valid output file type (expected 'txt' or 'bin')", toCheck)
+	}
+}

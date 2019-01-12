@@ -38,6 +38,8 @@ var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
 var packedBox = packr.New("box","../../assets")
 
+//TODO add unit tests for making sure that the boxed assets are returned
+
 func GetMostRecentTargetNetworkString() (string, error) {
 	if !fs.CheckIfFileExists(config.GetTargetNetworkFilePath()) {
 		return "", nil

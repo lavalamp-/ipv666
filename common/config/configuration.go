@@ -2,14 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/spf13/viper"
 	"net"
 	"path/filepath"
 	"time"
 )
-
-var targetNetwork *net.IPNet = nil
 
 func InitConfig() {
 	viper.SetEnvPrefix("IPV666")
@@ -107,10 +104,12 @@ func InitConfig() {
 	viper.BindEnv("ZmapExecPath")  					// Local file path to the Zmap executable
 	viper.BindEnv("ZmapBandwidth")  					// Bandwidth cap for Zmap
 	viper.BindEnv("ZmapSourceAddress")				// Source IPv6 address for Zmap
+	viper.BindEnv("ScanTargetNetwork")				// The default network to scan
 
 	viper.SetDefault("ZmapExecPath", "/usr/local/sbin/zmap")
 	viper.SetDefault("ZmapBandwidth", "20M")
 	viper.SetDefault("ZmapSourceAddress", "[REPLACE]")
+	viper.SetDefault("ScanTargetNetwork", "2000::/4")
 
 	// Clean Up
 
@@ -277,21 +276,7 @@ func GetSafeFilePaths() []string {
 	}
 }
 
-func SetTargetNetwork(toScan *net.IPNet) {
-	targetNetwork = toScan
-}
-
 func GetTargetNetwork() (*net.IPNet, error) {
-	if targetNetwork == nil {
-		addrBytes := []byte{byte(viper.GetInt("GenerateFirstNybble") << 4)}
-		for len(addrBytes) < 16 {
-			addrBytes = append(addrBytes, 0x00)
-		}
-		targetNetwork, err := addressing.GetIPv6NetworkFromBytes(addrBytes, 4)
-		if err != nil {
-			return nil, err
-		}
-		SetTargetNetwork(targetNetwork)
-	}
-	return targetNetwork, nil
+	_, network, err := net.ParseCIDR(viper.GetString("ScanTargetNetwork"))
+	return network, err
 }

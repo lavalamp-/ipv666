@@ -1,73 +1,35 @@
-package main
+package app
 
 import (
-	"flag"
-	"fmt"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/setup"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/spf13/viper"
 	"log"
 	"net"
-	"os"
-	"path/filepath"
 )
 
-func main() {
+func RunBlgen(inputPath string) {
 
-	var inputPath string
-	var configPath string
+	var newBlacklist *blacklist.NetworkBlacklist
 
-	flag.StringVar(&inputPath,"input", "", "An input file containing IPv6 network ranges to build a blacklist from.")
-	flag.StringVar(&configPath, "config", "config.json", "Local file path to the configuration file to use.")
-	flag.Parse()
-
-	if inputPath == "" {
-		log.Fatal("Please provide an input file path (-input).")
-	}
-
-	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-		log.Fatalf("No file found at path '%s'. Please supply a valid file path.", inputPath)
-	}
-
-	// TODO handle with cobra
-
-	//conf, err := config.LoadFromFile(configPath)
-	//
-	//if err != nil {
-	//	log.Fatal("Can't proceed without loading valid configuration file.")
-	//}
-
-	err := setup.InitFilesystem()
+	approved, err := shell.AskForApproval("Would you like to add to the existing blacklist (if not, a new one will be created)? [y/N]")
 
 	if err != nil {
-		log.Fatal("Error thrown during filesystem initialization: ", err)
+		log.Fatal(err)
 	}
 
-	var newBlacklist = blacklist.NewNetworkBlacklist([]*net.IPNet{})
-	fileName, err := fs.GetMostRecentFileFromDirectory(config.GetNetworkBlacklistDirPath())
-
-	if err != nil {
-		log.Fatalf("Error thrown when reading recent files from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err)
-	}
-
-	if fileName != "" {
-		filePath := filepath.Join(config.GetNetworkBlacklistDirPath(), fileName)
-		prompt := fmt.Sprintf("Existing blacklist found at path '%s'. Would you like to include its contents in the new blacklist? [y/N]", filePath)
-		approved, err := shell.AskForApproval(prompt)
+	if approved {
+		log.Printf("Loading existing blacklist...")
+		newBlacklist, err = data.GetBlacklist(config.GetNetworkBlacklistDirPath())
 		if err != nil {
-			log.Fatalf("Error thrown when prompting for approval: %e", err)
+			log.Fatal(err)
 		}
-		if approved {
-			newBlacklist, err = data.GetBlacklist(config.GetNetworkBlacklistDirPath())
-			if err != nil {
-				panic(err)
-			}
-		}
+	} else {
+		newBlacklist = blacklist.NewNetworkBlacklist([]*net.IPNet{})
 	}
 
 	networks, err := addressing.ReadIPv6NetworksFromHexFile(inputPath)
