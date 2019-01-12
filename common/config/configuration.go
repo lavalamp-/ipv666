@@ -2,8 +2,11 @@ package config
 
 import (
 	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"log"
 	"net"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -27,7 +30,12 @@ func InitConfig() {
 	viper.BindEnv("StateFileName")					// The file name for the file that contains the current state
 	viper.BindEnv("TargetNetworkFileName")			// The file name for the file that contains the last network that was targeted
 
-	viper.SetDefault("BaseOutputDirectory", "ipv6results")
+	home, err := homedir.Dir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	viper.SetDefault("BaseOutputDirectory", path.Join(home, ".ipv666"))
 	viper.SetDefault("GeneratedModelDirectory", "models")
 	viper.SetDefault("CandidateAddressDirectory", "candidates")
 	viper.SetDefault("PingResultDirectory", "pingresult")
