@@ -13,6 +13,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/filtering"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/modeling"
+	"github.com/spf13/viper"
 	"github.com/willf/bloom"
 	"io/ioutil"
 	"log"
@@ -37,11 +38,11 @@ var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
 var packedBox = packr.New("box","../../assets")
 
-func GetMostRecentTargetNetworkString(conf *config.Configuration) (string, error) {
-	if !fs.CheckIfFileExists(conf.GetTargetNetworkFilePath()) {
+func GetMostRecentTargetNetworkString() (string, error) {
+	if !fs.CheckIfFileExists(config.GetTargetNetworkFilePath()) {
 		return "", nil
 	}
-	content, err := ioutil.ReadFile(conf.GetTargetNetworkFilePath())
+	content, err := ioutil.ReadFile(config.GetTargetNetworkFilePath())
 	if err != nil {
 		return "", nil
 	}
@@ -52,8 +53,8 @@ func GetMostRecentTargetNetworkString(conf *config.Configuration) (string, error
 	return network.String(), nil
 }
 
-func WriteMostRecentTargetNetwork(toWrite *net.IPNet, conf *config.Configuration) (error) {
-	return addressing.WriteIPv6NetworksToFile(conf.GetTargetNetworkFilePath(), []*net.IPNet{toWrite})
+func WriteMostRecentTargetNetwork(toWrite *net.IPNet) error {
+	return addressing.WriteIPv6NetworksToFile(config.GetTargetNetworkFilePath(), []*net.IPNet{toWrite})
 }
 
 func UpdateAliasedNetworks(nets []*net.IPNet, filePath string) {
@@ -61,8 +62,8 @@ func UpdateAliasedNetworks(nets []*net.IPNet, filePath string) {
 	curAliasedNetworksPath = filePath
 }
 
-func GetAliasedNetworks(conf *config.Configuration) ([]*net.IPNet, error) {
-	aliasedDir := conf.GetAliasedNetworkDirPath()
+func GetAliasedNetworks() ([]*net.IPNet, error) {
+	aliasedDir := config.GetAliasedNetworkDirPath()
 	log.Printf("Attempting to retrieve most recent aliased networks from directory '%s'.", aliasedDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(aliasedDir)
 	if err != nil {
@@ -92,38 +93,38 @@ func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
 	curBloomFilterPath = filePath
 }
 
-func LoadBloomFilterFromOutput(conf *config.Configuration) (*bloom.BloomFilter, error) {
-	log.Printf("Creating Bloom filter from output file '%s'.", conf.GetOutputFilePath())
-	ips, err := addressing.ReadIPsFromHexFile(conf.GetOutputFilePath())
-	ips = addressing.GetUniqueIPs(ips, conf.LogLoopEmitFreq)
+func LoadBloomFilterFromOutput() (*bloom.BloomFilter, error) {
+	log.Printf("Creating Bloom filter from output file '%s'.", config.GetOutputFilePath())
+	ips, err := addressing.ReadIPsFromHexFile(config.GetOutputFilePath())
+	ips = addressing.GetUniqueIPs(ips, viper.GetInt("LogLoopEmitFreq"))
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d IP addresses loaded from file '%s'.", len(ips), conf.GetOutputFilePath())
-	newBloom := bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
+	log.Printf("%d IP addresses loaded from file '%s'.", len(ips), config.GetOutputFilePath())
+	newBloom := bloom.New(uint(viper.GetInt("AddressFilterSize")), uint(viper.GetInt("AddressFilterHashCount")))
 	for _, ip := range ips {
 		ipBytes := ([]byte)(*ip)
 		newBloom.Add(ipBytes)
 	}
-	log.Printf("Created Bloom filter with %d addresses from '%s'.", len(ips), conf.GetOutputFilePath())
+	log.Printf("Created Bloom filter with %d addresses from '%s'.", len(ips), config.GetOutputFilePath())
 	return newBloom, nil
 }
 
-func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {
-	filterDir := conf.GetBloomDirPath()
+func GetBloomFilter() (*bloom.BloomFilter, error) {
+	filterDir := config.GetBloomDirPath()
 	log.Printf("Attempting to retrieve most recent Bloom filter from directory '%s'.", filterDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(filterDir)
 	if err != nil {
 		log.Printf("Error thrown when retrieving Bloom filter from directory '%s': %s", filterDir, err)
 		return nil, err
 	} else if fileName == "" {
-		log.Printf("The directory at '%s' was empty. Checking for pre-existing output file at '%s'.", filterDir, conf.GetOutputFilePath())
-		if _, err := os.Stat(conf.GetOutputFilePath()); !os.IsNotExist(err) {
-			log.Printf("File at path '%s' exists. Using for new Bloom filter.", conf.GetOutputFilePath())
-			return LoadBloomFilterFromOutput(conf)
+		log.Printf("The directory at '%s' was empty. Checking for pre-existing output file at '%s'.", filterDir, config.GetOutputFilePath())
+		if _, err := os.Stat(config.GetOutputFilePath()); !os.IsNotExist(err) {
+			log.Printf("File at path '%s' exists. Using for new Bloom filter.", config.GetOutputFilePath())
+			return LoadBloomFilterFromOutput()
 		} else {
-			log.Printf("No existing output file at '%s'. Returning a new, empty Bloom filter.", conf.GetOutputFilePath())
-			return bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount), nil
+			log.Printf("No existing output file at '%s'. Returning a new, empty Bloom filter.", config.GetOutputFilePath())
+			return bloom.New(uint(viper.GetInt("AddressFilterSize")), uint(viper.GetInt("AddressFilterHashCount"))), nil
 		}
 	}
 	filePath := filepath.Join(filterDir, fileName)
@@ -133,7 +134,7 @@ func GetBloomFilter(conf *config.Configuration) (*bloom.BloomFilter, error) {
 		return curBloomFilter, nil
 	} else {
 		log.Printf("Loading Bloom filter from path '%s'.", filePath)
-		toReturn, err := filtering.GetBloomFilterFromFile(filePath, conf.AddressFilterSize, conf.AddressFilterHashCount)
+		toReturn, err := filtering.GetBloomFilterFromFile(filePath, uint(viper.GetInt("AddressFilterSize")), uint(viper.GetInt("AddressFilterHashCount")))
 		if err == nil {
 			UpdateBloomFilter(toReturn, filePath)
 		}

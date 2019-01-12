@@ -2,11 +2,11 @@ package statemachine
 
 import (
 	"github.com/lavalamp-/ipv666/common/config"
-	"log"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"path/filepath"
-	"os"
 	"github.com/rcrowley/go-metrics"
+	"log"
+	"os"
+	"path/filepath"
 )
 
 
@@ -16,8 +16,8 @@ func init() {
 	metrics.Register("cleanup.files.count", cleanUpFileCounter)
 }
 
-func cleanUpNonRecentFiles(conf *config.Configuration) (error) {
-	allDirs := conf.GetAllExportDirectories()
+func cleanUpNonRecentFiles() error {
+	allDirs := config.GetAllExportDirectories()
 	log.Printf("Now starting to delete all non-recent files from %d directories.", len(allDirs))
 	for _, curDir := range allDirs {
 		log.Printf("Processing content of directory '%s'.", curDir)

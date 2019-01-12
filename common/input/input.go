@@ -1,21 +1,22 @@
 package input
 
 import (
-	"github.com/lavalamp-/ipv666/common/config"
 	"fmt"
-	"github.com/lavalamp-/ipv666/common/shell"
-	"log"
-	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"net"
-	"github.com/lavalamp-/ipv666/common/zrandom"
+	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/statemachine"
+	"github.com/lavalamp-/ipv666/common/zrandom"
+	"github.com/spf13/viper"
+	"log"
+	"net"
 )
 
-func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Configuration) (error) {
+func PrepareFromInputFile(inputFilePath string, fileType string) error {
 	// Confirm that cleaning up is ok
-	if !conf.ForceAcceptPrompts {
-		err := confirmCleanUpExisting(inputFilePath, conf)
+	if !viper.GetBool("ForceAcceptPrompts") {
+		err := confirmCleanUpExisting(inputFilePath)
 		if err != nil {
 			return err
 		}
@@ -31,29 +32,29 @@ func PrepareFromInputFile(inputFilePath string, fileType string, conf *config.Co
 	// Remove IPv4 addresses
 	addrs = addressing.FilterIPv4FromList(addrs)
 	// Unique addresses
-	addrs = removeDuplicateIPs(addrs, conf)
+	addrs = removeDuplicateIPs(addrs)
 	// Filter out PSLAAC addresses
-	addrs = filterOutHighEntropyIPs(addrs, conf)
+	addrs = filterOutHighEntropyIPs(addrs)
 	// Check that enough addresses remain
-	if len(addrs) < conf.InputMinAddresses {
-		if !conf.ForceAcceptPrompts {
-			err := confirmTooFew(len(addrs), conf)
+	if len(addrs) < viper.GetInt("InputMinAddresses") {
+		if !viper.GetBool("ForceAcceptPrompts") {
+			err := confirmTooFew(len(addrs))
 			if err != nil {
 				return err
 			}
 		} else {
-			log.Printf("Configured to force accept prompts. Moving forward despite too few remaining addresses (got %d, wanted %d or more).", len(addrs), conf.InputMinAddresses)
+			log.Printf("Configured to force accept prompts. Moving forward despite too few remaining addresses (got %d, wanted %d or more).", len(addrs), viper.GetInt("InputMinAddresses"))
 		}
 	}
 	// Delete all existing files in all directories
-	err = cleanUpWorkingDirectories(conf)
+	err = cleanUpWorkingDirectories()
 	if err != nil {
 		return err
 	}
 	// Write addresses to ping results file path
-	writeNewAddresses(addrs, conf)
+	writeNewAddresses(addrs)
 	// Update state file to indicate that ping results should be checked for blacklist
-	err = updateState(conf)
+	err = updateState()
 	if err != nil {
 		return err
 	}
@@ -76,18 +77,18 @@ func getIPsFromFile(inputFilePath string, inputFileType string) ([]*net.IP, erro
 	return toReturn, err
 }
 
-func updateState(conf *config.Configuration) (error) {
-	err := statemachine.SetStateFile(conf.GetStateFilePath(), statemachine.NETWORK_GROUP)
+func updateState() error {
+	err := statemachine.SetStateFile(config.GetStateFilePath(), statemachine.NETWORK_GROUP)
 	if err != nil {
-		log.Printf("Error thrown when attempting to update state file at path '%s': %e", conf.GetStateFilePath(), err)
+		log.Printf("Error thrown when attempting to update state file at path '%s': %e", config.GetStateFilePath(), err)
 		return err
 	}
-	log.Printf("Successfully updated state file at path '%s'.", conf.GetStateFilePath())
+	log.Printf("Successfully updated state file at path '%s'.", config.GetStateFilePath())
 	return nil
 }
 
-func writeNewAddresses(toWrite []*net.IP, conf *config.Configuration) (error) {
-	outputPath := fs.GetTimedFilePath(conf.GetPingResultDirPath())
+func writeNewAddresses(toWrite []*net.IP) error {
+	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
 	log.Printf("Writing %d IP addresses to file at path '%s'.", len(toWrite), outputPath)
 	err := addressing.WriteIPsToHexFile(outputPath, toWrite)
 	if err != nil {
@@ -98,8 +99,8 @@ func writeNewAddresses(toWrite []*net.IP, conf *config.Configuration) (error) {
 	return nil
 }
 
-func confirmTooFew(count int, conf *config.Configuration) (error) {
-	prompt := fmt.Sprintf("The resulting list of addresses is only %d long, and we recommend having at least %d to get good results. Continue? [y/N]", count, conf.InputMinAddresses)
+func confirmTooFew(count int) error {
+	prompt := fmt.Sprintf("The resulting list of addresses is only %d long, and we recommend having at least %d to get good results. Continue? [y/N]", count, viper.GetInt("InputMinAddresses"))
 	errMsg := fmt.Sprintf("Exiting. Please add more addresses to your input list and try again.")
 	err := shell.RequireApproval(prompt, errMsg)
 	if err != nil {
@@ -109,9 +110,9 @@ func confirmTooFew(count int, conf *config.Configuration) (error) {
 	}
 }
 
-func confirmCleanUpExisting(inputFilePath string, conf *config.Configuration) (error) {
+func confirmCleanUpExisting(inputFilePath string) error {
 	prompt := fmt.Sprintf("Provided input file at path '%s'. Starting with an input file requires cleaning up all existing state from previous runs. Continue? [y/N]", inputFilePath)
-	errMsg := fmt.Sprintf("Exiting. Please backup all existing state (all directories under '%s') and try again.", conf.BaseOutputDirectory)
+	errMsg := fmt.Sprintf("Exiting. Please backup all existing state (all directories under '%s') and try again.", viper.GetString("BaseOutputDirectory"))
 	err := shell.RequireApproval(prompt, errMsg)
 	if err != nil {
 		return err
@@ -120,16 +121,16 @@ func confirmCleanUpExisting(inputFilePath string, conf *config.Configuration) (e
 	}
 }
 
-func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.IP) {
-	log.Printf("Now removing high entropy IP addresses from list of length %d (%f threshold, %d bits).", len(ips), conf.InputEntropyThreshold, conf.InputEntropyBitLength)
+func filterOutHighEntropyIPs(ips []*net.IP) []*net.IP {
+	log.Printf("Now removing high entropy IP addresses from list of length %d (%f threshold, %d bits).", len(ips), viper.GetFloat64("InputEntropyThreshold"), viper.GetInt("InputEntropyBitLength"))
 	var toReturn []*net.IP
 	for i, ip := range ips {
-		if i % conf.LogLoopEmitFreq == 0 {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
 			log.Printf("Processing %d out of %d for high entropy IPs.", i, len(ips))
 		}
 		ipBytes := ([]byte)(*ip)
-		entropy := zrandom.GetEntropyOfBitsFromRight(ipBytes, conf.InputEntropyBitLength)
-		if entropy < conf.InputEntropyThreshold {
+		entropy := zrandom.GetEntropyOfBitsFromRight(ipBytes, viper.GetInt("InputEntropyBitLength"))
+		if entropy < viper.GetFloat64("InputEntropyThreshold") {
 			toReturn = append(toReturn, ip)
 		}
 	}
@@ -137,18 +138,18 @@ func filterOutHighEntropyIPs(ips []*net.IP, conf *config.Configuration) ([]*net.
 	return toReturn
 }
 
-func removeDuplicateIPs(ips []*net.IP, conf *config.Configuration) ([]*net.IP) {
+func removeDuplicateIPs(ips []*net.IP) []*net.IP {
 	log.Printf("Now removing duplicates from list of IP addresses of length %d.", len(ips))
-	toReturn := addressing.GetUniqueIPs(ips, conf.LogLoopEmitFreq)
+	toReturn := addressing.GetUniqueIPs(ips, viper.GetInt("LogLoopEmitFreq"))
 	log.Printf("Resulting list is %d long (removed %d duplicates).", len(toReturn), len(ips) - len(toReturn))
 	return toReturn
 }
 
-func cleanUpWorkingDirectories(conf *config.Configuration) (error) {
-	log.Printf("Now deleting all regular files (recursively) starting in directory '%s'.", conf.BaseOutputDirectory)
-	numDeleted, numSkipped, err := fs.DeleteAllFilesInDirectory(conf.BaseOutputDirectory, conf.GetSafeFilePaths())
+func cleanUpWorkingDirectories() error {
+	log.Printf("Now deleting all regular files (recursively) starting in directory '%s'.", viper.GetString("BaseOutputDirectory"))
+	numDeleted, numSkipped, err := fs.DeleteAllFilesInDirectory(viper.GetString("BaseOutputDirectory"), config.GetSafeFilePaths())
 	if err != nil {
-		log.Printf("Error thrown when deleting files under directory '%s': %e", conf.BaseOutputDirectory, err)
+		log.Printf("Error thrown when deleting files under directory '%s': %e", viper.GetString("BaseOutputDirectory"), err)
 		return err
 	}
 	log.Printf("Successfully deleted %d files (%d skipped).", numDeleted, numSkipped)

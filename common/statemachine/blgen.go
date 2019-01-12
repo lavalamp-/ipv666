@@ -1,16 +1,17 @@
 package statemachine
 
 import (
+	"bufio"
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"net"
-	"github.com/lavalamp-/ipv666/common/addressing"
-	"log"
-	"github.com/rcrowley/go-metrics"
-	"time"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"log"
+	"net"
 	"os"
-	"bufio"
+	"time"
 )
 
 var blacklistCandGenDuration = metrics.NewTimer()
@@ -23,15 +24,15 @@ func init() {
 	metrics.Register("blgen.cand_file_write.time", blacklistCandGenFlushDuration)
 }
 
-func generateNetworkAddresses(conf *config.Configuration) (error) {
-	nets, err := data.GetScanResultsNetworkRanges(conf.GetNetworkGroupDirPath())
-	log.Printf("Now generating %d addresses for each of the %d blacklist network candidates.", conf.NetworkPingCount, len(nets))
+func generateNetworkAddresses() error {
+	nets, err := data.GetScanResultsNetworkRanges(config.GetNetworkGroupDirPath())
+	log.Printf("Now generating %d addresses for each of the %d blacklist network candidates.", viper.GetInt("NetworkPingCount"), len(nets))
 	if err != nil {
 		return err
 	}
 	var addrs []*net.IP
 	start := time.Now()
-	outputPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetNetworkScanTargetsDirPath())
 	log.Printf("Writing results to file at path '%s'.", outputPath)
 	file, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -40,11 +41,11 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	writer := bufio.NewWriter(file)
 	defer file.Close()
 	for i, networks := range nets {
-		if i % conf.LogLoopEmitFreq == 0 {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
 			log.Printf("Generating addresses for network %d out of %d.", i, len(nets))
 		}
-		addrs = append(addrs, addressing.GenerateRandomAddressesInNetwork(networks, conf.NetworkPingCount)...)
-		if len(addrs) >= conf.BlacklistFlushInterval {
+		addrs = append(addrs, addressing.GenerateRandomAddressesInNetwork(networks, viper.GetInt("NetworkPingCount"))...)
+		if len(addrs) >= viper.GetInt("BlacklistFlushInterval") {
 			start := time.Now()
 			toWrite := addressing.GetTextLinesFromIPs(addrs)
 			_, err := writer.WriteString(toWrite)
@@ -72,7 +73,7 @@ func generateNetworkAddresses(conf *config.Configuration) (error) {
 	elapsed := time.Since(start)
 	blacklistCandGenDuration.Update(elapsed)
 	blacklistCandGenCount.Inc(int64(len(addrs)))
-	log.Printf("Successfully generated %d addresses to test for blacklist.", len(nets) * conf.NetworkPingCount)
+	log.Printf("Successfully generated %d addresses to test for blacklist.", len(nets) * viper.GetInt("NetworkPingCount"))
 	if err != nil {
 		return err
 	}

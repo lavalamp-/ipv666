@@ -2,6 +2,7 @@ package statemachine
 
 import (
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/spf13/viper"
 	"log"
 	"net"
 	"github.com/lavalamp-/ipv666/common/fs"
@@ -42,7 +43,7 @@ type seekPair struct {
 	count		uint8
 }
 
-func newSeekPair(network *net.IPNet, addr *net.IP, count uint8) (*seekPair) {
+func newSeekPair(network *net.IPNet, addr *net.IP, count uint8) *seekPair {
 	return &seekPair{
 		network:	network,
 		address:	addr,
@@ -50,19 +51,19 @@ func newSeekPair(network *net.IPNet, addr *net.IP, count uint8) (*seekPair) {
 	}
 }
 
-func seekAliasedNetworks(conf *config.Configuration) (error) {
+func seekAliasedNetworks() error {
 
 	log.Print("Starting to seek aliased networks from results of Zmap scan.")
 
-	scanNets, err := data.GetScanResultsNetworkRanges(conf.GetNetworkGroupDirPath())
+	scanNets, err := data.GetScanResultsNetworkRanges(config.GetNetworkGroupDirPath())
 	aliasInitialNetsCounter.Inc(int64(len(scanNets)))
 
 	if err != nil {
-		log.Printf("Error thrown when reading scanned networks from directory '%s': %e", conf.GetNetworkGroupDirPath(), err)
+		log.Printf("Error thrown when reading scanned networks from directory '%s': %e", config.GetNetworkGroupDirPath(), err)
 		return err
 	}
 
-	seekPairs, err := checkNetworksForAliased(scanNets, conf)
+	seekPairs, err := checkNetworksForAliased(scanNets)
 	aliasSeekPairsCounter.Inc(int64(len(seekPairs)))
 
 	if len(seekPairs) == 0 {
@@ -75,7 +76,7 @@ func seekAliasedNetworks(conf *config.Configuration) (error) {
 		return err
 	}
 
-	nets, err := findAliasedNetworksFromSeekPairs(seekPairs, conf)
+	nets, err := findAliasedNetworksFromSeekPairs(seekPairs)
 	aliasAliasedNetsCount.Inc(int64(len(nets)))
 
 	if err != nil {
@@ -83,11 +84,11 @@ func seekAliasedNetworks(conf *config.Configuration) (error) {
 		return err
 	}
 
-	uniqueNets := addressing.GetUniqueNetworks(nets, conf.LogLoopEmitFreq)
+	uniqueNets := addressing.GetUniqueNetworks(nets, viper.GetInt("LogLoopEmitFreq"))
 	aliasUniqueNetsCount.Inc(int64(len(uniqueNets)))
 	log.Printf("%d networks were found via alias seeking (%d total before de-duping).", len(uniqueNets), len(nets))
 
-	outputPath := fs.GetTimedFilePath(conf.GetAliasedNetworkDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetAliasedNetworkDirPath())
 
 	log.Printf("Writing %d aliased networks to file '%s'.", len(uniqueNets), outputPath)
 	err = addressing.WriteIPv6NetworksToFile(outputPath, uniqueNets)
@@ -103,7 +104,7 @@ func seekAliasedNetworks(conf *config.Configuration) (error) {
 	return nil
 }
 
-func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair, conf *config.Configuration) ([]*net.IPNet, error) {
+func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair) ([]*net.IPNet, error) {
 
 	log.Printf("Starting search for aliased networks based on %d initial starting IPs.", len(seekPairs))
 	start := time.Now()
@@ -112,7 +113,7 @@ func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair, conf *config.Config
 	for _, pair := range seekPairs {
 		seekIPs = append(seekIPs, pair.address)
 	}
-	acs, err := blacklist.NewAliasCheckStates(seekIPs, conf.AliasLeftIndexStart, conf.NetworkGroupingSize)
+	acs, err := blacklist.NewAliasCheckStates(seekIPs, uint8(viper.GetInt("AliasLeftIndexStart")), uint8(viper.GetInt("NetworkGroupingSize")))
 
 	if err != nil {
 		return nil, err
@@ -122,7 +123,7 @@ func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair, conf *config.Config
 	var toReturn []*net.IPNet
 	for {
 		log.Printf("Now starting loop %d.", loopCount)
-		err := aliasSeekLoop(acs, conf)
+		err := aliasSeekLoop(acs)
 		if err != nil {
 			log.Printf("Error thrown on iteration %d of loop: %e", loopCount, err)
 			return nil, err
@@ -150,9 +151,9 @@ func findAliasedNetworksFromSeekPairs(seekPairs []*seekPair, conf *config.Config
 
 }
 
-func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) (error) {
+func aliasSeekLoop(acs *blacklist.AliasCheckStates) error {
 	//TODO delete files after the function is finished?
-	var i uint8
+	var i int
 	start := time.Now()
 	log.Print("Generating test addresses...")
 	testAddrs := acs.GetTestAddresses()
@@ -162,11 +163,11 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 	log.Printf("%d addresses generated.", len(testAddrs))
 	var scanAddrs []*net.IP
 	for _, testAddr := range testAddrs {
-		for i = 0; i < conf.AliasDuplicateScanCount; i++ {
+		for i = 0; i < viper.GetInt("AliasDuplicateScanCount"); i++ {
 			scanAddrs = append(scanAddrs, testAddr)
 		}
 	}
-	targetsPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
+	targetsPath := fs.GetTimedFilePath(config.GetNetworkScanTargetsDirPath())
 	log.Printf("Writing %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
 	err := addressing.WriteIPsToHexFile(targetsPath, scanAddrs)
 	if err != nil {
@@ -174,9 +175,9 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 		return err
 	}
 	log.Printf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
-	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
+	zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
 	log.Printf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
-	_, err = shell.ZmapScanFromConfig(conf, targetsPath, zmapPath)
+	_, err = shell.ZmapScanFromConfig(targetsPath, zmapPath)
 	if err != nil {
 		log.Printf("An error was thrown when trying to run zmap: %s", err)
 		return err
@@ -194,20 +195,20 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 	return nil
 }
 
-func checkNetworksForAliased(nets []*net.IPNet, conf *config.Configuration) ([]*seekPair, error) {
+func checkNetworksForAliased(nets []*net.IPNet) ([]*seekPair, error) {
 
 	log.Printf("Now testing %d networks for aliased properties.", len(nets))
 	start := time.Now()
 
-	candsPath, err := generateAliasCandidates(nets, conf)
+	candsPath, err := generateAliasCandidates(nets)
 	if err != nil {
 		return nil, err
 	}
 
-	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
+	zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
 	log.Printf("Zmap scanning alias candidates in file '%s'. Results will be written to '%s'.", candsPath, zmapPath)
 
-	_, err = shell.ZmapScanFromConfig(conf, candsPath, zmapPath)
+	_, err = shell.ZmapScanFromConfig(candsPath, zmapPath)
 	if err != nil {
 		return nil, err
 	}
@@ -218,16 +219,16 @@ func checkNetworksForAliased(nets []*net.IPNet, conf *config.Configuration) ([]*
 		return nil, err
 	}
 
-	seekPairs := getSeekPairsFromScanResults(nets, foundAddrs, conf)
+	seekPairs := getSeekPairsFromScanResults(nets, foundAddrs)
 	aliasCheckTimer.Update(time.Since(start))
 
 	return seekPairs, nil
 
 }
 
-func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (string, error) {
+func generateAliasCandidates(nets []*net.IPNet) (string, error) {
 
-	outputPath := fs.GetTimedFilePath(conf.GetNetworkScanTargetsDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetNetworkScanTargetsDirPath())
 
 	log.Printf("Alias checking targets will be written to file '%s'.", outputPath)
 
@@ -240,11 +241,11 @@ func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (str
 	writer := bufio.NewWriter(file)
 
 	for i, networks := range nets {
-		if i % conf.LogLoopEmitFreq == 0 {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
 			log.Printf("Generating addresses for network %d out of %d.", i, len(nets))
 		}
-		addrs = append(addrs, addressing.GenerateRandomAddressesInNetwork(networks, conf.NetworkPingCount)...)
-		if len(addrs) >= conf.BlacklistFlushInterval {
+		addrs = append(addrs, addressing.GenerateRandomAddressesInNetwork(networks, viper.GetInt("NetworkPingCount"))...)
+		if len(addrs) >= viper.GetInt("BlacklistFlushInterval") {
 			err := flushAddressesToDisk(addrs, writer)
 			if err != nil {
 				return "", err
@@ -265,7 +266,7 @@ func generateAliasCandidates(nets []*net.IPNet, conf *config.Configuration) (str
 
 }
 
-func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *config.Configuration) ([]*seekPair) {
+func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP) []*seekPair {
 
 	log.Printf("Processing %d live addresses against %d networks to find networks that appear to be aliased.", len(addrs), len(nets))
 
@@ -273,7 +274,7 @@ func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *confi
 	presenceTracker := make(map[string]*seekPair)
 
 	for i, addr :=  range addrs {
-		if i % conf.LogLoopEmitFreq == 0 {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
 			log.Printf("Checking address %d out of %d.", i, len(addrs))
 		}
 		addrNetwork := netList.GetBlacklistingNetworkFromIP(addr)
@@ -289,7 +290,7 @@ func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *confi
 	log.Printf("Processed all %d addresses.", len(addrs))
 
 	var toReturn []*seekPair
-	threshold := (uint8)(float64(conf.NetworkPingCount) * conf.NetworkBlacklistPercent)
+	threshold := (uint8)(float64(viper.GetInt("NetworkPingCount")) * viper.GetFloat64("NetworkBlacklistPercent"))
 
 	for _, v := range presenceTracker {
 		if v.count >= threshold {
@@ -302,7 +303,7 @@ func getSeekPairsFromScanResults(nets []*net.IPNet, addrs []*net.IP, conf *confi
 	return toReturn
 }
 
-func flushAddressesToDisk(addrs []*net.IP, w *bufio.Writer) (error) {
+func flushAddressesToDisk(addrs []*net.IP, w *bufio.Writer) error {
 	toWrite := addressing.GetTextLinesFromIPs(addrs)
 	_, err := w.WriteString(toWrite)
 	return err

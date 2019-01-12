@@ -14,7 +14,8 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/spf13/afero v1.2.0 // indirect
-	github.com/stretchr/testify v1.2.2
+	github.com/spf13/viper v1.3.1
+	github.com/stretchr/testify v1.3.0
 	github.com/tkanos/gonfig v0.0.0-20181112185242-896f3d81fadf
 	github.com/ugorji/go/codec v0.0.0-20181209151446-772ced7fd4c2 // indirect
 	github.com/willf/bitset v1.1.9 // indirect

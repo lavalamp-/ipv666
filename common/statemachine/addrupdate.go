@@ -1,14 +1,15 @@
 package statemachine
 
 import (
+	"bufio"
+	"fmt"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
 	"log"
 	"os"
-	"fmt"
-	"github.com/rcrowley/go-metrics"
 	"time"
-	"bufio"
 )
 
 var addressUpdateTimer = metrics.NewTimer()
@@ -17,13 +18,13 @@ func init() {
 	metrics.Register("addrupdate.file_write.time", addressUpdateTimer)
 }
 
-func updateAddressFile(conf *config.Configuration) (error) {
-	cleanPings, err := data.GetCleanPingResults(conf.GetCleanPingDirPath())
+func updateAddressFile() error {
+	cleanPings, err := data.GetCleanPingResults(config.GetCleanPingDirPath())
 	if err != nil {
 		return err
 	}
 	//TODO don't write addresses in input file in output file
-	outputPath := conf.GetOutputFilePath()
+	outputPath := config.GetOutputFilePath()
 	log.Printf("Updating file at path '%s' with %d newly-found IP addresses.", outputPath, len(cleanPings))
 	file, err := os.OpenFile(outputPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
@@ -32,9 +33,9 @@ func updateAddressFile(conf *config.Configuration) (error) {
 	}
 	defer file.Close()
 	start := time.Now()
-	if conf.OutputFileType != "bin" {
-		if !(conf.OutputFileType == "text") { //TODO figure out why the != check fails but this works
-			log.Printf("Unexpected file format for output (%s). Defaulting to text.", conf.OutputFileType)
+	if viper.GetString("OutputFileType") != "bin" {
+		if !(viper.GetString("OutputFileType") == "text") { //TODO figure out why the != check fails but this works
+			log.Printf("Unexpected file format for output (%s). Defaulting to text.", viper.GetString("OutputFileType"))
 		}
 		for _, addr := range cleanPings {
 			writer.WriteString(fmt.Sprintf("%s\n", addr))

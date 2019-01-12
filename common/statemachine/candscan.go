@@ -3,11 +3,12 @@ package statemachine
 import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
-	"time"
+	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/rcrowley/go-metrics"
-	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/spf13/viper"
+	"log"
+	"time"
 )
 
 var liveAddrCandGauge = metrics.NewGauge()
@@ -20,19 +21,19 @@ func init() {
 	metrics.Register("candscan.zmap_scan_error.count", zmapCandErrorCounter)
 }
 
-func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
-	inputPath, err := data.GetMostRecentFilePathFromDir(conf.GetCandidateAddressDirPath())
+func zmapScanCandidateAddresses() error {
+	inputPath, err := data.GetMostRecentFilePathFromDir(config.GetCandidateAddressDirPath())
 	if err != nil {
 		return err
 	}
-	outputPath := fs.GetTimedFilePath(conf.GetPingResultDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
 	log.Printf(
 		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
 	)
 	start := time.Now()
-	_, err = shell.ZmapScanFromConfig(conf, inputPath, outputPath)
+	_, err = shell.ZmapScanFromConfig(inputPath, outputPath)
 	elapsed := time.Since(start)
 	if err != nil {
 		zmapCandErrorCounter.Inc(1)
@@ -44,7 +45,7 @@ func zmapScanCandidateAddresses(conf *config.Configuration) (error) {
 	liveCount, err := fs.CountLinesInFile(outputPath)
 	if err != nil {
 		log.Printf("Error when counting lines in file '%s': %e", outputPath, err)
-		if conf.ExitOnFailedMetrics {
+		if viper.GetBool("ExitOnFailedMetrics") {
 			return err
 		}
 	}

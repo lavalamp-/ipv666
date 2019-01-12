@@ -2,14 +2,15 @@ package main
 
 import (
 	"flag"
-	"os"
-	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/blacklist"
-	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
+	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/setup"
+	"github.com/spf13/viper"
+	"log"
+	"os"
 )
 
 func main() {
@@ -49,15 +50,17 @@ func main() {
 		}
 	}
 
-	// Load content from disk
+	// TODO handle with Cobra
 
-	conf, err := config.LoadFromFile(configPath)
+	//// Load content from disk
+	//
+	//conf, err := config.LoadFromFile(configPath)
+	//
+	//if err != nil {
+	//	log.Fatalf("Can't proceed without loading valid configuration file: %e", err)
+	//}
 
-	if err != nil {
-		log.Fatalf("Can't proceed without loading valid configuration file: %e", err)
-	}
-
-	err = setup.InitFilesystem(&conf)
+	err := setup.InitFilesystem()
 
 	if err != nil {
 		log.Fatal("Error thrown during filesystem initialization: ", err)
@@ -79,15 +82,15 @@ func main() {
 			log.Fatalf("Error thrown when reading blacklist from path '%s': %e", blacklistPath, err)
 		}
 	} else {
-		fileName, err := fs.GetMostRecentFileFromDirectory(conf.GetNetworkBlacklistDirPath())
+		fileName, err := fs.GetMostRecentFileFromDirectory(config.GetNetworkBlacklistDirPath())
 		if err != nil {
-			log.Fatalf("Error thrown when reading recent files from directory '%s': %e", conf.GetNetworkBlacklistDirPath(), err)
+			log.Fatalf("Error thrown when reading recent files from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err)
 		} else if fileName == "" {
-			log.Fatalf("No existing blacklist found in directory %s.", conf.GetNetworkBlacklistDirPath())
+			log.Fatalf("No existing blacklist found in directory %s.", config.GetNetworkBlacklistDirPath())
 		}
-		blist, err = data.GetBlacklist(conf.GetNetworkBlacklistDirPath())
+		blist, err = data.GetBlacklist(config.GetNetworkBlacklistDirPath())
 		if err != nil {
-			log.Fatalf("Error thrown when retrieving blacklist from directory '%s': %e", conf.GetNetworkBlacklistDirPath(), err)
+			log.Fatalf("Error thrown when retrieving blacklist from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err)
 		}
 	}
 
@@ -95,11 +98,11 @@ func main() {
 
 	// Filter out addresses
 
-	uniqAddrs := addressing.GetUniqueIPs(addrs, conf.LogLoopEmitFreq)
+	uniqAddrs := addressing.GetUniqueIPs(addrs, viper.GetInt("LogLoopEmitFreq"))
 
 	log.Printf("Whittled %d input addresses down to %d unique addresses.", len(addrs), len(uniqAddrs))
 
-	outAddrs := blist.CleanIPList(uniqAddrs, conf.LogLoopEmitFreq)
+	outAddrs := blist.CleanIPList(uniqAddrs, viper.GetInt("LogLoopEmitFreq"))
 
 	log.Printf("%d addresses remain after cleaning from blacklist (started with %d).", len(outAddrs), len(uniqAddrs))
 

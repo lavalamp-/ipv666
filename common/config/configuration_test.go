@@ -1,53 +1,48 @@
 package config
 
 import (
-	"testing"
-	"net"
 	"github.com/stretchr/testify/assert"
-	"log"
+	"net"
+	"testing"
 )
 
-func getTestingConfig() (*Configuration) {
-	conf, err := LoadFromFile("../../config.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return &conf
+func init() {
+	InitConfig()
 }
 
 func TestConfiguration_SetTargetNetworkSets(t *testing.T) {
-	conf := getTestingConfig()
+	targetNetwork = nil
 	_, network, _ := net.ParseCIDR("2600::1/64")
-	conf.SetTargetNetwork(network)
-	assert.NotNil(t, conf.targetNetwork)
+	SetTargetNetwork(network)
+	assert.NotNil(t, targetNetwork)
 }
 
 func TestConfiguration_SetTargetNetworkSetsValue(t *testing.T) {
-	conf := getTestingConfig()
+	targetNetwork = nil
 	_, network, _ := net.ParseCIDR("2600::1/64")
-	conf.SetTargetNetwork(network)
+	SetTargetNetwork(network)
 	expected := network.String()
-	assert.EqualValues(t, expected, conf.targetNetwork.String())
+	assert.EqualValues(t, expected, targetNetwork.String())
 }
 
 func TestConfiguration_GetTargetNetwork(t *testing.T) {
-	conf := getTestingConfig()
-	_, err := conf.GetTargetNetwork()
+	targetNetwork = nil
+	_, err := GetTargetNetwork()
 	assert.Nil(t, err)
 }
 
 func TestConfiguration_GetTargetNetworkNilCreates(t *testing.T) {
-	conf := getTestingConfig()
-	network, _ := conf.GetTargetNetwork()
+	targetNetwork = nil
+	network, _ := GetTargetNetwork()
 	expected := "2000::/4"
 	assert.EqualValues(t, expected, network.String())
 }
 
 func TestConfiguration_GetTargetNetworkNotNilReturns(t *testing.T) {
-	conf := getTestingConfig()
+	targetNetwork = nil
 	_, network, _ := net.ParseCIDR("2600::1/64")
-	conf.SetTargetNetwork(network)
+	SetTargetNetwork(network)
 	expected := network.String()
-	newNet, _ := conf.GetTargetNetwork()
+	newNet, _ := GetTargetNetwork()
 	assert.EqualValues(t, expected, newNet.String())
 }

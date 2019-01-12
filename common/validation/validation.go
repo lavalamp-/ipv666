@@ -1,12 +1,13 @@
 package validation
 
 import (
-	"net"
-	"github.com/lavalamp-/ipv666/common/addressing"
-	"github.com/lavalamp-/ipv666/common/data"
-	"github.com/lavalamp-/ipv666/common/config"
 	"errors"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/spf13/viper"
+	"net"
 )
 
 func ValidateIPv6NetworkString(toParse string) (*net.IPNet, error) {
@@ -21,15 +22,15 @@ func ValidateIPv6NetworkString(toParse string) (*net.IPNet, error) {
 	return targetNetwork, nil
 }
 
-func ValidateIPv6NetworkStringForScanning(toParse string, conf *config.Configuration) (*net.IPNet, error) {
+func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 	//TODO check to see if value is in any of the weird predefined network ranges
 	network, err := ValidateIPv6NetworkString(toParse)
 	if err != nil {
 		return nil, err
 	}
-	curBlacklist, err := data.GetBlacklist(conf.GetNetworkBlacklistDirPath())
+	curBlacklist, err := data.GetBlacklist(config.GetNetworkBlacklistDirPath())
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error thrown when reading blacklist from directory '%s': %e", conf.GetNetworkBlacklistDirPath(), err))
+		return nil, errors.New(fmt.Sprintf("Error thrown when reading blacklist from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err))
 	}
 	if curBlacklist.IsNetworkBlacklisted(network) {
 		blacklistingNetwork := curBlacklist.GetBlacklistingNetworkFromNetwork(network)
@@ -37,7 +38,7 @@ func ValidateIPv6NetworkStringForScanning(toParse string, conf *config.Configura
 	}
 	ones, _ := network.Mask.Size()
 	bitsLeft := 128 - ones
-	if bitsLeft < conf.InputMinTargetCount {
+	if bitsLeft < viper.GetInt("InputMinTargetCount") {
 		return nil, errors.New(fmt.Sprintf("You specified a network range that had 2^30 or less addresses in it (specifically 2^%d). This tool is not meant for such small ranges. We recommend using the IPv6 Zmap directly for this whole range.", bitsLeft))
 	}
 	return network, nil

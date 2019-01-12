@@ -1,13 +1,14 @@
 package statemachine
 
 import (
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
-	"github.com/lavalamp-/ipv666/common/addressing"
-	"net"
-	"github.com/rcrowley/go-metrics"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"log"
+	"net"
 )
 
 var netRangesCreatedGauge = metrics.NewGauge()
@@ -18,26 +19,26 @@ func init() {
 	metrics.Register("candgroup.addrs.gauge", netRangesDownFromGauge)
 }
 
-func generateScanResultsNetworkRanges(conf *config.Configuration) (error) {
+func generateScanResultsNetworkRanges() error {
 	log.Printf("Now converting ping scan for candidates into network ranges.")
-	addrs, err := data.GetCandidatePingResults(conf.GetPingResultDirPath())
+	addrs, err := data.GetCandidatePingResults(config.GetPingResultDirPath())
 	if err != nil {
 		return err
 	}
 	log.Printf("Loaded ping scan results, now converting down to networks.")
 	var nets []*net.IPNet
 	for _, curAddr := range addrs {
-		newNet, err := addressing.GetIPv6NetworkFromBytes(*curAddr, conf.NetworkGroupingSize)
+		newNet, err := addressing.GetIPv6NetworkFromBytes(*curAddr, uint8(viper.GetInt("NetworkGroupingSize")))
 		if err != nil {
 			return err
 		}
 		nets = append(nets, newNet)
 	}
-	nets = addressing.GetUniqueNetworks(nets, conf.LogLoopEmitFreq)
-	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), conf.NetworkGroupingSize)
+	nets = addressing.GetUniqueNetworks(nets, viper.GetInt("LogLoopEmitFreq"))
+	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), viper.GetInt("NetworkGroupingSize"))
 	netRangesCreatedGauge.Update(int64(len(nets)))
 	netRangesDownFromGauge.Update(int64(len(addrs)))
-	outputPath := fs.GetTimedFilePath(conf.GetNetworkGroupDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetNetworkGroupDirPath())
 	log.Printf("Writing resulting network file to path '%s'.", outputPath)
 	err = addressing.WriteIPv6NetworksToFile(outputPath, nets)
 	if err != nil {

@@ -1,252 +1,289 @@
 package config
 
 import (
-	"github.com/tkanos/gonfig"
 	"fmt"
-	"github.com/kr/pretty"
+	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/spf13/viper"
+	"net"
 	"path/filepath"
 	"time"
-	"net"
-	"github.com/lavalamp-/ipv666/common/addressing"
 )
 
-type Configuration struct {
+var targetNetwork *net.IPNet = nil
+
+func InitConfig() {
+	viper.SetEnvPrefix("IPV666")
 
 	// Filesystem
 
-	BaseOutputDirectory			string		// Base directory where transient files are kept
-	GeneratedModelDirectory		string		// Subdirectory where statistical models are kept
-	CandidateAddressDirectory	string		// Subdirectory where generated candidate addressing are kept
-	PingResultDirectory			string		// Subdirectory where results of ping scans are kept
-	NetworkGroupDirectory		string		// Subdirectory where results of grouping live hosts are kept
-	NetworkScanTargetsDirectory	string		// Subdirectory where the addresses to scan for blacklist checks are kept
-	NetworkScanResultsDirectory	string		// Subdirectory where the results of scanning blacklist candidate networks are kept
-	NetworkBlacklistDirectory	string		// Subdirectory where network range blacklists are kept
-	CleanPingResultDirectory	string		// Subdirectory where cleaned ping results are kept
-	AliasedNetworkDirectory		string		// Subdirectory where aliased network results are kept
-	BloomFilterDirectory		string		// Subdirectory where the Bloom filter is kept
-	StateFileName				string		// The file name for the file that contains the current state
-	TargetNetworkFileName		string		// The file name for the file that contains the last network that was targeted
+	viper.BindEnv("BaseOutputDirectory")				// Base directory where transient files are kept
+	viper.BindEnv("GeneratedModelDirectory")			// Subdirectory where statistical models are kept
+	viper.BindEnv("CandidateAddressDirectory")		// Subdirectory where generated candidate addressing are kept
+	viper.BindEnv("PingResultDirectory")				// Subdirectory where results of ping scans are kept
+	viper.BindEnv("NetworkGroupDirectory")			// Subdirectory where results of grouping live hosts are kept
+	viper.BindEnv("NetworkScanTargetsDirectory")		// Subdirectory where the addresses to scan for blacklist checks are kept
+	viper.BindEnv("NetworkScanResultsDirectory")		// Subdirectory where the results of scanning blacklist candidate networks are kept
+	viper.BindEnv("NetworkBlacklistDirectory")		// Subdirectory where network range blacklists are kept
+	viper.BindEnv("CleanPingResultDirectory")		// Subdirectory where cleaned ping results are kept
+	viper.BindEnv("AliasedNetworkDirectory")			// Subdirectory where aliased network results are kept
+	viper.BindEnv("BloomFilterDirectory")			// Subdirectory where the Bloom filter is kept
+	viper.BindEnv("StateFileName")					// The file name for the file that contains the current state
+	viper.BindEnv("TargetNetworkFileName")			// The file name for the file that contains the last network that was targeted
+
+	viper.SetDefault("BaseOutputDirectory", "ipv6results")
+	viper.SetDefault("GeneratedModelDirectory", "models")
+	viper.SetDefault("CandidateAddressDirectory", "candidates")
+	viper.SetDefault("PingResultDirectory", "pingresult")
+	viper.SetDefault("NetworkGroupDirectory", "networkgroups")
+	viper.SetDefault("NetworkScanTargetsDirectory", "networkscantargets")
+	viper.SetDefault("NetworkScanResultsDirectory", "networkscanresults")
+	viper.SetDefault("NetworkBlacklistDirectory", "networkblacklist")
+	viper.SetDefault("CleanPingResultDirectory", "cleanpings")
+	viper.SetDefault("AliasedNetworkDirectory", "aliasednets")
+	viper.SetDefault("BloomFilterDirectory", "bloom")
+	viper.SetDefault("StateFileName", "state.bin")
+	viper.SetDefault("TargetNetworkFileName", "network.bin")
 
 	// Candidate address generation
 
-	GenerateAddressCount		int			// How many addressing to generate in a given iteration
-	GenerateFirstNybble			uint8		// The first nybble of IPv6 addressing to generate
+	viper.BindEnv("GenerateAddressCount")			// How many addressing to generate in a given iteration
+	viper.BindEnv("GenerateFirstNybble")				// The first nybble of IPv6 addressing to generate
+
+	viper.SetDefault("GenerateAddressCount", 10000000)
+	viper.SetDefault("GenerateFirstNybble", 2)
 
 	// Modeling
 
-	ModelDefaultWeight			uint64		// The default weight to give to model probability maps
+	viper.BindEnv("ModelDefaultWeight")				// The default weight to give to model probability maps
+
+	viper.SetDefault("ModelDefaultWeight", 10000)
 
 	// Existing address bloom filter
 
-	AddressFilterSize			uint		// The size of the Bloom filter to use for identifying already guessed addresses
-	AddressFilterHashCount		uint		// The number of hashing functions to use for the address Bloom filter
-	BloomEmptyMultiple			float64		// The multiple of the address generation size upon which the Bloom filter should be emptied and remade
+	viper.BindEnv("AddressFilterSize")				// The size of the Bloom filter to use for identifying already guessed addresses
+	viper.BindEnv("AddressFilterHashCount")			// The number of hashing functions to use for the address Bloom filter
+	viper.BindEnv("BloomEmptyMultiple")				// The multiple of the address generation size upon which the Bloom filter should be emptied and remade
+
+	viper.SetDefault("AddressFilterSize", 250000000)
+	viper.SetDefault("AddressFilterHashCount", 3)
+	viper.SetDefault("BloomEmptyMultiple", 2.0)
 
 	// Network grouping and validation
 
-	NetworkGroupingSize			uint8		// The bit-length of network size to use when checking for many-to-one
-	NetworkPingCount			int			// The number of addressing to try pinging when testing for many-to-one
-	NetworkBlacklistPercent		float64		// The percentage of ping results that, if returned positive, indicate a blacklisted network
+	viper.BindEnv("NetworkGroupingSize")				// The bit-length of network size to use when checking for many-to-one
+	viper.BindEnv("NetworkPingCount")				// The number of addressing to try pinging when testing for many-to-one
+	viper.BindEnv("NetworkBlacklistPercent")			// The percentage of ping results that, if returned positive, indicate a blacklisted network
+
+	viper.SetDefault("NetworkGroupingSize", 96)
+	viper.SetDefault("NetworkPingCount", 6)
+	viper.SetDefault("NetworkBlacklistPercent", 0.5)
 
 	// Blacklist candidate generation
 
-	BlacklistFlushInterval		int			// The frequency with which to write newly-generate blacklist candidate addresses to disk
+	viper.BindEnv("BlacklistFlushInterval")			// The frequency with which to write newly-generate blacklist candidate addresses to disk
+
+	viper.SetDefault("BlacklistFlushInterval", 500000)
 
 	// Logging
 
-	LogToFile					bool		// Whether or not to write log results to a file instead of stdout
-	LogFilePath					string		// The local file path to where log files should be written
-	LogFileMBSize				int			// The max size of each log file in MB
-	LogFileMaxBackups			int			// The maximum number of backups to have in rotating log files
-	LogFileMaxAge				int			// The maximum number of days to store log files
-	CompressLogFiles			bool		// Whether or not to compress log files
-	LogLoopEmitFreq				int			// The general frequency with which logs should be emitted in long loops
+	viper.BindEnv("LogToFile")						// Whether or not to write log results to a file instead of stdout
+	viper.BindEnv("LogFilePath")						// The local file path to where log files should be written
+	viper.BindEnv("LogFileMBSize")					// The max size of each log file in MB
+	viper.BindEnv("LogFileMaxBackups")				// The maximum number of backups to have in rotating log files
+	viper.BindEnv("LogFileMaxAge")					// The maximum number of days to store log files
+	viper.BindEnv("CompressLogFiles")				// Whether or not to compress log files
+	viper.BindEnv("LogLoopEmitFreq")					// The general frequency with which logs should be emitted in long loops
+
+	viper.SetDefault("LogToFile", false)
+	viper.SetDefault("LogFilePath", "ipv666.log")
+	viper.SetDefault("LogFileMBSize", 10)
+	viper.SetDefault("LogFileMaxBackups", 10)
+	viper.SetDefault("LogFileMaxAge", 120)
+	viper.SetDefault("CompressLogFiles", false)
+	viper.SetDefault("LogLoopEmitFreq", 250000)
 
 	// Scanning
 
-	ZmapExecPath				string  	// Local file path to the Zmap executable
-	ZmapBandwidth				string  	// Bandwidth cap for Zmap
-	ZmapSourceAddress   		string		// Source IPv6 address for Zmap
+	viper.BindEnv("ZmapExecPath")  					// Local file path to the Zmap executable
+	viper.BindEnv("ZmapBandwidth")  					// Bandwidth cap for Zmap
+	viper.BindEnv("ZmapSourceAddress")				// Source IPv6 address for Zmap
 
-	// Exportation
-
-	ExportEnabled				bool		// Whether or not to export data to S3
-	ExitOnFailedSync			bool		// Whether or not to exit the program if an S3 sync fails
-
-	// AWS
-
-	AWSBucketRegion				string		// The region where the AWS S3 bucket resides
-	AWSBucketName				string		// The name of the bucket to push to
-	AWSAccessKey				string		// The AWS access key to use
-	AWSSecretKey				string		// The AWS secret key to use
+	viper.SetDefault("ZmapExecPath", "/usr/local/sbin/zmap")
+	viper.SetDefault("ZmapBandwidth", "20M")
+	viper.SetDefault("ZmapSourceAddress", "[REPLACE]")
 
 	// Clean Up
 
-	CleanUpEnabled				bool		// Whether or not to delete non-recent files after a run
+	viper.BindEnv("CleanUpEnabled")					// Whether or not to delete non-recent files after a run
+
+	viper.SetDefault("CleanUpEnabled", true)
 
 	// Metrics
 
-	MetricsStateLoopPrefix		string		// The prefix for the state loop metric
-	ExitOnFailedMetrics			bool		// Whether or not to exit the program when a metrics operation fails
-	MetricsToStdout				bool		// Whether or not to print metrics to Stdout
-	MetricsStdoutFreq			int64		// The frequency in seconds of how often to print metrics to Stdout
-	GraphiteExportEnabled		bool		// Whether or not to export data to Graphite
-	GraphiteHost				string		// The host address for Graphite
-	GraphitePort				int			// The Graphite port
-	GraphiteEmitFreq			int64		// How often to emit metrics to Graphite in seconds
+	viper.BindEnv("MetricsStateLoopPrefix")			// The prefix for the state loop metric
+	viper.BindEnv("ExitOnFailedMetrics")				// Whether or not to exit the program when a metrics operation fails
+	viper.BindEnv("MetricsToStdout")					// Whether or not to print metrics to Stdout
+	viper.BindEnv("MetricsStdoutFreq")				// The frequency in seconds of how often to print metrics to Stdout
+	viper.BindEnv("GraphiteExportEnabled")			// Whether or not to export data to Graphite
+	viper.BindEnv("GraphiteHost")					// The host address for Graphite
+	viper.BindEnv("GraphitePort")					// The Graphite port
+	viper.BindEnv("GraphiteEmitFreq")				// How often to emit metrics to Graphite in seconds
+
+	viper.SetDefault("MetricsStateLoopPrefix", "stateloop")
+	viper.SetDefault("ExitOnFailedMetrics", false)
+	viper.SetDefault("MetricsToStdout", false)
+	viper.SetDefault("MetricsStdoutFreq", 300)
+	viper.SetDefault("GraphiteExportEnabled", false)
+	viper.SetDefault("GraphiteHost", "127.0.0.1")
+	viper.SetDefault("GraphitePort", 2003)
+	viper.SetDefault("GraphiteEmitFreq", 60)
 
 	// Output
 
-	OutputFileName				string		// The file name for the file to write addresses to
-	OutputFileType				string		// The output file type
+	viper.BindEnv("OutputFileName")					// The file name for the file to write addresses to
+	viper.BindEnv("OutputFileType")					// The output file type
+
+	viper.SetDefault("OutputFileName", "discovered_addrs")
+	viper.SetDefault("OutputFileType", "txt")
 
 	// Input
 
-	InputEntropyThreshold		float64		// The threshold upon which addresses having more entropy will be removed
-	InputEntropyBitLength		int			// The number of bits within IP addresses to calculate entropy based on
-	InputMinAddresses			int			// The recommended minimum number of addresses to require for a given statistical model
-	InputMinTargetCount			int			// The minimum bit count for network sizes to scan
+	viper.BindEnv("InputEntropyThreshold")			// The threshold upon which addresses having more entropy will be removed
+	viper.BindEnv("InputEntropyBitLength")			// The number of bits within IP addresses to calculate entropy based on
+	viper.BindEnv("InputMinAddresses")				// The recommended minimum number of addresses to require for a given statistical model
+	viper.BindEnv("InputMinTargetCount")				// The minimum bit count for network sizes to scan
+
+	viper.SetDefault("InputEntropyThreshold", 0.9)
+	viper.SetDefault("InputEntropyBitLength", 64)
+	viper.SetDefault("InputMinAddresses", 100000)
+	viper.SetDefault("InputMinTargetCount", 30)
 
 	// Runtime
 
-	ForceAcceptPrompts			bool		// Whether or not to bypass prompts by force accepting them
+	viper.BindEnv("ForceAcceptPrompts")				// Whether or not to bypass prompts by force accepting them
+
+	viper.SetDefault("ForceAcceptPrompts", false)
 
 	// Alias Detection
 
-	AliasLeftIndexStart			uint8		// The left-most index for CIDR mask lengths where aliased network detection should start
-	AliasDuplicateScanCount		uint8		// The number of times a single address should be scanned when checking for aliased networks
+	viper.BindEnv("AliasLeftIndexStart")				// The left-most index for CIDR mask lengths where aliased network detection should start
+	viper.BindEnv("AliasDuplicateScanCount")			// The number of times a single address should be scanned when checking for aliased networks
 
-	// Internal
+	viper.SetDefault("AliasLeftIndexStart", 0)
+	viper.SetDefault("AliasDuplicateScanCount", 3)
 
-	targetNetwork				*net.IPNet
-
+	viper.AutomaticEnv()
 }
 
-func LoadFromFile(filePath string) (Configuration, error) {
-	config := Configuration{}
-	err := gonfig.GetConf(filePath, &config)
-	if err != nil {
-		return Configuration{}, err
-	} else {
-		return config, nil
-	}
+func GetOutputFilePath() string {
+	return fmt.Sprintf("%s.%s", viper.GetString("OutputFileName"), viper.GetString("OutputFileType"))
 }
 
-func (config *Configuration) Print() {
-	fmt.Print("\n-= Configuration Values =-\n\n")
-	fmt.Printf("%# v", pretty.Formatter(config))
+func GetStateFilePath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("StateFileName"))
 }
 
-func (config *Configuration) GetOutputFilePath() (string) {
-	return fmt.Sprintf("%s.%s", config.OutputFileName, config.OutputFileType)
+func GetTargetNetworkFilePath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("TargetNetworkFileName"))
 }
 
-func (config *Configuration) GetStateFilePath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.StateFileName)
+func GetGeneratedModelDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("GeneratedModelDirectory"))
 }
 
-func (config *Configuration) GetTargetNetworkFilePath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.TargetNetworkFileName)
+func GetCandidateAddressDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("CandidateAddressDirectory"))
 }
 
-func (config *Configuration) GetGeneratedModelDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.GeneratedModelDirectory)
+func GetPingResultDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("PingResultDirectory"))
 }
 
-func (config *Configuration) GetCandidateAddressDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.CandidateAddressDirectory)
+func GetNetworkGroupDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("NetworkGroupDirectory"))
 }
 
-func (config *Configuration) GetPingResultDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.PingResultDirectory)
+func GetNetworkScanTargetsDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("NetworkScanTargetsDirectory"))
 }
 
-func (config *Configuration) GetNetworkGroupDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.NetworkGroupDirectory)
+func GetNetworkScanResultsDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("NetworkScanResultsDirectory"))
 }
 
-func (config *Configuration) GetNetworkScanTargetsDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.NetworkScanTargetsDirectory)
+func GetNetworkBlacklistDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("NetworkBlacklistDirectory"))
 }
 
-func (config *Configuration) GetNetworkScanResultsDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.NetworkScanResultsDirectory)
+func GetCleanPingDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("CleanPingResultDirectory"))
 }
 
-func (config *Configuration) GetNetworkBlacklistDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.NetworkBlacklistDirectory)
+func GetAliasedNetworkDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("AliasedNetworkDirectory"))
 }
 
-func (config *Configuration) GetCleanPingDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.CleanPingResultDirectory)
+func GetBloomDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("BloomFilterDirectory"))
 }
 
-func (config *Configuration) GetAliasedNetworkDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.AliasedNetworkDirectory)
-}
-
-func (config *Configuration) GetBloomDirPath() (string) {
-	return filepath.Join(config.BaseOutputDirectory, config.BloomFilterDirectory)
-}
-
-func (config *Configuration) GetAllDirectories() ([]string) {
+func GetAllDirectories() []string {
 	return []string{
-		config.BaseOutputDirectory,
-		config.GetGeneratedModelDirPath(),
-		config.GetCandidateAddressDirPath(),
-		config.GetPingResultDirPath(),
-		config.GetNetworkGroupDirPath(),
-		config.GetNetworkScanTargetsDirPath(),
-		config.GetNetworkScanResultsDirPath(),
-		config.GetNetworkBlacklistDirPath(),
-		config.GetCleanPingDirPath(),
-		config.GetAliasedNetworkDirPath(),
-		config.GetBloomDirPath(),
+		viper.GetString("BaseOutputDirectory"),
+		GetGeneratedModelDirPath(),
+		GetCandidateAddressDirPath(),
+		GetPingResultDirPath(),
+		GetNetworkGroupDirPath(),
+		GetNetworkScanTargetsDirPath(),
+		GetNetworkScanResultsDirPath(),
+		GetNetworkBlacklistDirPath(),
+		GetCleanPingDirPath(),
+		GetAliasedNetworkDirPath(),
+		GetBloomDirPath(),
 	}
 }
 
-func (config *Configuration) GetAllExportDirectories() ([]string) {
+func GetAllExportDirectories() []string {
 	return []string{
-		config.GetGeneratedModelDirPath(),
-		config.GetCandidateAddressDirPath(),
-		config.GetPingResultDirPath(),
-		config.GetNetworkGroupDirPath(),
-		config.GetNetworkScanTargetsDirPath(),
-		config.GetNetworkScanResultsDirPath(),
-		config.GetNetworkBlacklistDirPath(),
-		config.GetCleanPingDirPath(),
-		config.GetAliasedNetworkDirPath(),
-		config.GetBloomDirPath(),
+		GetGeneratedModelDirPath(),
+		GetCandidateAddressDirPath(),
+		GetPingResultDirPath(),
+		GetNetworkGroupDirPath(),
+		GetNetworkScanTargetsDirPath(),
+		GetNetworkScanResultsDirPath(),
+		GetNetworkBlacklistDirPath(),
+		GetCleanPingDirPath(),
+		GetAliasedNetworkDirPath(),
+		GetBloomDirPath(),
 	}
 }
 
-func (config *Configuration) GetGraphiteEmitDuration() (time.Duration) {
-	return time.Duration(config.GraphiteEmitFreq) * time.Second
+func GetGraphiteEmitDuration() time.Duration {
+	return time.Duration(viper.GetInt64("GraphiteEmitFreq")) * time.Second
 }
 
-func (config *Configuration) GetGoldenModelFilePath() (string) {
-	return filepath.Join(config.GetGeneratedModelDirPath(), "default")
+func GetGoldenModelFilePath() string {
+	return filepath.Join(GetGeneratedModelDirPath(), "default")
 }
 
-func (config *Configuration) GetGoldenBlacklistFilePath() (string) {
-	return filepath.Join(config.GetNetworkBlacklistDirPath(), "default")
+func GetGoldenBlacklistFilePath() string {
+	return filepath.Join(GetNetworkBlacklistDirPath(), "default")
 }
 
-func (config *Configuration) GetSafeFilePaths() ([]string) {
+func GetSafeFilePaths() []string {
 	return []string{
-		config.GetGoldenModelFilePath(),
-		config.GetGoldenBlacklistFilePath(),
+		GetGoldenModelFilePath(),
+		GetGoldenBlacklistFilePath(),
 	}
 }
 
-func (config *Configuration) SetTargetNetwork(toScan *net.IPNet) {
-	config.targetNetwork = toScan
+func SetTargetNetwork(toScan *net.IPNet) {
+	targetNetwork = toScan
 }
 
-func (config *Configuration) GetTargetNetwork() (*net.IPNet, error) {
-	if config.targetNetwork == nil {
-		addrBytes := []byte{byte(config.GenerateFirstNybble << 4)}
+func GetTargetNetwork() (*net.IPNet, error) {
+	if targetNetwork == nil {
+		addrBytes := []byte{byte(viper.GetInt("GenerateFirstNybble") << 4)}
 		for len(addrBytes) < 16 {
 			addrBytes = append(addrBytes, 0x00)
 		}
@@ -254,7 +291,7 @@ func (config *Configuration) GetTargetNetwork() (*net.IPNet, error) {
 		if err != nil {
 			return nil, err
 		}
-		config.SetTargetNetwork(targetNetwork)
+		SetTargetNetwork(targetNetwork)
 	}
-	return config.targetNetwork, nil
+	return targetNetwork, nil
 }
