@@ -2,17 +2,17 @@ package addressing
 
 import (
 	"bufio"
-	"net"
-	"os"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/zrandom"
-	"log"
+	"io"
 	"io/ioutil"
-	"strings"
-	"encoding/binary"
 	"math/rand"
+	"net"
+	"os"
+	"strings"
 )
 
 func getFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
@@ -35,9 +35,9 @@ func GetNetworksFromStrings(toParse []string) ([]*net.IPNet) {
 	for i, curParse := range toParse {
 		_, network, err := net.ParseCIDR(curParse)
 		if err != nil {
-			log.Printf("Error thrown when parsing string '%s' as CIDR network (index %d): %e", curParse, i, err)
+			logging.Warnf("Error thrown when parsing string '%s' as CIDR network (index %d): %e", curParse, i, err)
 		} else if network == nil {
-			log.Printf("Parsing string '%s' as CIDR network returned empty CIDR network (index %d).", curParse, i)
+			logging.Warnf("Parsing string '%s' as CIDR network returned empty CIDR network (index %d).", curParse, i)
 		} else {
 			toReturn = append(toReturn, network)
 		}
@@ -86,7 +86,7 @@ func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
 	var toReturn []*net.IPNet
 	for i, curNet := range networks {
 		if i % updateFreq == 0 {
-			log.Printf("Processing %d out of %d for unique networks.", i, len(networks))
+			logging.Debugf("Processing %d out of %d for unique networks.", i, len(networks))
 		}
 		netString := GetBaseAddressString(curNet)
 		if _, ok := checkMap[netString]; !ok {
@@ -128,7 +128,7 @@ func WriteIPv6NetworksToHexFile(filePath string, networks []*net.IPNet) (error) 
 }
 
 func ReadIPv6NetworksFromHexFile(filePath string) ([]*net.IPNet, error) {
-	log.Printf("Reading IPv6 networks from file at path '%s'.", filePath)
+	logging.Debugf("Reading IPv6 networks from file at path '%s'.", filePath)
 	fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -140,12 +140,12 @@ func ReadIPv6NetworksFromHexFile(filePath string) ([]*net.IPNet, error) {
 		trimmedLine := strings.TrimSpace(fileLine)
 		_, network, err := net.ParseCIDR(trimmedLine)
 		if err != nil {
-			log.Printf("Error thrown when parsing '%s' as CIDR: %e", trimmedLine, err)
+			logging.Warnf("Error thrown when parsing '%s' as CIDR: %e", trimmedLine, err)
 			continue
 		}
 		networks = append(networks, network)
 	}
-	log.Printf("Read %d networks from file '%s'.", len(networks), filePath)
+	logging.Infof("Read %d networks from file '%s'.", len(networks), filePath)
 	return networks, nil
 }
 

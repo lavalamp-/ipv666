@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"github.com/lavalamp-/ipv666/common/app"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/spf13/cobra"
-	"log"
 	"os"
 )
 
 func init() {
 	var inputPath string
 	blgenCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "An input file containing IPv6 network ranges to build a blacklist from.")
-	blgenCmd.MarkFlagRequired("input")
+	blgenCmd.MarkPersistentFlagRequired("input")
 }
 
 func validateBlgenCommand(cmd *cobra.Command) {
@@ -18,11 +18,11 @@ func validateBlgenCommand(cmd *cobra.Command) {
 	inputPath, err := cmd.PersistentFlags().GetString("input")
 
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-		log.Fatalf("No file found at path '%s'. Please supply a valid file path.", inputPath)
+		logging.ErrorStringFf("No file found at path '%s'. Please supply a valid file path.", inputPath)
 	}
 
 }

@@ -1,21 +1,21 @@
 package statemachine
 
 import (
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"github.com/spf13/viper"
-	"log"
-	"time"
-	"net"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
-	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/spf13/viper"
+	"net"
+	"time"
 
-	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/filtering"
-	bloom2 "github.com/willf/bloom"
-	"os"
 	"errors"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/filtering"
+	"github.com/lavalamp-/ipv666/common/fs"
+	bloom2 "github.com/willf/bloom"
+	"os"
 )
 
 var generateDurationTimer = metrics.NewTimer()
@@ -62,7 +62,7 @@ func generateCandidateAddresses() error {
 
 	// Generate all of the addresses and filter out based on Bloom filter and blacklist
 
-	log.Printf(
+	logging.Infof(
 		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Network range is %s.",
 		viper.GetInt("GenerateAddressCount"),
 		model.Name,
@@ -89,13 +89,13 @@ func generateCandidateAddresses() error {
 			toReturn = false
 		}
 		if (madeCount + blacklistCount + totalBloomCount) % viper.GetInt("LogLoopEmitFreq") == 0 {
-			log.Printf("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount + totalBloomCount, madeCount, blacklistCount, totalBloomCount)
+			logging.Infof("Generated %d total addresses, %d have been valid, %d have been blacklisted, %d exist in Bloom filter.", madeCount + blacklistCount + totalBloomCount, madeCount, blacklistCount, totalBloomCount)
 		}
 		if curBloomCount >= bloomEmptyThreshold {
-			log.Printf("Bloom filter rejection rate currently exceeds threshold of %d (%d rejected). Emptying and recreating.", bloomEmptyThreshold, curBloomCount)
+			logging.Infof("Bloom filter rejection rate currently exceeds threshold of %d (%d rejected). Emptying and recreating.", bloomEmptyThreshold, curBloomCount)
 			bloom, err = remakeBloomFilter(addresses)
 			if err != nil {
-				log.Printf("Error thrown when remaking Bloom filter: %e", err)
+				logging.Warnf("Error thrown when remaking Bloom filter: %e", err)
 				return false, err
 			}
 			curBloomCount = 0
@@ -107,24 +107,24 @@ func generateCandidateAddresses() error {
 	start := time.Now()
 	targetNetwork, err = config.GetTargetNetwork()
 	if err != nil {
-		log.Printf("Error thrown when getting target network from config: %e", err)
+		logging.Warnf("Error thrown when getting target network from config: %e", err)
 		return err
 	}
 	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, viper.GetInt("GenerateAddressCount"), addrProcessFunc)
 	if err != nil {
-		log.Printf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
+		logging.Warnf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
 		return err
 	}
 	elapsed := time.Since(start)
 	generateDurationTimer.Update(elapsed)
 	generateBlacklistCount.Inc(int64(blacklistCount))
 	generateBloomCount.Inc(int64(totalBloomCount))
-	log.Printf("Took a total of %s to generate %d candidate addresses (%d blacklisted filtered out, %d existed in Bloom filter).", elapsed, viper.GetInt("GenerateAddressCount"), blacklistCount, totalBloomCount)
+	logging.Infof("Took a total of %s to generate %d candidate addresses (%d blacklisted filtered out, %d existed in Bloom filter).", elapsed, viper.GetInt("GenerateAddressCount"), blacklistCount, totalBloomCount)
 
 	// Write addresses and Bloom filter to disk and update data manager to point to in-memory references
 
 	outputPath := fs.GetTimedFilePath(config.GetCandidateAddressDirPath())
-	log.Printf("Writing results of candidate address generation to file at '%s'.", outputPath)
+	logging.Debugf("Writing results of candidate address generation to file at '%s'.", outputPath)
 	start = time.Now()
 	err = addressing.WriteIPsToHexFile(outputPath, addresses)
 	if err != nil {
@@ -132,9 +132,9 @@ func generateCandidateAddresses() error {
 	}
 	elapsed = time.Since(start)
 	generateWriteTimer.Update(elapsed)
-	log.Printf("It took a total of %s to write %d addresses to file.", elapsed, len(addresses))
+	logging.Debugf("It took a total of %s to write %d addresses to file.", elapsed, len(addresses))
 	outputPath = fs.GetTimedFilePath(config.GetBloomDirPath())
-	log.Printf("Writing current state of Bloom filter to file at '%s'.", outputPath)
+	logging.Debugf("Writing current state of Bloom filter to file at '%s'.", outputPath)
 	start = time.Now()
 	err = filtering.WriteBloomFilterToFile(outputPath, bloom)
 	if err != nil {
@@ -143,29 +143,29 @@ func generateCandidateAddresses() error {
 	elapsed = time.Since(start)
 	bloomWriteTimer.Update(elapsed)
 	data.UpdateBloomFilter(bloom, outputPath)
-	log.Printf("It took a total of %s to write Bloom filter to file '%s'.", elapsed, outputPath)
+	logging.Debugf("It took a total of %s to write Bloom filter to file '%s'.", elapsed, outputPath)
 	return nil
 
 }
 
 func remakeBloomFilter(existingAddrs []*net.IP) (*bloom2.BloomFilter, error) {
-	log.Printf("Creating new Bloom filter with %d entries and %d hashes.", viper.GetInt("AddressFilterSize"), viper.GetInt("AddressFilterHashCount"))
+	logging.Debugf("Creating new Bloom filter with %d entries and %d hashes.", viper.GetInt("AddressFilterSize"), viper.GetInt("AddressFilterHashCount"))
 	var filter *bloom2.BloomFilter
 	if _, err := os.Stat(config.GetOutputFilePath()); !os.IsNotExist(err) {
-		log.Printf("Output file at path '%s' exists. Creating new Bloom filter from its contents.", config.GetOutputFilePath())
+		logging.Debugf("Output file at path '%s' exists. Creating new Bloom filter from its contents.", config.GetOutputFilePath())
 		filter, err = data.LoadBloomFilterFromOutput()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		log.Printf("No output file found at path '%s'. Starting a new Bloom filter from scratch.", config.GetOutputFilePath())
+		logging.Debugf("No output file found at path '%s'. Starting a new Bloom filter from scratch.", config.GetOutputFilePath())
 		filter = filtering.NewFromConfig()
 	}
-	log.Printf("Updating Bloom filter with %d existing addresses.", len(existingAddrs))
+	logging.Debugf("Updating Bloom filter with %d existing addresses.", len(existingAddrs))
 	for _, ip := range existingAddrs {
 		ipBytes := ([]byte)(*ip)
 		filter.Add(ipBytes)
 	}
-	log.Printf("Successfully created new Bloom filter and added %d existing addresses.", len(existingAddrs))
+	logging.Debugf("Successfully created new Bloom filter and added %d existing addresses.", len(existingAddrs))
 	return filter, nil
 }

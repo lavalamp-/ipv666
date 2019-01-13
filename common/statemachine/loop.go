@@ -1,14 +1,14 @@
 package statemachine
 
 import (
-	"github.com/spf13/viper"
-	"log"
-	"time"
-	"io/ioutil"
 	"errors"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"io/ioutil"
+	"time"
 )
 
 //noinspection GoSnakeCaseUsage
@@ -67,24 +67,24 @@ func fetchStateFromFile(filePath string) (State, error) {
 	return State(state), nil
 }
 
-func SetStateFile(filePath string, curState State) (error) {
-	log.Printf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
+func SetStateFile(filePath string, curState State) error {
+	logging.Debugf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
 	var b []byte
 	b = append(b, byte(curState))
 	return ioutil.WriteFile(filePath, b, 0644)
 }
 
-func ResetStateFile(filePath string) (error) {
+func ResetStateFile(filePath string) error {
 	return SetStateFile(filePath, FIRST_STATE)
 }
 
-func InitStateFile(filePath string) (error) {
+func InitStateFile(filePath string) error {
 	return SetStateFile(filePath, FIRST_STATE)
 }
 
 func RunStateMachine() error {
 
-	log.Print("Now starting to run the state machine.")
+	logging.Infof("Now starting to run the state machine.")
 
 	state, err := fetchStateFromFile(config.GetStateFilePath())
 
@@ -92,11 +92,11 @@ func RunStateMachine() error {
 		return err
 	}
 
-	log.Printf("Starting at state %d.", state)
+	logging.Debugf("Starting at state %d.", state)
 
 	for {
 
-		log.Printf("Now entering state %d.", state)
+		logging.Debugf("Now entering state %d.", state)
 		start := time.Now()
 
 		switch state {
@@ -152,7 +152,7 @@ func RunStateMachine() error {
 		case CLEAN_UP:
 			// Remove all but the most recent files in each of the directories
 			if !viper.GetBool("CleanUpEnabled") {
-				log.Printf("Clean up disabled. Skipping clean up step.")
+				logging.Infof("Clean up disabled. Skipping clean up step.")
 			} else {
 				err := cleanUpNonRecentFiles()
 				if err != nil {
@@ -164,11 +164,11 @@ func RunStateMachine() error {
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Completed state %d (took %s).", state, elapsed)
+		logging.Debugf("Completed state %d (took %s).", state, elapsed)
 
 		timer, found := getStateLoopTimer(state)
 		if !found {
-			log.Printf("Unable to find state loop timer for state %d.", state)
+			logging.Warnf("Unable to find state loop timer for state %d.", state)
 			if viper.GetBool("ExitOnFailedMetrics") {
 				return errors.New(fmt.Sprintf("Unable to find state loop timer for state %d.", state))
 			}

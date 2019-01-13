@@ -4,10 +4,10 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
-	"log"
 	"time"
 )
 
@@ -27,7 +27,7 @@ func zmapScanCandidateAddresses() error {
 		return err
 	}
 	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
-	log.Printf(
+	logging.Infof(
 		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
@@ -37,19 +37,19 @@ func zmapScanCandidateAddresses() error {
 	elapsed := time.Since(start)
 	if err != nil {
 		zmapCandErrorCounter.Inc(1)
-		log.Printf("An error was thrown when trying to run zmap: %s", err)
-		log.Printf("Zmap elapsed time was %s.", elapsed)
+		logging.Warnf("An error was thrown when trying to run zmap: %s", err)
+		logging.Debugf("Zmap elapsed time was %s.", elapsed)
 		return err
 	}
 	zmapCandDurationTimer.Update(elapsed)
 	liveCount, err := fs.CountLinesInFile(outputPath)
 	if err != nil {
-		log.Printf("Error when counting lines in file '%s': %e", outputPath, err)
+		logging.Warnf("Error when counting lines in file '%s': %e", outputPath, err)
 		if viper.GetBool("ExitOnFailedMetrics") {
 			return err
 		}
 	}
 	liveAddrCandGauge.Update(int64(liveCount))
-	log.Printf("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+	logging.Infof("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
 	return nil
 }

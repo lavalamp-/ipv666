@@ -5,8 +5,8 @@ import (
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/spf13/cobra"
-	"log"
 	"os"
 )
 
@@ -17,8 +17,8 @@ func init() {
 	cleanCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "An input file containing IPv6 addresses to clean via a blacklist.")
 	cleanCmd.PersistentFlags().StringVarP(&outputPath, "out", "o", "", "The file path where the cleaned results should be written to.")
 	cleanCmd.PersistentFlags().StringVarP(&blacklistPath, "blacklist", "b", "", "The local file path to the blacklist to use. If not specified, defaults to the most recent blacklist in the configured blacklist directory.")
-	blgenCmd.MarkFlagRequired("input")
-	blgenCmd.MarkFlagRequired("out")
+	cleanCmd.MarkPersistentFlagRequired("input")
+	cleanCmd.MarkPersistentFlagRequired("out")
 }
 
 func validateCleanCommand(cmd *cobra.Command) {
@@ -26,32 +26,32 @@ func validateCleanCommand(cmd *cobra.Command) {
 	inputPath, err := cmd.PersistentFlags().GetString("input")
 
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
-		log.Fatalf("No file found at path '%s'. Please supply a valid file path.", inputPath)
+		logging.ErrorStringFf("No file found at path '%s'. Please supply a valid file path.", inputPath)
 	}
 
 	outPath, err := cmd.PersistentFlags().GetString("out")
 
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	if _, err := os.Stat(outPath); !os.IsNotExist(err) {
-		log.Fatalf("File already exists at output path of '%s'. Please choose a different output path or delete the file in question.", outPath)
+		logging.ErrorStringFf("File already exists at output path of '%s'. Please choose a different output path or delete the file in question.", outPath)
 	}
 
 	blacklistPath, err := cmd.PersistentFlags().GetString("blacklist")
 
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	if blacklistPath != "" {
 		if _, err := os.Stat(blacklistPath); os.IsNotExist(err) {
-			log.Fatalf("No blacklist file found at path '%s'. Please either specify a valid blacklist file path or don't specify one.", blacklistPath)
+			logging.ErrorStringFf("No blacklist file found at path '%s'. Please either specify a valid blacklist file path or don't specify one.", blacklistPath)
 		}
 	}
 
@@ -84,7 +84,7 @@ var cleanCmd = &cobra.Command{
 		}
 
 		if err != nil {
-			log.Fatal(err)
+			logging.ErrorF(err)
 		}
 
 		app.RunClean(inputPath, outputPath, processBlacklist)

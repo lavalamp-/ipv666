@@ -2,9 +2,9 @@ package modeling
 
 import (
 	"github.com/lavalamp-/ipv666/common/addressing"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/persist"
 	"github.com/spf13/viper"
-	"log"
 	"math"
 	"math/rand"
 	"net"
@@ -136,14 +136,14 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybb
 
 func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNybble(fromNybble uint8, count int, updateFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
-	log.Printf("Generating %d IP addresses using model %s.", count, addrModel.Name)
+	logging.Debugf("Generating %d IP addresses using model %s.", count, addrModel.Name)
 	for i := 0; i < count; i++ {
 		if i % updateFreq == 0 {
-			log.Printf("Generating %d addresses out of %d.", i, count)
+			logging.Debugf("Generating %d addresses out of %d.", i, count)
 		}
 		toReturn = append(toReturn, addrModel.GenerateSingleIPFromNybble(fromNybble))
 	}
-	log.Printf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
+	logging.Debugf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
 	return toReturn
 }
 
@@ -171,14 +171,14 @@ func generateAddressModel(ips []*net.IP, name string, updateInterval int) *Proba
 }
 
 func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateInterval int) () {
-	log.Printf("Updating model %s with %d addresses.", addrModel.Name, len(ips))
+	logging.Debugf("Updating model %s with %d addresses.", addrModel.Name, len(ips))
 	for i, ip := range ips {
 		if i % updateInterval == 0 {
-			log.Printf("Processing address %d out of %d.", i, len(ips))
+			logging.Debugf("Processing address %d out of %d.", i, len(ips))
 		}
 		addrModel.UpdateSingleIP(ip)
 	}
-	log.Printf("Successfully updated model %s with %d addresses.", addrModel.Name, len(ips))
+	logging.Debugf("Successfully updated model %s with %d addresses.", addrModel.Name, len(ips))
 }
 
 func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP) () {
@@ -245,12 +245,12 @@ func (probMap *NybbleProbabilityMap) buildDistribution () {
 }
 
 func CreateBlankModel(name string, outputPath string) error {
-	log.Printf("Now creating a blank statistical model.")
+	logging.Debugf("Now creating a blank statistical model.")
 	model := NewAddressModel(name)
-	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
+	logging.Debugf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
 	err := model.Save(outputPath)
 	if err != nil {
-		log.Printf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
+		logging.Warnf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
 		return err
 	}
 	return nil

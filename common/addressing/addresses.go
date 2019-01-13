@@ -1,18 +1,18 @@
 package addressing
 
 import (
-	"os"
-	"io/ioutil"
-	"errors"
-	"strings"
-	"fmt"
-	"net"
-	"io"
-	"log"
-	"encoding/binary"
-	"github.com/lavalamp-/ipv666/common/zrandom"
-	"github.com/lavalamp-/ipv666/common"
 	"bufio"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"github.com/lavalamp-/ipv666/common"
+	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/lavalamp-/ipv666/common/zrandom"
+	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"strings"
 )
 
 func FilterIPv4FromList(toParse []*net.IP) ([]*net.IP) {
@@ -29,12 +29,12 @@ func IsAddressIPv4(toCheck *net.IP) (bool) {
 	return toCheck.To4() != nil
 }
 
-func GetIPsFromStrings(toParse []string) ([]*net.IP) {
+func GetIPsFromStrings(toParse []string) []*net.IP {
 	var toReturn []*net.IP
 	for _, curParse := range toParse {
 		newIP := net.ParseIP(curParse)
 		if newIP == nil {
-			log.Printf("Could not parse IP from string '%s'.", curParse)
+			logging.Warnf("Could not parse IP from string '%s'.", curParse)
 		} else {
 			toReturn = append(toReturn, &newIP)
 		}
@@ -51,17 +51,17 @@ func GetIPSet(ips []*net.IP) (map[string]*common.Empty) {
 	return toReturn
 }
 
-func GetFirst64BitsOfIP(ip *net.IP) (uint64) {
+func GetFirst64BitsOfIP(ip *net.IP) uint64 {
 	ipBytes := ([]byte)(*ip)
 	return binary.LittleEndian.Uint64(ipBytes[:8])
 }
 
-func GetUniqueIPs(ips []*net.IP, updateFreq int) ([]*net.IP) {
+func GetUniqueIPs(ips []*net.IP, updateFreq int) []*net.IP {
 	checkMap := make(map[string]bool)
 	var toReturn []*net.IP
 	for i, ip := range ips {
 		if i % updateFreq == 0 {
-			log.Printf("Processing %d out of %d for unique IPs.", i, len(ips))
+			logging.Debugf("Processing %d out of %d for unique IPs.", i, len(ips))
 		}
 		if _, ok := checkMap[ip.String()]; !ok {
 			checkMap[ip.String()] = true
@@ -82,7 +82,7 @@ func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 	for i, line := range lines {
 		newIP := net.ParseIP(strings.TrimSpace(line))
 		if newIP == nil {
-			log.Printf("No IP found from content '%s' (line %d in file '%s').", line, i, filePath)
+			logging.Warnf("No IP found from content '%s' (line %d in file '%s').", line, i, filePath)
 			continue
 		}
 		toReturn = append(toReturn, &newIP)

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/app"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 )
 
@@ -31,7 +31,7 @@ func validateScanCommand() {
 
 	err := validation.ValidateOutputFileType(viper.GetString("OutputFileType"))
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	if _, err := os.Stat(config.GetOutputFilePath()); !os.IsNotExist(err) {
@@ -40,29 +40,29 @@ func validateScanCommand() {
 			errMsg := fmt.Sprintf("Exiting. Please move the file at path '%s' and try again.", config.GetOutputFilePath())
 			err := shell.RequireApproval(prompt, errMsg)
 			if err != nil {
-				log.Fatal(err)
+				logging.ErrorF(err)
 			}
 		} else {
-			log.Printf("Force accept configured. Not asking for permission to append to file '%s'.", config.GetOutputFilePath())
+			logging.Infof("Force accept configured. Not asking for permission to append to file '%s'.", config.GetOutputFilePath())
 		}
 	}
 
 	_, err = validation.ValidateIPv6NetworkStringForScanning(viper.GetString("ScanTargetNetwork"))
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	_, err = config.GetTargetNetwork()
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	zmapAvailable, err := shell.IsZmapAvailable()
 
 	if err != nil {
-		log.Fatal("Error thrown when checking for Zmap: ", err)
+		logging.ErrorStringFf("Error thrown when checking for Zmap: %s", err)
 	} else if !zmapAvailable {
-		log.Fatal("Zmap not found. Please install Zmap.")
+		logging.ErrorStringF("Zmap not found. Please install Zmap.")
 	}
 
 }

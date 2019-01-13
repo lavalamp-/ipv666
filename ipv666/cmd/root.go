@@ -1,11 +1,17 @@
 package cmd
 
 import (
+	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/lavalamp-/ipv666/common/validation"
 	"github.com/spf13/cobra"
-	"log"
+	"github.com/spf13/viper"
 )
 
 func init() {
+	var logLevel string
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log", "l", viper.GetString("LogLevel"), "The log level to emit logs at (one of debug, info, success, warn, error).")
+	viper.BindPFlag("LogLevel", rootCmd.PersistentFlags().Lookup("log"))
+
 	rootCmd.AddCommand(scanCmd)
 	rootCmd.AddCommand(aliasCmd)
 	rootCmd.AddCommand(blgenCmd)
@@ -24,10 +30,14 @@ var rootCmd = &cobra.Command{
 	Use:		"ipv666",
 	Short:		"IPv6 address enumeration tool set",
 	Long:		rootLongDesc,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		logLevel := viper.GetString("LogLevel")
+		return validation.ValidateLogLevel(logLevel)
+	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 }

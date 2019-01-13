@@ -4,9 +4,9 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
-	"log"
 	"time"
 )
 
@@ -27,20 +27,20 @@ func updateModelWithSuccessfulHosts() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Updating model %s with %d addresses.", model.Name, len(cleanPings))
+	logging.Infof("Updating model %s with %d addresses.", model.Name, len(cleanPings))
 	start := time.Now()
 	model.UpdateMultiIP(cleanPings, viper.GetInt("LogLoopEmitFreq"))
 	elapsed := time.Since(start)
 	modelUpdateCounter.Inc(int64(len(cleanPings)))
 	modelUpdateDurationTimer.Update(elapsed)
-	log.Printf("Model updated with %d addresses in %s.", len(cleanPings), elapsed)
+	logging.Debugf("Model updated with %d addresses in %s.", len(cleanPings), elapsed)
 	outputPath := fs.GetTimedFilePath(config.GetGeneratedModelDirPath())
-	log.Printf("Writing new model to output path at '%s'.", outputPath)
+	logging.Debugf("Writing new model to output path at '%s'.", outputPath)
 	err = model.Save(outputPath)
 	if err != nil {
 		return err
 	}
-	log.Printf("Model successfully updated and written to '%s'.", outputPath)
+	logging.Debugf("Model successfully updated and written to '%s'.", outputPath)
 	data.UpdateProbabilisticAddressModel(model, outputPath)
 	return nil
 }

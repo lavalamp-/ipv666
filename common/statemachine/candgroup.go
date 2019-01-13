@@ -5,9 +5,9 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
-	"log"
 	"net"
 )
 
@@ -20,12 +20,12 @@ func init() {
 }
 
 func generateScanResultsNetworkRanges() error {
-	log.Printf("Now converting ping scan for candidates into network ranges.")
+	logging.Infof("Now converting ping scan for candidates into network ranges.")
 	addrs, err := data.GetCandidatePingResults(config.GetPingResultDirPath())
 	if err != nil {
 		return err
 	}
-	log.Printf("Loaded ping scan results, now converting down to networks.")
+	logging.Debugf("Loaded ping scan results, now converting down to networks.")
 	var nets []*net.IPNet
 	for _, curAddr := range addrs {
 		newNet, err := addressing.GetIPv6NetworkFromBytes(*curAddr, uint8(viper.GetInt("NetworkGroupingSize")))
@@ -35,16 +35,16 @@ func generateScanResultsNetworkRanges() error {
 		nets = append(nets, newNet)
 	}
 	nets = addressing.GetUniqueNetworks(nets, viper.GetInt("LogLoopEmitFreq"))
-	log.Printf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), viper.GetInt("NetworkGroupingSize"))
+	logging.Debugf("Whittled %d initial addresses down to %d network ranges with bit mask length of %d.", len(addrs), len(nets), viper.GetInt("NetworkGroupingSize"))
 	netRangesCreatedGauge.Update(int64(len(nets)))
 	netRangesDownFromGauge.Update(int64(len(addrs)))
 	outputPath := fs.GetTimedFilePath(config.GetNetworkGroupDirPath())
-	log.Printf("Writing resulting network file to path '%s'.", outputPath)
+	logging.Debugf("Writing resulting network file to path '%s'.", outputPath)
 	err = addressing.WriteIPv6NetworksToFile(outputPath, nets)
 	if err != nil {
 		return err
 	}
-	log.Printf("Resulting network file successfully written.")
+	logging.Debugf("Resulting network file successfully written.")
 	data.UpdateScanResultsNetworkRanges(nets, outputPath)
 	return nil
 }

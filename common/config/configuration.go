@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
-	"log"
 	"net"
 	"path"
 	"path/filepath"
@@ -32,7 +32,7 @@ func InitConfig() {
 
 	home, err := homedir.Dir()
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	viper.SetDefault("BaseOutputDirectory", path.Join(home, ".ipv666"))
@@ -91,6 +91,7 @@ func InitConfig() {
 
 	// Logging
 
+	viper.BindEnv("LogLevel")						// The level to log at (debug, info, success, warn, error)
 	viper.BindEnv("LogToFile")						// Whether or not to write log results to a file instead of stdout
 	viper.BindEnv("LogFilePath")						// The local file path to where log files should be written
 	viper.BindEnv("LogFileMBSize")					// The max size of each log file in MB
@@ -99,6 +100,7 @@ func InitConfig() {
 	viper.BindEnv("CompressLogFiles")				// Whether or not to compress log files
 	viper.BindEnv("LogLoopEmitFreq")					// The general frequency with which logs should be emitted in long loops
 
+	viper.SetDefault("LogLevel", "info")
 	viper.SetDefault("LogToFile", false)
 	viper.SetDefault("LogFilePath", "ipv666.log")
 	viper.SetDefault("LogFileMBSize", 10)
@@ -267,21 +269,6 @@ func GetAllExportDirectories() []string {
 
 func GetGraphiteEmitDuration() time.Duration {
 	return time.Duration(viper.GetInt64("GraphiteEmitFreq")) * time.Second
-}
-
-func GetGoldenModelFilePath() string {
-	return filepath.Join(GetGeneratedModelDirPath(), "default")
-}
-
-func GetGoldenBlacklistFilePath() string {
-	return filepath.Join(GetNetworkBlacklistDirPath(), "default")
-}
-
-func GetSafeFilePaths() []string {
-	return []string{
-		GetGoldenModelFilePath(),
-		GetGoldenBlacklistFilePath(),
-	}
 }
 
 func GetTargetNetwork() (*net.IPNet, error) {

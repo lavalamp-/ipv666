@@ -3,6 +3,7 @@ module github.com/lavalamp-/ipv666
 require (
 	github.com/aws/aws-sdk-go v1.16.10
 	github.com/cyberdelia/go-metrics-graphite v0.0.0-20161219230853-39f87cc3b432
+	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gobuffalo/buffalo-plugins v1.9.3 // indirect
 	github.com/gobuffalo/flect v0.0.0-20181210151238-24a2b68e0316 // indirect
@@ -10,6 +11,8 @@ require (
 	github.com/google/uuid v1.1.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0
+	github.com/mattn/go-colorable v0.0.9 // indirect
+	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.0.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pkg/errors v0.8.0

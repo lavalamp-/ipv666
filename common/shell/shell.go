@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/spf13/viper"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -33,7 +33,7 @@ func ZmapScan(inputFile string, outputFile string, bandwidth string, sourceAddre
 	args = append(args, fmt.Sprintf("--ipv6-source-ip=%s", sourceAddress))
 	args = append(args, "--probe-module=icmp6_echoscan")
 	cmd := exec.Command(viper.GetString("ZmapExecPath"), args...)
-	log.Printf("Zmap command is: %s %s", cmd.Path, cmd.Args)
+	logging.Debugf("Zmap command is: %s %s", cmd.Path, cmd.Args)
 	if err := RunCommandToStdout(cmd); err != nil {
 		return "", err
 	} else {
@@ -75,7 +75,7 @@ func AskForApproval(prompt string) (bool, error) {
 	return resp == "y", nil
 }
 
-func RequireApproval(prompt string, error string) (error) {
+func RequireApproval(prompt string, errString string) error {
 	resp, err := PromptForInput(prompt)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func RequireApproval(prompt string, error string) (error) {
 	fmt.Println()
 	resp = strings.TrimSpace(strings.ToLower(resp))
 	if resp != "y" {
-		log.Fatal(error)
+		logging.ErrorStringF(errString)
 	}
 	return nil
 }

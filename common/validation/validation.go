@@ -51,3 +51,11 @@ func ValidateOutputFileType(toCheck string) error {
 		return fmt.Errorf("%s is not a valid output file type (expected 'txt' or 'bin')", toCheck)
 	}
 }
+
+func ValidateLogLevel(toCheck string) error {
+	if toCheck == "debug" || toCheck == "info" || toCheck == "success" || toCheck == "warning" || toCheck == "error" {
+		return nil
+	} else {
+		return fmt.Errorf("'%s' is not a valid log level (expected one of 'debug', 'info', 'success', 'warning', or 'error')", toCheck)
+	}
+}

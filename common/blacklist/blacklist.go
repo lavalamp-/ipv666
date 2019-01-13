@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"log"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"net"
 	"os"
 	"sort"
@@ -95,7 +95,7 @@ func (blacklist *NetworkBlacklist) CleanIPList(toClean []*net.IP, emitFreq int) 
 	var toReturn []*net.IP
 	for i, curClean := range toClean {
 		if i % emitFreq == 0 && i != 0 {
-			log.Printf("Cleaning entry %d out of %d.", i, len(toClean))
+			logging.Debugf("Cleaning entry %d out of %d.", i, len(toClean))
 		}
 		if !blacklist.IsIPBlacklisted(curClean) {
 			toReturn = append(toReturn, curClean)
@@ -208,7 +208,7 @@ func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
 			}
 			loopCount++
 			if loopCount % emitFreq == 0 {
-				log.Printf("Processing %d out of %d in blacklist cleaning.", loopCount, blacklist.count)
+				logging.Debugf("Processing %d out of %d in blacklist cleaning.", loopCount, blacklist.count)
 			}
 		}
 	}
@@ -222,13 +222,13 @@ func (blacklist *NetworkBlacklist) Clean(emitFreq int) (int) {
 }
 
 func ReadNetworkBlacklistFromFile(filePath string) (*NetworkBlacklist, error) {
-	log.Printf("Loading blacklist from path '%s'.", filePath)
+	logging.Debugf("Loading blacklist from path '%s'.", filePath)
 	networks, err := addressing.ReadIPv6NetworksFromFile(filePath)
-	log.Printf("Read %d networks from file '%s'.", len(networks), filePath)
+	logging.Debugf("Read %d networks from file '%s'.", len(networks), filePath)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Creating blacklist from %d networks.", len(networks))
+	logging.Debugf("Creating blacklist from %d networks.", len(networks))
 	return NewNetworkBlacklist(networks), nil
 }
 

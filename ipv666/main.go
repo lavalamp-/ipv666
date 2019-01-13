@@ -6,7 +6,6 @@ import (
 	"github.com/lavalamp-/ipv666/common/metrics"
 	"github.com/lavalamp-/ipv666/common/setup"
 	"github.com/lavalamp-/ipv666/ipv666/cmd"
-	"log"
 	"math/rand"
 	"time"
 )
@@ -16,11 +15,11 @@ func main() {
 	logging.SetupLogging()
 	err := setup.InitFilesystem()
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 	err = metrics.InitMetrics()
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	cmd.Execute()

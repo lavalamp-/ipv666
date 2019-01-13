@@ -3,38 +3,40 @@ package cmd
 import (
 	"github.com/lavalamp-/ipv666/common/app"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/shell"
 	"github.com/lavalamp-/ipv666/common/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
 )
 
 func init() {
 	var targetNetwork string
 	aliasCmd.PersistentFlags().StringVarP(&targetNetwork, "target", "t", viper.GetString("ScanTargetNetwork"), "An IPv6 CIDR range to test as an aliased network.")
 	viper.BindPFlag("ScanTargetNetwork", aliasCmd.PersistentFlags().Lookup("target"))
-	aliasCmd.MarkFlagRequired("target")
+	aliasCmd.MarkPersistentFlagRequired("target")
 }
+
+//TODO move all validation into PersistentPreRun
 
 func validateAliasCommand() {
 
 	_, err := validation.ValidateIPv6NetworkStringForScanning(viper.GetString("ScanTargetNetwork"))
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	_, err = config.GetTargetNetwork()
 	if err != nil {
-		log.Fatal(err)
+		logging.ErrorF(err)
 	}
 
 	zmapAvailable, err := shell.IsZmapAvailable()
 
 	if err != nil {
-		log.Fatal("Error thrown when checking for Zmap: ", err)
+		logging.ErrorStringFf("Error thrown when checking for Zmap: %s", err)
 	} else if !zmapAvailable {
-		log.Fatal("Zmap not found. Please install Zmap.")
+		logging.ErrorStringF("Zmap not found. Please install Zmap.")
 	}
 
 }
