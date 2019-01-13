@@ -31,7 +31,7 @@ func processAliasedNetworks() error {
 
 	logging.Infof("Processing the aliased networks that were found into blacklist.")
 
-	curBlacklist, err := data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+	curBlacklist, err := data.GetBlacklist()
 	if err != nil {
 		return err
 	}

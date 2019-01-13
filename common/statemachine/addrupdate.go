@@ -19,7 +19,7 @@ func init() {
 }
 
 func updateAddressFile() error {
-	cleanPings, err := data.GetCleanPingResults(config.GetCleanPingDirPath())
+	cleanPings, err := data.GetCleanPingResults()
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func updateAddressFile() error {
 	defer file.Close()
 	start := time.Now()
 	if viper.GetString("OutputFileType") != "bin" {
-		if !(viper.GetString("OutputFileType") == "text") { //TODO figure out why the != check fails but this works
+		if !(viper.GetString("OutputFileType") == "txt") { //TODO figure out why the != check fails but this works
 			logging.Warnf("Unexpected file format for output (%s). Defaulting to text.", viper.GetString("OutputFileType"))
 		}
 		for _, addr := range cleanPings {
@@ -49,6 +49,7 @@ func updateAddressFile() error {
 	writer.Flush()
 	elapsed := time.Since(start)
 	addressUpdateTimer.Update(elapsed)
+	logging.Successf("%d new live IPv6 addresses were found.", len(cleanPings))
 	logging.Debugf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
 	return nil
 }

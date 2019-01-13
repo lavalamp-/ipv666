@@ -38,11 +38,11 @@ func generateCandidateAddresses() error {
 
 	// Load the statistical model, blacklist, and bloom filter
 
-	model, err := data.GetProbabilisticAddressModel(config.GetGeneratedModelDirPath())
+	model, err := data.GetProbabilisticAddressModel()
 	if err != nil {
 		return err
 	}
-	blacklist, err := data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+	blacklist, err := data.GetBlacklist()
 	if err != nil {
 		return err
 	}

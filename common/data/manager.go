@@ -149,7 +149,8 @@ func UpdateCleanPingResults(addrs []*net.IP, filePath string) {
 	curCleanPingResultsPath = filePath
 }
 
-func GetCleanPingResults(resultsDir string) ([]*net.IP, error) {
+func GetCleanPingResults() ([]*net.IP, error) {
+	resultsDir := config.GetCleanPingDirPath()
 	logging.Debugf("Attempting to retrieve most recent cleaned ping results from directory '%s'.", resultsDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(resultsDir)
 	if err != nil {
@@ -179,7 +180,8 @@ func UpdateBlacklist(blacklist *blacklist.NetworkBlacklist, filePath string) {
 	curBlacklistPath = filePath
 }
 
-func GetBlacklist(blacklistDir string) (*blacklist.NetworkBlacklist, error) {
+func GetBlacklist() (*blacklist.NetworkBlacklist, error) {
+	blacklistDir := config.GetNetworkBlacklistDirPath()
 	logging.Debugf("Attempting to retrieve most recent blacklist from directory '%s'.", blacklistDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(blacklistDir)
 	if err != nil {
@@ -241,7 +243,8 @@ func UpdateScanResultsNetworkRanges(networks []*net.IPNet, filePath string) {
 	curScanResultsNetworkRangesPath = filePath
 }
 
-func GetScanResultsNetworkRanges(scanResultsDir string) ([]*net.IPNet, error) {
+func GetScanResultsNetworkRanges() ([]*net.IPNet, error) {
+	scanResultsDir := config.GetNetworkGroupDirPath()
 	logging.Debugf("Attempting to retrieve most recent candidate ping networks from directory '%s'.", scanResultsDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(scanResultsDir)
 	if err != nil {
@@ -271,7 +274,8 @@ func UpdateCandidatePingResults(ips []*net.IP, filePath string) {
 	curCandidatePingResults = ips
 }
 
-func GetCandidatePingResults(pingResultsDir string) ([]*net.IP, error) {
+func GetCandidatePingResults() ([]*net.IP, error) {
+	pingResultsDir := config.GetPingResultDirPath()
 	logging.Debugf("Attempting to retrieve most recent candidate ping results from directory '%s'.", pingResultsDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(pingResultsDir)
 	if err != nil {
@@ -301,7 +305,8 @@ func UpdateProbabilisticAddressModel(model *modeling.ProbabilisticAddressModel, 
 	curAddressModel = model
 }
 
-func GetProbabilisticAddressModel(modelDir string) (*modeling.ProbabilisticAddressModel, error) {
+func GetProbabilisticAddressModel() (*modeling.ProbabilisticAddressModel, error) {
+	modelDir := config.GetGeneratedModelDirPath()
 	logging.Debugf("Attempting to retrieve most recent probabilistic model from directory '%s'.", modelDir)
 	fileName, err := fs.GetMostRecentFileFromDirectory(modelDir)
 	if err != nil {

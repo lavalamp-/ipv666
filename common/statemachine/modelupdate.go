@@ -19,11 +19,11 @@ func init() {
 }
 
 func updateModelWithSuccessfulHosts() error {
-	cleanPings, err := data.GetCleanPingResults(config.GetCleanPingDirPath())
+	cleanPings, err := data.GetCleanPingResults()
 	if err != nil {
 		return err
 	}
-	model, err := data.GetProbabilisticAddressModel(config.GetGeneratedModelDirPath())
+	model, err := data.GetProbabilisticAddressModel()
 	if err != nil {
 		return err
 	}

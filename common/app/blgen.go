@@ -24,7 +24,7 @@ func RunBlgen(inputPath string) {
 
 	if approved {
 		logging.Debugf("Loading existing blacklist...")
-		newBlacklist, err = data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+		newBlacklist, err = data.GetBlacklist()
 		if err != nil {
 			logging.ErrorF(err)
 		}

@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/lavalamp-/ipv666/common/app"
 	"github.com/lavalamp-/ipv666/common/blacklist"
-	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/spf13/cobra"
@@ -80,7 +79,7 @@ var cleanCmd = &cobra.Command{
 		if blacklistPath != "" {
 			processBlacklist, err = blacklist.ReadNetworkBlacklistFromFile(blacklistPath)
 		} else {
-			processBlacklist, err = data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+			processBlacklist, err = data.GetBlacklist()
 		}
 
 		if err != nil {

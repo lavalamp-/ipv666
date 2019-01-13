@@ -28,7 +28,7 @@ func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 	if err != nil {
 		return nil, err
 	}
-	curBlacklist, err := data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+	curBlacklist, err := data.GetBlacklist()
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error thrown when reading blacklist from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err))
 	}

@@ -55,7 +55,7 @@ func seekAliasedNetworks() error {
 
 	logging.Infof("Starting to seek aliased networks from results of Zmap scan.")
 
-	scanNets, err := data.GetScanResultsNetworkRanges(config.GetNetworkGroupDirPath())
+	scanNets, err := data.GetScanResultsNetworkRanges()
 	aliasInitialNetsCounter.Inc(int64(len(scanNets)))
 
 	if err != nil {

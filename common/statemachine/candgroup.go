@@ -21,7 +21,7 @@ func init() {
 
 func generateScanResultsNetworkRanges() error {
 	logging.Infof("Now converting ping scan for candidates into network ranges.")
-	addrs, err := data.GetCandidatePingResults(config.GetPingResultDirPath())
+	addrs, err := data.GetCandidatePingResults()
 	if err != nil {
 		return err
 	}

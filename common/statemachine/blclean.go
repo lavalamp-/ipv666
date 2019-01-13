@@ -22,12 +22,12 @@ func init() {
 }
 
 func cleanBlacklistedAddresses() error {
-	blacklist, err := data.GetBlacklist(config.GetNetworkBlacklistDirPath())
+	blacklist, err := data.GetBlacklist()
 	if err != nil {
 		return err
 	}
 	logging.Infof("Cleaning addresses using blacklist with %d entries.", blacklist.GetCount())
-	addrs, err := data.GetCandidatePingResults(config.GetPingResultDirPath())
+	addrs, err := data.GetCandidatePingResults()
 	if err != nil {
 		return err
 	}
