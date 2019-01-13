@@ -39,6 +39,8 @@ go get github.com/lavalamp-/ipv666/ipv666
 
 Once this command completes you should have the `ipv666` binary on your path. If you don't, double check to make sure that `$GOPATH/bin` is in your `PATH`.
 
+**NOTE** - This software is only intended to be run on Linux-based operating systems. Support for other operating systems is not presently planned.
+
 ## discover
 
 The `discover` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
