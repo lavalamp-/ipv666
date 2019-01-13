@@ -50,7 +50,10 @@ Please note that any networks that you scan with this tool will receive a consid
 ### Usage
 
 ```$xslt
-This utility scans for live hosts over IPv6 based on the network range you specify. If no range is specified, then this utility scans the global IPv6 address space (e.g. 2000::/4). The scanning process generates candidate addresses, scans for them, tests the network ranges where live addresses are found for aliased conditions, and adds legitimate discovered IPv6 addresses to an output list.
+This utility scans for live hosts over IPv6 based on the network range you specify. If no range is specified, then this 
+utility scans the global IPv6 address space (e.g. 2000::/4). The scanning process generates candidate addresses, scans 
+for them, tests the network ranges where live addresses are found for aliased conditions, and adds legitimate discovered
+IPv6 addresses to an output list.
 
 Usage:
   ipv666 scan discover [flags]
@@ -87,7 +90,10 @@ The `alias` tool will test a target network to see if it exhibits traits of bein
 ### Usage
 
 ```$xslt
-A utility for testing whether or not a network range exhibits traits of an aliased network range. Aliased network ranges are ranges in which every host responds to a ping request, thereby making it look like the range is full of IPv6 hosts. Pointing this utility at a network range will let tell you whether or not that network range is aliased and, if it is, the boundary of the network range that is aliased.
+A utility for testing whether or not a network range exhibits traits of an aliased network range. Aliased network ranges
+are ranges in which every host responds to a ping request, thereby making it look like the range is full of IPv6 hosts. 
+Pointing this utility at a network range will let tell you whether or not that network range is aliased and, if it is, 
+the boundary of the network range that is aliased.
 
 Usage:
   ipv666 scan alias [flags]
@@ -124,7 +130,8 @@ You will be prompted after invocation asking whether you'd like to create a new 
 ### Usage
 
 ```$xslt
-This utility takes a list of IPv6 CIDR ranges from a text file (new-line delimited), adds them to the current network blacklist, and sets the new blacklist as the one to use for the 'scan' command.
+This utility takes a list of IPv6 CIDR ranges from a text file (new-line delimited), adds them to the current network 
+blacklist, and sets the new blacklist as the one to use for the 'scan' command.
 
 Usage:
   ipv666 blgen [flags]
@@ -158,7 +165,9 @@ The `clean` tool processes the content of a file containing IPv6 addresses (new-
 ### Usage
 
 ```$xslt
-This utility will clean the contents of an IPv6 address file (new-line delimited, standard ASCII hex representation) based on the contents of an IPv6 network blacklist file. If no blacklist path is supplied then the utility will use the default blacklist. The cleaned results will then be written to an output file.
+This utility will clean the contents of an IPv6 address file (new-line delimited, standard ASCII hex representation) 
+based on the contents of an IPv6 network blacklist file. If no blacklist path is supplied then the utility will use the 
+default blacklist. The cleaned results will then be written to an output file.
 
 Usage:
   ipv666 clean [flags]
@@ -195,10 +204,9 @@ The `convert` tool is useful for converting a file containing IPv6 addresses to 
 ### Usage
 
 ```$xslt
-This utility will process the contents of a file as containing IPv6 addresses, convert
-those addresses to another format, and then write a new file with the same addresses in
-the new format. This functionality is (hopefully) intelligent enough to determine how the
-addresses are stored in the file without having to specify an input type.
+This utility will process the contents of a file as containing IPv6 addresses, convert those addresses to another 
+format, and then write a new file with the same addresses in the new format. This functionality is (hopefully) 
+intelligent enough to determine how the addresses are stored in the file without having to specify an input type.
 
 Usage:
   ipv666 convert [flags]
