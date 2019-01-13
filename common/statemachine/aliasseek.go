@@ -7,7 +7,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/fs"
 	"os"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"errors"
@@ -176,7 +176,7 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates, conf *config.Configuration) 
 	log.Printf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
 	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 	log.Printf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
-	_, err = shell.ZmapScanFromConfig(conf, targetsPath, zmapPath)
+	_, err = pingscan.PingScanFromConfig(conf, targetsPath, zmapPath)
 	if err != nil {
 		log.Printf("An error was thrown when trying to run zmap: %s", err)
 		return err
@@ -207,7 +207,7 @@ func checkNetworksForAliased(nets []*net.IPNet, conf *config.Configuration) ([]*
 	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 	log.Printf("Zmap scanning alias candidates in file '%s'. Results will be written to '%s'.", candsPath, zmapPath)
 
-	_, err = shell.ZmapScanFromConfig(conf, candsPath, zmapPath)
+	_, err = pingscan.PingScanFromConfig(conf, candsPath, zmapPath)
 	if err != nil {
 		return nil, err
 	}

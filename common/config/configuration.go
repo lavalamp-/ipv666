@@ -65,9 +65,7 @@ type Configuration struct {
 
 	// Scanning
 
-	ZmapExecPath				string  	// Local file path to the Zmap executable
-	ZmapBandwidth				string  	// Bandwidth cap for Zmap
-	ZmapSourceAddress   		string		// Source IPv6 address for Zmap
+	PingScanBandwidth				string  	// Bandwidth cap for ping scan
 
 	// Exportation
 

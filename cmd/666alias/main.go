@@ -7,7 +7,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/lavalamp-/ipv666/common/blacklist"
 	"errors"
 	"fmt"
@@ -111,7 +111,7 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP, conf *config.Confi
 		log.Printf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
 		zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 		log.Printf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
-		_, err = shell.ZmapScanFromConfig(conf, targetsPath, zmapPath)
+		_, err = pingscan.PingScanFromConfig(conf, targetsPath, zmapPath)
 		if err != nil {
 			log.Printf("An error was thrown when trying to run zmap: %s", err)
 			return nil, err
@@ -167,7 +167,7 @@ func checkNetworkForAliased(inputNet *net.IPNet, conf *config.Configuration) (*n
 	log.Printf("Wrote test addresses to file at path '%s'.", addrsPath)
 	zmapPath := fs.GetTimedFilePath(conf.GetNetworkScanResultsDirPath())
 
-	_, err = shell.ZmapScanFromConfig(conf, addrsPath, zmapPath)
+	_, err = pingscan.PingScanFromConfig(conf, addrsPath, zmapPath)
 	if err != nil {
 		log.Printf("An error was thrown when trying to run zmap: %s", err)
 		return nil, false, err

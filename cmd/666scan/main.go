@@ -182,16 +182,6 @@ func main() {
 		log.Fatal("Error thrown during filesystem initialization: ", err)
 	}
 
-	zmapAvailable, err := shell.IsZmapAvailable(&conf)
-
-	if err != nil {
-		log.Fatal("Error thrown when checking for Zmap: ", err)
-	} else if !zmapAvailable {
-		log.Fatal("Zmap not found. Please install Zmap.")
-	}
-
-	log.Printf("Zmap found and working at path '%s'.", conf.ZmapExecPath)
-
 	err = initMetrics(&conf)
 	if err != nil {
 		log.Fatal(err)
