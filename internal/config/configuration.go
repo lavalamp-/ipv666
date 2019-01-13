@@ -54,7 +54,7 @@ func InitConfig() {
 	viper.BindEnv("GenerateAddressCount")			// How many addressing to generate in a given iteration
 	viper.BindEnv("GenerateFirstNybble")				// The first nybble of IPv6 addressing to generate
 
-	viper.SetDefault("GenerateAddressCount", 10000000)
+	viper.SetDefault("GenerateAddressCount", 1000000)
 	viper.SetDefault("GenerateFirstNybble", 2)
 
 	// Modeling

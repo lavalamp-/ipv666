@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+//TODO for some reason the PersisteentPreRun is happening before the flag being missing throws an error. fix
+
 func init() {
 	var inputPath string
 	blgenCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "An input file containing IPv6 network ranges to build a blacklist from.")

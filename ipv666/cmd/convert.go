@@ -15,7 +15,7 @@ func init() {
 	var outputType string
 	convertCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "The file to process IPv6 addresses out of.")
 	convertCmd.PersistentFlags().StringVarP(&outputPath, "out", "o", "", "The file path to write the converted file to.")
-	convertCmd.PersistentFlags().StringVarP(&outputType, "format", "f", viper.GetString("OutputFileType"), "The format to write the IPv6 addresses in (one of 'txt', 'bin', 'hex').")
+	convertCmd.PersistentFlags().StringVarP(&outputType, "type", "t", viper.GetString("OutputFileType"), "The format to write the IPv6 addresses in (one of 'txt', 'bin', 'hex').")
 	convertCmd.MarkPersistentFlagRequired("input")
 	convertCmd.MarkPersistentFlagRequired("out")
 }
@@ -53,7 +53,7 @@ var convertCmd = &cobra.Command{
 			logging.ErrorF(err)
 		}
 
-		outputType, err := cmd.PersistentFlags().GetString("format")
+		outputType, err := cmd.PersistentFlags().GetString("type")
 
 		if err != nil {
 			logging.ErrorF(err)
@@ -67,7 +67,7 @@ var convertCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		inputPath, _ := cmd.PersistentFlags().GetString("input")
 		outputPath, _ := cmd.PersistentFlags().GetString("out")
-		outputType, _ := cmd.PersistentFlags().GetString("format")
+		outputType, _ := cmd.PersistentFlags().GetString("type")
 		app.RunConvert(inputPath, outputPath, outputType)
 	},
 }

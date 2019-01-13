@@ -8,12 +8,13 @@ If you're interested in how these tools work please refer to [this blog post](ht
 
 The tools included in this codebase are as follows:
 
-* [`666scan`](#666scan) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
-* [`666alias`](#666alias) - Tests a single IPv6 network range to see if the network range is aliased
-* [`666blgen`](#666blgen) - Adds the contents of a file containing IPv6 network ranges to the aliased network blacklist
-* [`666clean`](#666clean) - Cleans the contents of a file containing IPv6 addresses based on an aliased network blacklist
+* [`discover`](#discover) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
+* [`alias`](#alias) - Tests a single IPv6 network range to see if the network range is aliased
+* [`blgen`](#blgen) - Adds the contents of a file containing IPv6 network ranges to the aliased network blacklist
+* [`clean`](#clean) - Cleans the contents of a file containing IPv6 addresses based on an aliased network blacklist
+* [`convert`](#convert) - Converts the contents of a file containing IPv6 addresses to another IP address representation
 
-Unless you're doing more complicated IPv6 research it is likely that the [`666scan`](#666scan) tool is what you're looking for. 
+Unless you're doing more complicated IPv6 research it is likely that the [`discover`](#discover) tool is what you're looking for. 
 
 To get started check out the [Installation](#installation) section first and then head to whichever section details the tool you're looking to use.
 
@@ -26,234 +27,203 @@ This software is brought to you free of charge by [@_lavalamp](https://twitter.c
 
 ## Installation
 
-`ipv666` is largely self-contained but it does rely on the IPv6 `ZMap` port authored by a research group out of the Department of Informatics at the Technical University of Munich. We encourage users to [check out their research](https://www.net.in.tum.de/projects/gino/ipv6-hitlist.html).
+As of `v0.2` `ipv666` should be much easier to install!
 
-On a host that has at least one IPv6 interface available pull down the `ZMapv6` code from [GitHub](https://github.com/tumi8/zmap):
+First you'll need to have the [Golang environment installed](https://golang.org/doc/install#install). As `ipv666` makes use of Go modules we recommend using Golang `v1.11` and above to ensure a working installation.
 
-```$xslt
-git clone https://github.com/tumi8/zmap.git
-```
-
-[Follow the instructions found here](https://github.com/tumi8/zmap/blob/master/INSTALL.md) to install `ZMapv6` from source. The exact commands will differ depending on your OS. We've done the following and everything works pretty easily on Ubuntu 16.04 x64:
+Once you have Golang `v1.11` or above installed, do the following:
 
 ```$xslt
-sudo apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config libunistring-dev
-cd zmap
-cmake .
-make -j4
-sudo make install
+go get github.com/lavalamp-/ipv666/ipv666
 ```
 
-The `ZMapv6` tool should now be working and found in your `$PATH`:
+Once this command completes you should have the `ipv666` binary on your path. If you don't, double check to make sure that `$GOPATH/bin` is in your `PATH`.
 
-```$xslt
-ubuntu@scanner:~/zmap# which zmap
-/usr/local/sbin/zmap
-```
+## discover
 
-We have noticed in some cases that `ZMapv6` fails silently, indicating that no ICMP ping responses are ever received. To ensure that it's working first get the IPv6 address of the interface you'd like to use for scanning:
+The `discover` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
 
-```$xslt
-ubuntu@scanner:~/zmap# ifconfig | grep inet6 | grep Global | awk '{print $3}'
-2600:ffff:bbbb:cccc::1234/64
-```
-
-Create a file with a test IPv6 address that we know will respond to a ping (in this case we're using an IPv6 address associated with Google):
-
-```$xslt
-ubuntu@scanner:~/zmap# dig aaaa +short ipv6.google.com | grep ":" > scantarget
-ubuntu@scanner:~/zmap# cat scantarget
-2607:f8b0:4005:807::200e
-```
-
-We can now use `ZMapv6` to scan this address and confirm that an ICMP ping response is received:
-
-```$xslt
-ubuntu@scanner:~/zmap# zmap --bandwidth=20m --output-file=scantest --ipv6-target-file=scantarget --ipv6-source-ip=2600:ffff:bbbb:cccc::1234 --probe-module=icmp6_echoscan
-ubuntu@scanner:~/zmap# cat scantest
-2607:f8b0:4006:81a::200e
-```
-
-If the `scantest` file has the Google IPv6 address in it, then `ZMapv6` is working and you can continue with installing our software. If it doesn't work then... turn it off and on again? Honestly our approach has been to destroy the host and provision a new one and try again.
-
-In order to build `ipv666` you'll need to have the [Golang environment installed](https://golang.org/doc/install). An alternative to pulling the code down and building it on the box where you're scanning from is to pull it down locally, build it locally, and then push the code to a scanning box. While this is possible, please note that there are a number of directories and files that come with the codebase that are required to be on the scanning box. If you do pull/build/push from local, we recommend zipping up the entire `ipv666` directory (after being built) and pushing it to the scanning box. We realize this is not optimal and are open to recommendations for how to better support portability.
-
-Pull down the `ipv666` code using `go get`:
-
-```$xslt
-go get github.com/lavalamp-/ipv666
-```
-
-We can now test the code to make sure that everything looks good.
-
-```$xslt
-cd $GOPATH/github.com/lavalamp-/ipv666
-make get-deps
-make test
-```
-
-If all of the tests pass then do the following to build the tools:
-
-```$xslt
-make build-all
-```
-
-The binaries should now be present in the `build` directory:
-
-```$xslt
-ubuntu@scanner:~/gocode/src/github.com/lavalamp-/ipv666# ls -l build/
-total 29996
--rwxr-xr-x 1 ubuntu ubuntu  3469112 Nov 20 19:37 666alias
--rwxr-xr-x 1 ubuntu ubuntu  7232230 Nov 20 19:37 666blgen
--rwxr-xr-x 1 ubuntu ubuntu  7218927 Nov 20 19:37 666clean
--rwxr-xr-x 1 ubuntu ubuntu 12787808 Nov 20 19:37 666scan
-```
-
-The last thing we need to do is fill out some of the fields in the `config.json` file. There are many values in here and most of them are irrelevant for most users. The values that either **must** be changed or are likely of interest to most users are below:
-
-```$xslt
-{
-  ...
-  "GenerateAddressCount": 10000000,         // The number of IPv6 addresses generated and tested for each loop of the scanner's state machine
-  "ZmapExecPath": "/usr/local/sbin/zmap",   // The path to the ZMap executable 
-  "ZmapBandwidth": "20M",                   // The maximum bandwidth for ZMap scans
-  "ZmapSourceAddress": "[REPLACE]",         // The IPv6 address to scan from (identified above)
-  ...
-}
-```
-
-Note that you **must** put the correct IPv6 address in the `ZmapSourceAddress` field above. The rest can optionally be updated.
-
-Once the configuration file is updated you should be good to go with any of the commands listed below.
-
-## 666scan
-
-The `666scan` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
-
-Please note that any networks that you scan with this tool will receive a considerable amount of traffic for a significant variety of IPv6 addresses. In some cases the networking infrastructure that is carrying your traffic will be unhappy and may either fall over and/or block you. We recommend exercising caution when using this tool (especially for targeted network scans) and turning down the `ZmapBandwidth` value in the configuration file as needed.
+Please note that any networks that you scan with this tool will receive a considerable amount of traffic for a significant variety of IPv6 addresses. In some cases the networking infrastructure that is carrying your traffic will be unhappy and may either fall over and/or block you. We recommend exercising caution when using this tool (especially for targeted network scans) and choosing a `bandwidth` value with care (default is currently 20 Mbps).
 
 ### Usage
 
 ```$xslt
-Usage of ./build/666scan:
-  -config string
-    	Local file path to the configuration file to use. (default "config.json")
-  -force
-    	Whether or not to force accept all prompts (useful for daemonized scanning).
-  -input string
-    	An input file containing IPv6 addresses to initiate scanning from.
-  -input-type string
-    	The type of file pointed to by the 'input' argument (bin or txt). (default "txt")
-  -network string
-    	The target IPv6 network range to scan in. If empty, defaults to 2000::/4
-  -output string
-    	The path to the file where discovered addresses should be written.
-  -output-type string
-    	The type of output to write to the output file (txt or bin). (default "txt")
+This utility scans for live hosts over IPv6 based on the network range you specify. If no range is specified, then this utility scans the global IPv6 address space (e.g. 2000::/4). The scanning process generates candidate addresses, scans for them, tests the network ranges where live addresses are found for aliased conditions, and adds legitimate discovered IPv6 addresses to an output list.
+
+Usage:
+  ipv666 scan discover [flags]
+
+Flags:
+  -h, --help                 help for discover
+  -o, --output string        The path to the file where discovered addresses should be written.
+  -t, --output-type string   The type of output to write to the output file (txt or bin).
+
+Global Flags:
+  -b, --bandwidth string   The maximum bandwidth to use for ping scanning
+  -f, --force              Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string         The log level to emit logs at (one of debug, info, success, warn, error).
+  -n, --network string     The IPv6 CIDR range to scan.
 ```
 
 ### Examples
 
-Scan the global IPv6 address space using the configuration values in the file `/foo/bar/config.json` and write the results to `discovered_addrs.txt`:
+Scan the global address space for live hosts over IPv6 with a maximum speed of 20 Mbps and write the results to a file entitled `discovered_addrs.txt`:
 
 ```$xslt
-./build/666scan -config /foo/bar/config.json
+ipv666 scan discover
 ```
 
-Scan the network `2600:6000::/32` using the configuration values in a file named `config.json` residing in the present working directory and write the results in hexadecimal format to the file `/tmp/2600_3000__32_results.txt`:
-
+Scan the network `2600:6000::/32` for live hosts over IPv6 with a maximum speed of 10 Mbps and write the results to a file entitled `addresses.txt`:
 ```$xslt
-./build/666scan -network 2600:6000::/32 -output /tmp/2600_3000__32_results
+ipv666 scan discover -b 10M -o addresses.txt -n 2600:6000::32
 ```
 
-## 666alias
+## alias
 
-The `666alias` tool will test a target network to see if it exhibits traits of being an aliased network (ie: all addresses in the range respond to ICMP pings). If the target network is aliased it will perform a binary search to find the exact network length for how large the aliased network is.
+The `alias` tool will test a target network to see if it exhibits traits of being an aliased network (ie: all addresses in the range respond to ICMP pings). If the target network is aliased it will perform a binary search to find the exact network length for how large the aliased network is.
 
 ### Usage
 
 ```$xslt
-Usage of ./build/666alias:
-  -config string
-    	Local file path to the configuration file to use. (default "config.json")
-  -net string
-    	An IPv6 CIDR range to test as an aliased network.
+A utility for testing whether or not a network range exhibits traits of an aliased network range. Aliased network ranges are ranges in which every host responds to a ping request, thereby making it look like the range is full of IPv6 hosts. Pointing this utility at a network range will let tell you whether or not that network range is aliased and, if it is, the boundary of the network range that is aliased.
+
+Usage:
+  ipv666 scan alias [flags]
+
+Flags:
+  -h, --help   help for alias
+
+Global Flags:
+  -b, --bandwidth string   The maximum bandwidth to use for ping scanning
+  -f, --force              Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string         The log level to emit logs at (one of debug, info, success, warn, error).
+  -n, --network string     The IPv6 CIDR range to scan.
 ```
 
 ### Examples
 
-Check if the network at `2600:9000:2173:6d50:5dca:2d48::/96` is aliased using the configuration values in the `config.json` file in the present working directory:
+Test the network range `2600:9000:2173:6d50:5dca:2d48::/96` to see if it's aliased with a maximum speed of 20 Mbps:
 
 ```$xslt
-./build/666alias -net 2600:9000:2173:6d50:5dca:2d48::/96
-``` 
+ipv666 scan alias -n 2600:9000:2173:6d50:5dca:2d48::/96
+```
 
-Check if the network at `2600:9000:2173:6d50:5dca:2d48::/96` is aliased using the configuration values in the file at `/tmp/config.json`:
-
+Test the network range `2600:9000:2173:6d50:5dca:2d48::/96` to see ifit's aliased with maximum speed of 10 Mbps and show debug logging:
 ```$xslt
-./build/666alias -net 2600:9000:2173:6d50:5dca:2d48::/96 -config /tmp/config.json
-``` 
+ipv666 scan alias -n 2600:9000:2173:6d50:5dca:2d48::/96 -b 10M -l debug
+```
 
-## 666blgen
+## blgen
 
-The `666blgen` tool processes the content of a file containing IPv6 CIDR ranges (new-line delimited) and adds all of the network ranges to either (1) a new blacklist or (2) your existing blacklist. These blacklists are automatically located and loaded from specific file paths during the operation of [`666scan`](#666scan), [`666alias`](#666alias), and [`666clean`](#666clean).
+The `blgen` tool processes the content of a file containing IPv6 CIDR ranges (new-line delimited) and adds all of the network ranges to either (1) a new blacklist or (2) your existing blacklist. These blacklists are automatically located and loaded from specific file paths during the operation of [`discover`](#discover), [`alias`](#alias), and [`clean`](#clean).
 
 You will be prompted after invocation asking whether you'd like to create a new blacklist or add these new networks to your existing blacklist.
 
 ### Usage
 
 ```$xslt
-Usage of ./build/666blgen:
-  -config string
-    	Local file path to the configuration file to use. (default "config.json")
-  -input string
-    	An input file containing IPv6 network ranges to build a blacklist from.
+This utility takes a list of IPv6 CIDR ranges from a text file (new-line delimited), adds them to the current network blacklist, and sets the new blacklist as the one to use for the 'scan' command.
+
+Usage:
+  ipv666 blgen [flags]
+
+Flags:
+  -h, --help           help for blgen
+  -i, --input string   An input file containing IPv6 network ranges to build a blacklist from.
+
+Global Flags:
+  -f, --force        Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string   The log level to emit logs at (one of debug, info, success, warn, error).
 ```
 
 ### Examples
 
-Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist based on the configuration values found in a `config.json` file in your present working directory:
+Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist:
 
 ```$xslt
-./build/666blgen -input /tmp/addrranges
+ipv666 blgen -i /tmp/addrranges
 ```
 
-Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist based on the configuration values found in the file `/tmp/config.json`:
-
+Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist and force accept all prompts:
 ```$xslt
-./build/666blgen -input /tmp/addrranges -config /tmp/config.json
+ipv666 blgen -i /tmp/addrranges -f
 ```
 
-## 666clean
+## clean
 
-The `666clean` tool processes the content of a file containing IPv6 addresses (new-line delimited), removes all the addresses that are found within blacklisted networks, and writes the results to an output file. This tool is an easy way to remove addresses in aliased network ranges from a set of IP addresses.
+The `clean` tool processes the content of a file containing IPv6 addresses (new-line delimited), removes all the addresses that are found within blacklisted networks, and writes the results to an output file. This tool is an easy way to remove addresses in aliased network ranges from a set of IP addresses.
 
 ### Usage
 
 ```$xslt
-Usage of ./build/666clean:
-  -blacklist string
-    	The local file path to the blacklist to use. If not specified, defaults to the most recent blacklist in the configured blacklist directory.
-  -config string
-    	Local file path to the configuration file to use. (default "config.json")
-  -input string
-    	An input file containing IPv6 addresses to clean via a blacklist.
-  -out string
-    	The file path where the cleaned results should be written to.
+This utility will clean the contents of an IPv6 address file (new-line delimited, standard ASCII hex representation) based on the contents of an IPv6 network blacklist file. If no blacklist path is supplied then the utility will use the default blacklist. The cleaned results will then be written to an output file.
+
+Usage:
+  ipv666 clean [flags]
+
+Flags:
+  -b, --blacklist string   The local file path to the blacklist to use. If not specified, defaults to the most recent blacklist in the configured blacklist directory.
+  -h, --help               help for clean
+  -i, --input string       An input file containing IPv6 addresses to clean via a blacklist.
+  -o, --out string         The file path where the cleaned results should be written to.
+
+Global Flags:
+  -f, --force        Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string   The log level to emit logs at (one of debug, info, success, warn, error).
 ```
 
 ### Examples
 
-Process the IPv6 addresses in the file `/tmp/addresses`, remove all addresses found in the most up-to-date blacklist found in the default file path, and write the results to `/tmp/cleanedaddrs` (using configuration values in the `config.json` file in the present working directory):
+Process the IPv6 addresses in the file `/tmp/addresses`, remove all addresses found in the most up-to-date blacklist found in the default file path, and write the results to `/tmp/cleanedaddrs`):
 
 ```$xslt
-./build/666clean -input /tmp/addresses -out /tmp/cleanedaddrs
+ipv666 clean -i /tmp/addresses -o /tmp/cleanedaddrs
 ```
 
-Process the IPv6 addresses in the file `/tmp/addresses`, remove all addresses found in the blacklist in the file at `/tmp/blacklist`, and write the results to `/tmp/cleanedaddrs` using configuration values from the file `/tmp/config.json`:
+Process the IPv6 addresses in the file `/tmp/addresses`, remove all addresses found in the blacklist at `/tmp/blacklist`, and write the results to `/tmp/cleanedaddrs`):
 
 ```$xslt
-./build/666clean -input /tmp/addresses -blacklist /tmp/blacklist -out /tmp/cleanedaddrs -config /tmp/config.json
+ipv666 clean -i /tmp/addresses -o /tmp/cleanedaddrs -b /tmp/blacklist
+```
+
+## convert
+
+The `convert` tool is useful for converting a file containing IPv6 addresses to different file formats. It currently supports the three different output types of `txt` (standard ASCII hex IPv6 addresses), `bin` (the raw 16 bytes of all input addresses are written sequentially to a file) and `hex` (the full 32 character ASCII hex representation is written to a file delimited by new lines).
+
+### Usage
+
+```$xslt
+This utility will process the contents of a file as containing IPv6 addresses, convert
+those addresses to another format, and then write a new file with the same addresses in
+the new format. This functionality is (hopefully) intelligent enough to determine how the
+addresses are stored in the file without having to specify an input type.
+
+Usage:
+  ipv666 convert [flags]
+
+Flags:
+  -h, --help           help for convert
+  -i, --input string   The file to process IPv6 addresses out of.
+  -o, --out string     The file path to write the converted file to.
+  -t, --type string    The format to write the IPv6 addresses in (one of 'txt', 'bin', 'hex').
+
+Global Flags:
+  -f, --force        Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string   The log level to emit logs at (one of debug, info, success, warn, error).
+```
+
+### Examples
+
+Convert the contents of the file at `/tmp/addresses` (in standard text format) to binary format and write the results to `/tmp/out`:
+
+```$xslt
+ipv666 convert -i /tmp/addresses -o /tmp/out -t bin
+```
+
+Convert the contents of the file at `/tmp/addresses` (in binary format) to fat hex format and write the results to `/tmp/out`:
+
+```$xslt
+ipv666 convert -i /tmp/addresses -o /tmp/out -t hex
 ```
 
 ## License
