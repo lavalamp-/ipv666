@@ -1,23 +1,23 @@
 package shell
 
 import (
-  "os/exec"
-  "fmt"
-  "bytes"
-  "io"
-  "os"
-  "log"
-  "bufio"
-  "strings"
+	"bufio"
+	"bytes"
+	"fmt"
+	"github.com/lavalamp-/ipv666/common/logging"
+	"io"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 func IsCommandAvailable(command string, args ...string) (bool, error) {
-  cmd := exec.Command(command, args...)
-  if err := cmd.Run(); err != nil {
-    return false, err
-  } else {
-    return true, nil
-  }
+	cmd := exec.Command(command, args...)
+	if err := cmd.Run(); err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
 }
 
 func RunCommandToStdout(cmd *exec.Cmd) (error) {
@@ -50,15 +50,15 @@ func AskForApproval(prompt string) (bool, error) {
   return resp == "y", nil
 }
 
-func RequireApproval(prompt string, error string) (error) {
-  resp, err := PromptForInput(prompt)
-  if err != nil {
-    return err
-  }
-  fmt.Println()
-  resp = strings.TrimSpace(strings.ToLower(resp))
-  if resp != "y" {
-    log.Fatal(error)
-  }
-  return nil
+func RequireApproval(prompt string, errString string) error {
+	resp, err := PromptForInput(prompt)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	resp = strings.TrimSpace(strings.ToLower(resp))
+	if resp != "y" {
+		logging.ErrorStringF(errString)
+	}
+	return nil
 }

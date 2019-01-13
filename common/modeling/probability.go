@@ -1,13 +1,13 @@
 package modeling
 
 import (
-	"math/rand"
-	"log"
-	"github.com/lavalamp-/ipv666/common/persist"
 	"github.com/lavalamp-/ipv666/common/addressing"
-	"net"
-	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/lavalamp-/ipv666/common/persist"
+	"github.com/spf13/viper"
 	"math"
+	"math/rand"
+	"net"
 )
 
 type addrProcessFunc func(*net.IP) (bool, error)
@@ -18,10 +18,10 @@ type ProbabilisticAddressModel struct {
 	NybbleModels 	[31]*ProbabilisticNybbleModel 	`json:"models"`
 }
 
-func NewAddressModel(name string, conf *config.Configuration) (*ProbabilisticAddressModel) {
+func NewAddressModel(name string) *ProbabilisticAddressModel {
 	var models [31]*ProbabilisticNybbleModel
 	for i := 0; i < 31; i++ {
-		models[i] = newNybbleModel(conf)
+		models[i] = newNybbleModel()
 	}
 	return &ProbabilisticAddressModel{
 		name,
@@ -36,11 +36,11 @@ type ProbabilisticNybbleModel struct {
 	DefaultProbabilityMap 	*NybbleProbabilityMap 			`json:"defaultprobmap"`
 }
 
-func newNybbleModel(conf *config.Configuration) (*ProbabilisticNybbleModel) {
+func newNybbleModel() *ProbabilisticNybbleModel {
 	return &ProbabilisticNybbleModel{
 		0,
 		make(map[uint8]*NybbleProbabilityMap),
-		newProbabilityMap(conf),
+		newProbabilityMap(),
 	}
 }
 
@@ -51,7 +51,7 @@ type NybbleProbabilityMap struct {
 	Distribution 	[]uint8 			`json:"dist"`
 }
 
-func newProbabilityMap(conf *config.Configuration) (*NybbleProbabilityMap) {
+func newProbabilityMap() *NybbleProbabilityMap {
 	toReturn := &NybbleProbabilityMap{
 		0,
 		0,
@@ -60,9 +60,9 @@ func newProbabilityMap(conf *config.Configuration) (*NybbleProbabilityMap) {
 	}
 	var i uint8
 	for i = 0; i < 16; i++ {
-		toReturn.TimesSeen[i] = conf.ModelDefaultWeight
+		toReturn.TimesSeen[i] = uint64(viper.GetInt64("ModelDefaultWeight"))
 	}
-	toReturn.DigestCount = conf.ModelDefaultWeight * 16
+	toReturn.DigestCount = uint64(viper.GetInt64("ModelDefaultWeight")) * 16
 	return toReturn
 }
 
@@ -95,7 +95,7 @@ func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNetwork(fromNetwo
 	return toReturn, nil
 }
 
-func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint) (*net.IP) {
+func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybbles []byte, offset uint) *net.IP {
 	//TODO this will throw an exception if offset < 4
 	//TODO if offset does not correspond with length of fromNybbles this will error
 	var mustMatch bool
@@ -136,14 +136,14 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybbles(fromNybb
 
 func (addrModel *ProbabilisticAddressModel) GenerateMultiIPFromNybble(fromNybble uint8, count int, updateFreq int) ([]*net.IP) {
 	var toReturn []*net.IP
-	log.Printf("Generating %d IP addresses using model %s.", count, addrModel.Name)
+	logging.Debugf("Generating %d IP addresses using model %s.", count, addrModel.Name)
 	for i := 0; i < count; i++ {
 		if i % updateFreq == 0 {
-			log.Printf("Generating %d addresses out of %d.", i, count)
+			logging.Debugf("Generating %d addresses out of %d.", i, count)
 		}
 		toReturn = append(toReturn, addrModel.GenerateSingleIPFromNybble(fromNybble))
 	}
-	log.Printf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
+	logging.Debugf("Successfully generated %d IP addresses using model %s.", count, addrModel.Name)
 	return toReturn
 }
 
@@ -164,34 +164,34 @@ func (addrModel *ProbabilisticAddressModel) GenerateSingleIPFromNybble(fromNybbl
 	return &newIP
 }
 
-func generateAddressModel(ips []*net.IP, name string, updateInterval int, conf *config.Configuration) (*ProbabilisticAddressModel) {
-	toReturn := NewAddressModel(name, conf)
-	toReturn.UpdateMultiIP(ips, updateInterval, conf)
+func generateAddressModel(ips []*net.IP, name string, updateInterval int) *ProbabilisticAddressModel {
+	toReturn := NewAddressModel(name)
+	toReturn.UpdateMultiIP(ips, updateInterval)
 	return toReturn
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateInterval int, conf *config.Configuration) () {
-	log.Printf("Updating model %s with %d addresses.", addrModel.Name, len(ips))
+func (addrModel *ProbabilisticAddressModel) UpdateMultiIP(ips []*net.IP, updateInterval int) () {
+	logging.Debugf("Updating model %s with %d addresses.", addrModel.Name, len(ips))
 	for i, ip := range ips {
 		if i % updateInterval == 0 {
-			log.Printf("Processing address %d out of %d.", i, len(ips))
+			logging.Debugf("Processing address %d out of %d.", i, len(ips))
 		}
-		addrModel.UpdateSingleIP(ip, conf)
+		addrModel.UpdateSingleIP(ip)
 	}
-	log.Printf("Successfully updated model %s with %d addresses.", addrModel.Name, len(ips))
+	logging.Debugf("Successfully updated model %s with %d addresses.", addrModel.Name, len(ips))
 }
 
-func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP, conf *config.Configuration) () {
+func (addrModel *ProbabilisticAddressModel) UpdateSingleIP(ip *net.IP) () {
 	fromNybble := addressing.GetNybbleFromIP(ip, 0)
 	for i, nybbleModel := range addrModel.NybbleModels {
 		toNybble := addressing.GetNybbleFromIP(ip, i+1)
-		nybbleModel.update(fromNybble, toNybble, conf)
+		nybbleModel.update(fromNybble, toNybble)
 		fromNybble = toNybble
 	}
 	addrModel.DigestCount += 1
 }
 
-func (nybbleModel *ProbabilisticNybbleModel) predictNextNybble(fromNybble uint8) (uint8) {
+func (nybbleModel *ProbabilisticNybbleModel) predictNextNybble(fromNybble uint8) uint8 {
 	if val, ok := nybbleModel.Probabilities[fromNybble]; ok {
 		return val.predictNextNybble()
 	} else {
@@ -199,11 +199,11 @@ func (nybbleModel *ProbabilisticNybbleModel) predictNextNybble(fromNybble uint8)
 	}
 }
 
-func (nybbleModel *ProbabilisticNybbleModel) update(fromNybble uint8, toNybble uint8, conf *config.Configuration) () {
+func (nybbleModel *ProbabilisticNybbleModel) update(fromNybble uint8, toNybble uint8) () {
 	if val, ok := nybbleModel.Probabilities[fromNybble]; ok {
 		val.update(toNybble)
 	} else {
-		newMap := newProbabilityMap(conf)
+		newMap := newProbabilityMap()
 		newMap.update(toNybble)
 		nybbleModel.Probabilities[fromNybble] = newMap
 	}
@@ -220,14 +220,14 @@ func (probMap *NybbleProbabilityMap) update(nybble uint8) () {
 	probMap.DigestCount += 1
 }
 
-func (probMap *NybbleProbabilityMap) predictNextNybble() (uint8) {
+func (probMap *NybbleProbabilityMap) predictNextNybble() uint8 {
 	if !probMap.isModelUpdated() {
 		probMap.buildDistribution()
 	}
 	return probMap.Distribution[rand.Intn(len(probMap.Distribution))]
 }
 
-func (probMap *NybbleProbabilityMap) isModelUpdated() (bool) {
+func (probMap *NybbleProbabilityMap) isModelUpdated() bool {
 	return probMap.DigestCount == probMap.LastUpdatedAt
 }
 
@@ -244,13 +244,13 @@ func (probMap *NybbleProbabilityMap) buildDistribution () {
 	probMap.LastUpdatedAt = probMap.DigestCount
 }
 
-func CreateBlankModel(name string, outputPath string, conf *config.Configuration) (error) {
-	log.Printf("Now creating a blank statistical model.")
-	model := NewAddressModel(name, conf)
-	log.Printf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
+func CreateBlankModel(name string, outputPath string) error {
+	logging.Debugf("Now creating a blank statistical model.")
+	model := NewAddressModel(name)
+	logging.Debugf("Writing blank statistical model with name '%s' to file '%s'.", model.Name, outputPath)
 	err := model.Save(outputPath)
 	if err != nil {
-		log.Printf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
+		logging.Warnf("Error thrown when saving model '%s' to file '%s': %e", model.Name, outputPath, err)
 		return err
 	}
 	return nil

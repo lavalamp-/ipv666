@@ -1,6 +1,7 @@
 package blacklist
 
 import (
+	"github.com/lavalamp-/ipv666/common/logging"
 	"net"
 	"math"
 	"errors"
@@ -223,27 +224,27 @@ func (states *AliasCheckStates) Update(foundAddrs map[string]*common.Empty) () {
 	}
 }
 
-func (states *AliasCheckStates) PrintAliasedNetworks() (error) {
+func (states *AliasCheckStates) PrintAliasedNetworks() error {
 	networks, err := states.GetAliasedNetworks()
 	if err != nil {
 		return err
 	}
 	for i, network := range networks {
-		log.Printf("Network %d: %s", i, network)
+		logging.Infof("Network %d: %s", i, network)
 	}
 	return nil
 }
 
 func (states *AliasCheckStates) PrintStates() () {
 	log.Println()
-	log.Printf("Alias check states (%d total, %d found):", states.GetChecksCount(), states.GetFoundCount())
+	logging.Infof("Alias check states (%d total, %d found):", states.GetChecksCount(), states.GetFoundCount())
 	log.Println()
 	for i, check := range states.checks {
 		foundString := ""
 		if check.found {
 			foundString = "FOUND"
 		}
-		log.Printf("\t%d:\t%s\tL: %d\tR: %d\t%s", i, check.baseAddress, check.leftPosition, check.rightPosition, foundString)
+		logging.Infof("\t%d:\t%s\tL: %d\tR: %d\t%s", i, check.baseAddress, check.leftPosition, check.rightPosition, foundString)
 	}
 	log.Println()
 }

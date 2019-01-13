@@ -3,11 +3,13 @@ package statemachine
 import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
-	"time"
+	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/rcrowley/go-metrics"
-	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/spf13/viper"
+	"log"
+	"time"
 )
 
 var liveAddrCandGauge = metrics.NewGauge()
@@ -17,22 +19,22 @@ var pingscanCandErrorCounter = metrics.NewCounter()
 func init() {
 	metrics.Register("candscan.live_results.gauge", liveAddrCandGauge)
 	metrics.Register("candscan.ping_scan.time", pingscanCandDurationTimer)
-	// metrics.Register("candscan.zmap_scan_error.count", zmapCandErrorCounter)
+	metrics.Register("candscan.ping_scan.error.count", pingscanCandErrorCounter)
 }
 
-func pingScanCandidateAddresses(conf *config.Configuration) (error) {
-	inputPath, err := data.GetMostRecentFilePathFromDir(conf.GetCandidateAddressDirPath())
+func pingScanCandidateAddresses() error {
+	inputPath, err := data.GetMostRecentFilePathFromDir(config.GetCandidateAddressDirPath())
 	if err != nil {
 		return err
 	}
-	outputPath := fs.GetTimedFilePath(conf.GetPingResultDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
 	log.Printf(
 		"Now ping-scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
 	)
 	start := time.Now()
-	_, err = pingscan.PingScanFromConfig(conf, inputPath, outputPath)
+	_, err = pingscan.ScanFromConfig(inputPath, outputPath)
 	elapsed := time.Since(start)
 	if err != nil {
 		pingscanCandErrorCounter.Inc(1)
@@ -43,8 +45,8 @@ func pingScanCandidateAddresses(conf *config.Configuration) (error) {
 	pingscanCandDurationTimer.Update(elapsed)
 	liveCount, err := fs.CountLinesInFile(outputPath)
 	if err != nil {
-		log.Printf("Error when counting lines in file '%s': %e", outputPath, err)
-		if conf.ExitOnFailedMetrics {
+		logging.Warnf("Error when counting lines in file '%s': %e", outputPath, err)
+		if viper.GetBool("ExitOnFailedMetrics") {
 			return err
 		}
 	}

@@ -1,22 +1,22 @@
 package fs
 
 import (
-	"log"
-	"os"
-	"io/ioutil"
-	"compress/zlib"
-	"io"
+	"bufio"
 	"bytes"
+	"compress/zlib"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/lavalamp-/ipv666/common/comparison"
+	"github.com/lavalamp-/ipv666/common/logging"
+	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
-	"github.com/google/uuid"
-	"bufio"
-	"fmt"
-	"github.com/lavalamp-/ipv666/common/comparison"
 )
 
-func WriteStringsToFile(toWrite []string, filePath string) (error) {
+func WriteStringsToFile(toWrite []string, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -30,13 +30,13 @@ func WriteStringsToFile(toWrite []string, filePath string) (error) {
 	return nil
 }
 
-func CreateDirectoryIfNotExist(dirPath string) (error) {
-	log.Printf("Making sure that directory at '%s' exists.", dirPath)
+func CreateDirectoryIfNotExist(dirPath string) error {
+	logging.Debugf("Making sure that directory at '%s' exists.", dirPath)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		log.Printf("No directory found at path '%s'. Creating now.", dirPath)
+		logging.Debugf("No directory found at path '%s'. Creating now.", dirPath)
 		return os.Mkdir(dirPath, 0755)
 	} else {
-		log.Printf("Directory at path '%s' already exists.", dirPath)
+		logging.Debugf("Directory at path '%s' already exists.", dirPath)
 		return nil
 	}
 }
@@ -47,7 +47,7 @@ func GetMostRecentFileFromDirectory(dirPath string) (string, error) {
 
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		log.Printf("Error thrown when reading files from directory '%s': %s", dirPath, err)
+		logging.Warnf("Error thrown when reading files from directory '%s': %s", dirPath, err)
 		return "", err
 	}
 	var newestFile = ""
@@ -70,10 +70,10 @@ func GetNonMostRecentFilesFromDirectory(dirPath string) ([]string, error) {
 	if err != nil || recentFile == ""{
 		return toReturn, err
 	}
-	log.Printf("Most recent file in directory '%s' is '%s'.", dirPath, recentFile)
+	logging.Debugf("Most recent file in directory '%s' is '%s'.", dirPath, recentFile)
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		log.Printf("Error thrown when trying to read files from directory '%s': '%s", dirPath, err)
+		logging.Warnf("Error thrown when trying to read files from directory '%s': '%s", dirPath, err)
 		return toReturn, err
 	}
 	for _, fi := range files {
@@ -82,35 +82,35 @@ func GetNonMostRecentFilesFromDirectory(dirPath string) ([]string, error) {
 			toReturn = append(toReturn, name)
 		}
 	}
-	log.Printf("Found %d files older than the most recent '%s' in directory '%s'.", len(toReturn), recentFile, dirPath)
+	logging.Debugf("Found %d files older than the most recent '%s' in directory '%s'.", len(toReturn), recentFile, dirPath)
 	return toReturn, nil
 }
 
-func ZipFiles(inputPaths []string, outputPath string) (error) {
-	log.Printf("Zipping up %d files (at %s) into output path of '%s'.", len(inputPaths), inputPaths, outputPath)
+func ZipFiles(inputPaths []string, outputPath string) error {
+	logging.Debugf("Zipping up %d files (at %s) into output path of '%s'.", len(inputPaths), inputPaths, outputPath)
 	outFile, err := os.Create(outputPath)
 	if err != nil {
-		log.Printf("Error thrown when trying to create file at path '%s': %e", outputPath, err)
+		logging.Warnf("Error thrown when trying to create file at path '%s': %e", outputPath, err)
 		return err
 	}
 	defer outFile.Close()
 	outZipFile := zlib.NewWriter(outFile)
 	defer outZipFile.Close()
 	for _, inputPath := range inputPaths {
-		log.Printf("Now processing file at '%s'.", inputPath)
+		logging.Debugf("Now processing file at '%s'.", inputPath)
 		inputFile, err := os.Open(inputPath)
 		if err != nil {
-			log.Printf("Error thrown when opening file at path '%s': %e", inputPath, err)
+			logging.Warnf("Error thrown when opening file at path '%s': %e", inputPath, err)
 			return err
 		}
 		if _, err := io.Copy(outZipFile, inputFile); err != nil {
-			log.Printf("Error thrown when trying to add file at '%s' to zip file at '%s': %e", inputPath, outputPath, err)
+			logging.Warnf("Error thrown when trying to add file at '%s' to zip file at '%s': %e", inputPath, outputPath, err)
 			return err
 		}
-		log.Printf("File at path '%s' successfully added to zip file at '%s'.", inputPath, outputPath)
+		logging.Debugf("File at path '%s' successfully added to zip file at '%s'.", inputPath, outputPath)
 		inputFile.Close()
 	}
-	log.Printf("Successfully added %d files (at %s) into output zip file at path '%s'.", len(inputPaths), inputPaths, outputPath)
+	logging.Debugf("Successfully added %d files (at %s) into output zip file at path '%s'.", len(inputPaths), inputPaths, outputPath)
 	return nil
 }
 
@@ -151,7 +151,7 @@ func CountFileSize(filePath string) (int64, error) {
 func DeleteAllFilesInDirectory(dirPath string, omitPaths []string) (int, int, error) {
 	var files []string
 	numDeleted, numSkipped := 0, 0
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) (error) {
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		mode := info.Mode()
 		if mode.IsRegular() {
 			files = append(files, path)
@@ -175,20 +175,61 @@ func DeleteAllFilesInDirectory(dirPath string, omitPaths []string) (int, int, er
 	return numDeleted, numSkipped, nil
 }
 
-func GetTimedFilePath(baseDir string) (string) {
+func GetTimedFilePath(baseDir string) string {
 	curTime := strconv.FormatInt(time.Now().Unix(), 10)
 	return filepath.Join(baseDir, curTime)
 }
 
-func GetTemporaryFilePath() (string) {
+func GetTemporaryFilePath() string {
 	fileName := uuid.New().String()
 	return filepath.Join("/tmp/", fileName)
 }
 
-func CheckIfFileExists(filePath string) (bool) {
+func CheckIfFileExists(filePath string) bool {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return false
 	} else {
 		return true
 	}
+}
+
+func UnzipBytes(data []byte) ([]byte, error) {
+	b := bytes.NewReader(data)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	defer z.Close()
+	unzipped, err := ioutil.ReadAll(z)
+	if err != nil {
+		return nil, err
+	}
+	return unzipped, nil
+}
+
+func ZLibCompress(inputPath string, outputPath string) error {
+	content, err := ioutil.ReadFile(inputPath)
+	if err != nil {
+		return err
+	}
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
+	_, err = w.Write(content)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	outFile, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+	_, err = outFile.Write(b.Bytes())
+	if err != nil {
+		return err
+	}
+	return nil
 }
