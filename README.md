@@ -175,7 +175,8 @@ Usage:
   ipv666 clean [flags]
 
 Flags:
-  -b, --blacklist string   The local file path to the blacklist to use. If not specified, defaults to the most recent blacklist in the configured blacklist directory.
+  -b, --blacklist string   The local file path to the blacklist to use. If not specified, defaults to 
+                           the most recent blacklist in the configured blacklist directory.
   -h, --help               help for clean
   -i, --input string       An input file containing IPv6 addresses to clean via a blacklist.
   -o, --out string         The file path where the cleaned results should be written to.
