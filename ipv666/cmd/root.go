@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/lavalamp-/ipv666/internal/logging"
-	"github.com/lavalamp-/ipv666/internal/splash"
 	"github.com/lavalamp-/ipv666/internal/validation"
 	"github.com/lavalamp-/ipv666/ipv666/cmd/scan"
 	"github.com/spf13/cobra"
@@ -11,8 +10,6 @@ import (
 )
 
 func init() {
-	cobra.OnInitialize(splash.PrintSplash)
-
 	var logLevel string
 	var forceAccept bool
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log", "l", viper.GetString("LogLevel"), "The log level to emit logs at (one of debug, info, success, warn, error).")
