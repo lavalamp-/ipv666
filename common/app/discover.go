@@ -18,7 +18,7 @@ func init() {
 
 // TODO add functionality for writing results in hex format
 
-func RunScanning() {
+func RunDiscovery() {
 
 	targetNetwork, _ := config.GetTargetNetwork()
 

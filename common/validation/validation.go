@@ -9,26 +9,30 @@ import (
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/spf13/viper"
 	"net"
+	"regexp"
 )
 
-func ValidateIPv6NetworkString(toParse string) (*net.IPNet, error) {
+var bandwidthRegex = regexp.MustCompile(`\d{1,8}[MGK]`)
+
+func ValidateIPv6NetworkString(toParse string) error {
 	ip, targetNetwork, err := net.ParseCIDR(toParse)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error thrown when parsing target network string of '%s': %e", toParse, err))
+		return errors.New(fmt.Sprintf("Error thrown when parsing target network string of '%s': %e", toParse, err))
 	} else if targetNetwork == nil {
-		return nil, errors.New(fmt.Sprintf("Target network of '%s' could not be decoded to a valid IPv6 network range.", toParse))
+		return errors.New(fmt.Sprintf("Target network of '%s' could not be decoded to a valid IPv6 network range.", toParse))
 	} else if addressing.IsAddressIPv4(&ip) {
-		return nil, errors.New(fmt.Sprintf("Network range '%s' decoded to an IPv4 network range (%s).", toParse, ip))
+		return errors.New(fmt.Sprintf("Network range '%s' decoded to an IPv4 network range (%s).", toParse, ip))
 	}
-	return targetNetwork, nil
+	return nil
 }
 
 func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 	//TODO check to see if value is in any of the weird predefined network ranges
-	network, err := ValidateIPv6NetworkString(toParse)
+	err := ValidateIPv6NetworkString(toParse)
 	if err != nil {
 		return nil, err
 	}
+	_, network, _ := net.ParseCIDR(toParse)
 	curBlacklist, err := data.GetBlacklist()
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error thrown when reading blacklist from directory '%s': %e", config.GetNetworkBlacklistDirPath(), err))
@@ -72,6 +76,14 @@ func ValidateFileNotExist(filePath string) error {
 func ValidateFileExists(filePath string) error {
 	if !fs.CheckIfFileExists(filePath) {
 		return fmt.Errorf("no file found at path '%s'", filePath)
+	} else {
+		return nil
+	}
+}
+
+func ValidateScanBandwidth(toValidate string) error {
+	if !bandwidthRegex.Match([]byte(toValidate)) {
+		return fmt.Errorf("%s is not a valid bandwidth, expecting a number followed by K, M, or G (ex: 10M, 100K)", toValidate)
 	} else {
 		return nil
 	}

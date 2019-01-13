@@ -5,43 +5,44 @@ import (
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/logging"
-	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
+	"log"
 	"time"
 )
 
 var liveAddrCandGauge = metrics.NewGauge()
-var zmapCandDurationTimer = metrics.NewTimer()
-var zmapCandErrorCounter = metrics.NewCounter()
+var pingscanCandDurationTimer = metrics.NewTimer()
+var pingscanCandErrorCounter = metrics.NewCounter()
 
 func init() {
 	metrics.Register("candscan.live_results.gauge", liveAddrCandGauge)
-	metrics.Register("candscan.zmap_scan.time", zmapCandDurationTimer)
-	metrics.Register("candscan.zmap_scan_error.count", zmapCandErrorCounter)
+	metrics.Register("candscan.ping_scan.time", pingscanCandDurationTimer)
+	metrics.Register("candscan.ping_scan.error.count", pingscanCandErrorCounter)
 }
 
-func zmapScanCandidateAddresses() error {
+func pingScanCandidateAddresses() error {
 	inputPath, err := data.GetMostRecentFilePathFromDir(config.GetCandidateAddressDirPath())
 	if err != nil {
 		return err
 	}
 	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
-	logging.Infof(
-		"Now Zmap scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
+	log.Printf(
+		"Now ping-scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
 	)
 	start := time.Now()
-	_, err = shell.ZmapScanFromConfig(inputPath, outputPath)
+	_, err = pingscan.ScanFromConfig(inputPath, outputPath)
 	elapsed := time.Since(start)
 	if err != nil {
-		zmapCandErrorCounter.Inc(1)
-		logging.Warnf("An error was thrown when trying to run zmap: %s", err)
-		logging.Debugf("Zmap elapsed time was %s.", elapsed)
+		pingscanCandErrorCounter.Inc(1)
+		log.Printf("An error was thrown when trying to run ping-scan: %s", err)
+		log.Printf("Ping-scan elapsed time was %s.", elapsed)
 		return err
 	}
-	zmapCandDurationTimer.Update(elapsed)
+	pingscanCandDurationTimer.Update(elapsed)
 	liveCount, err := fs.CountLinesInFile(outputPath)
 	if err != nil {
 		logging.Warnf("Error when counting lines in file '%s': %e", outputPath, err)
@@ -50,6 +51,6 @@ func zmapScanCandidateAddresses() error {
 		}
 	}
 	liveAddrCandGauge.Update(int64(liveCount))
-	logging.Infof("Zmap completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+	log.Printf("Ping-scan completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
 	return nil
 }

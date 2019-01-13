@@ -1,11 +1,11 @@
 package persist
 
 import (
-	"sync"
-	"os"
-	"io"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
+	"io"
+	"os"
+	"sync"
 )
 
 // https://medium.com/@matryer/golang-advent-calendar-day-eleven-persisting-go-objects-to-disk-7caf1ee3d11d

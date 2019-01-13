@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Utility for converting IPv6 files to different formats
 - Dependency management with Golang modules
+- ASCII art
+- Changelog
 
 ### Changed
 - Logging now uses log levels

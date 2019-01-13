@@ -7,7 +7,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/logging"
-	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"log"
@@ -81,16 +81,16 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP) (*net.IPNet, error
 			return nil, err
 		}
 		logging.Debugf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
-		zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
-		logging.Debugf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
-		_, err = shell.ZmapScanFromConfig(targetsPath, zmapPath)
+		outputPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
+		logging.Debugf("Kicking off ping scan from file path '%s' to output path '%s'.", targetsPath, outputPath)
+		_, err = pingscan.ScanFromConfig(targetsPath, outputPath)
 		if err != nil {
-			logging.Warnf("An error was thrown when trying to run zmap: %s", err)
+			logging.Warnf("An error was thrown when trying to run ping scan: %s", err)
 			return nil, err
 		}
-		foundAddrs, err := addressing.ReadIPsFromHexFile(zmapPath)
+		foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
 		if err != nil {
-			logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", zmapPath, err)
+			logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 			return nil, err
 		}
 		logging.Debugf("%d addresses responded to ICMP pings.", len(foundAddrs))
@@ -137,17 +137,17 @@ func checkNetworkForAliased(inputNet *net.IPNet) (*net.IP, bool, error) {
 	}
 
 	logging.Debugf("Wrote test addresses to file at path '%s'.", addrsPath)
-	zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
+	outputPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
 
-	_, err = shell.ZmapScanFromConfig(addrsPath, zmapPath)
+	_, err = pingscan.ScanFromConfig(addrsPath, outputPath)
 	if err != nil {
-		logging.Warnf("An error was thrown when trying to run zmap: %s", err)
+		logging.Warnf("An error was thrown when trying to run ping scan: %s", err)
 		return nil, false, err
 	}
 
-	foundAddrs, err := addressing.ReadIPsFromHexFile(zmapPath)
+	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
 	if err != nil {
-		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", zmapPath, err)
+		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 		return nil, false, err
 	}
 
@@ -163,4 +163,3 @@ func checkNetworkForAliased(inputNet *net.IPNet) (*net.IP, bool, error) {
 	}
 
 }
-

@@ -111,14 +111,10 @@ func InitConfig() {
 
 	// Scanning
 
-	viper.BindEnv("ZmapExecPath")  					// Local file path to the Zmap executable
-	viper.BindEnv("ZmapBandwidth")  					// Bandwidth cap for Zmap
-	viper.BindEnv("ZmapSourceAddress")				// Source IPv6 address for Zmap
+	viper.BindEnv("PingScanBandwidth")				// The maximum bandwidth to use for ping scanning
 	viper.BindEnv("ScanTargetNetwork")				// The default network to scan
 
-	viper.SetDefault("ZmapExecPath", "/usr/local/sbin/zmap")
-	viper.SetDefault("ZmapBandwidth", "20M")
-	viper.SetDefault("ZmapSourceAddress", "[REPLACE]")
+	viper.SetDefault("PingScanBandwidth", "20M")
 	viper.SetDefault("ScanTargetNetwork", "2000::/4")
 
 	// Clean Up

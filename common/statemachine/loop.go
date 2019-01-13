@@ -107,8 +107,8 @@ func RunStateMachine() error {
 				return err
 			}
 		case PING_SCAN_ADDR:
-			// Perform a Zmap scan of the candidate addressing that were generated
-			err := zmapScanCandidateAddresses()
+			// Perform a ping scan of the candidate addressing that were generated
+			err := pingScanCandidateAddresses()
 			if err != nil {
 				return err
 			}

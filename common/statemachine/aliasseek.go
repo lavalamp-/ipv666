@@ -9,7 +9,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/data"
 	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/lavalamp-/ipv666/common/logging"
-	"github.com/lavalamp-/ipv666/common/shell"
+	"github.com/lavalamp-/ipv666/common/pingscan"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 	"net"
@@ -175,16 +175,16 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates) error {
 		return err
 	}
 	logging.Debugf("Successfully wrote %d blacklist scan addresses to file '%s'.", len(scanAddrs), targetsPath)
-	zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
-	logging.Debugf("Kicking off Zmap from file path '%s' to output path '%s'.", targetsPath, zmapPath)
-	_, err = shell.ZmapScanFromConfig(targetsPath, zmapPath)
+	outputPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
+	logging.Debugf("Kicking off ping scan from file path '%s' to output path '%s'.", targetsPath, outputPath)
+	_, err = pingscan.ScanFromConfig(targetsPath, outputPath)
 	if err != nil {
-		logging.Warnf("An error was thrown when trying to run zmap: %s", err)
+		logging.Warnf("An error was thrown when running ping scan: %s", err)
 		return err
 	}
-	foundAddrs, err := addressing.ReadIPsFromHexFile(zmapPath)
+	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
 	if err != nil {
-		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", zmapPath, err)
+		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 		return err
 	}
 	logging.Debugf("%d addresses responded to ICMP pings.", len(foundAddrs))
@@ -205,16 +205,16 @@ func checkNetworksForAliased(nets []*net.IPNet) ([]*seekPair, error) {
 		return nil, err
 	}
 
-	zmapPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
-	logging.Debugf("Zmap scanning alias candidates in file '%s'. Results will be written to '%s'.", candsPath, zmapPath)
+	outputPath := fs.GetTimedFilePath(config.GetNetworkScanResultsDirPath())
+	logging.Debugf("Ping scanning alias candidates in file '%s'. Results will be written to '%s'.", candsPath, outputPath)
 
-	_, err = shell.ZmapScanFromConfig(candsPath, zmapPath)
+	_, err = pingscan.ScanFromConfig(candsPath, outputPath)
 	if err != nil {
 		return nil, err
 	}
-	logging.Infof("Successfully scanned alias candidates to file '%s'.", zmapPath)
+	logging.Infof("Successfully scanned alias candidates to file '%s'.", outputPath)
 
-	foundAddrs, err := addressing.ReadIPsFromHexFile(zmapPath)
+	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
 	if err != nil {
 		return nil, err
 	}
