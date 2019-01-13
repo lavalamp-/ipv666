@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/lavalamp-/ipv666/common/app"
-	"github.com/lavalamp-/ipv666/common/blacklist"
-	"github.com/lavalamp-/ipv666/common/data"
-	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/lavalamp-/ipv666/internal/app"
+	"github.com/lavalamp-/ipv666/internal/blacklist"
+	"github.com/lavalamp-/ipv666/internal/data"
+	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/spf13/cobra"
 	"os"
 	"strings"

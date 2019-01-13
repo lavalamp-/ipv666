@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/lavalamp-/ipv666/common/config"
-	"github.com/lavalamp-/ipv666/common/logging"
-	"github.com/lavalamp-/ipv666/common/metrics"
-	"github.com/lavalamp-/ipv666/common/setup"
+	"github.com/lavalamp-/ipv666/internal/config"
+	"github.com/lavalamp-/ipv666/internal/logging"
+	"github.com/lavalamp-/ipv666/internal/metrics"
+	"github.com/lavalamp-/ipv666/internal/setup"
 	"github.com/lavalamp-/ipv666/ipv666/cmd"
 	"math/rand"
 	"time"

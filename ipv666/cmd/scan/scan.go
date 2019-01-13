@@ -1,9 +1,9 @@
 package scan
 
 import (
-	"github.com/lavalamp-/ipv666/common/config"
-	"github.com/lavalamp-/ipv666/common/logging"
-	"github.com/lavalamp-/ipv666/common/validation"
+	"github.com/lavalamp-/ipv666/internal/config"
+	"github.com/lavalamp-/ipv666/internal/logging"
+	"github.com/lavalamp-/ipv666/internal/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"runtime"

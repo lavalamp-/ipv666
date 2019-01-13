@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/lavalamp-/ipv666/common/app"
-	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/lavalamp-/ipv666/internal/app"
+	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/spf13/cobra"
 	"os"
 	"strings"
