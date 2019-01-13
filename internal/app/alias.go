@@ -10,7 +10,6 @@ import (
 	"github.com/lavalamp-/ipv666/internal/pingscan"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	"log"
 	"net"
 )
 
@@ -38,7 +37,7 @@ func RunAlias(targetNetworkString string) {
 	}
 
 	logging.Success("Aliased network found!")
-	log.Println()
+	logging.Success("")
 	logging.Successf("%s", aliasedNet)
 
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/lavalamp-/ipv666/internal/pingscan"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
-	"log"
 	"time"
 )
 
@@ -28,7 +27,7 @@ func pingScanCandidateAddresses() error {
 		return err
 	}
 	outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
-	log.Printf(
+	logging.Infof(
 		"Now ping-scanning IPv6 addressing found in file at path '%s'. Results will be written to '%s'.",
 		inputPath,
 		outputPath,
@@ -38,8 +37,8 @@ func pingScanCandidateAddresses() error {
 	elapsed := time.Since(start)
 	if err != nil {
 		pingscanCandErrorCounter.Inc(1)
-		log.Printf("An error was thrown when trying to run ping-scan: %s", err)
-		log.Printf("Ping-scan elapsed time was %s.", elapsed)
+		logging.Warnf("An error was thrown when trying to run ping-scan: %s", err)
+		logging.Debugf("Ping-scan elapsed time was %s.", elapsed)
 		return err
 	}
 	pingscanCandDurationTimer.Update(elapsed)
@@ -51,6 +50,6 @@ func pingScanCandidateAddresses() error {
 		}
 	}
 	liveAddrCandGauge.Update(int64(liveCount))
-	log.Printf("Ping-scan completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
+	logging.Infof("Ping-scan completed successfully in %s. Results written to file at '%s'.", elapsed, outputPath)
 	return nil
 }

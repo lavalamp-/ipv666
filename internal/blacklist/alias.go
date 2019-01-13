@@ -1,14 +1,13 @@
 package blacklist
 
 import (
-	"github.com/lavalamp-/ipv666/internal/logging"
-	"net"
-	"math"
 	"errors"
 	"fmt"
-	"github.com/lavalamp-/ipv666/internal/addressing"
-	"log"
 	"github.com/lavalamp-/ipv666/internal"
+	"github.com/lavalamp-/ipv666/internal/addressing"
+	"github.com/lavalamp-/ipv666/internal/logging"
+	"math"
+	"net"
 )
 
 type AliasCheckState struct {
@@ -236,9 +235,9 @@ func (states *AliasCheckStates) PrintAliasedNetworks() error {
 }
 
 func (states *AliasCheckStates) PrintStates() () {
-	log.Println()
+	logging.Info("")
 	logging.Infof("Alias check states (%d total, %d found):", states.GetChecksCount(), states.GetFoundCount())
-	log.Println()
+	logging.Info("")
 	for i, check := range states.checks {
 		foundString := ""
 		if check.found {
@@ -246,5 +245,5 @@ func (states *AliasCheckStates) PrintStates() () {
 		}
 		logging.Infof("\t%d:\t%s\tL: %d\tR: %d\t%s", i, check.baseAddress, check.leftPosition, check.rightPosition, foundString)
 	}
-	log.Println()
+	logging.Info("")
 }
