@@ -3,10 +3,11 @@ package statemachine
 import (
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
-	"github.com/rcrowley/go-metrics"
-	"time"
 	"github.com/lavalamp-/ipv666/common/fs"
+	"github.com/lavalamp-/ipv666/common/logging"
+	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"time"
 )
 
 var modelUpdateDurationTimer = metrics.NewTimer()
@@ -17,29 +18,29 @@ func init() {
 	metrics.Register("modelupdate.update.count", modelUpdateCounter)
 }
 
-func updateModelWithSuccessfulHosts(conf *config.Configuration) (error) {
-	cleanPings, err := data.GetCleanPingResults(conf.GetCleanPingDirPath())
+func updateModelWithSuccessfulHosts() error {
+	cleanPings, err := data.GetCleanPingResults()
 	if err != nil {
 		return err
 	}
-	model, err := data.GetProbabilisticAddressModel(conf.GetGeneratedModelDirPath())
+	model, err := data.GetProbabilisticAddressModel()
 	if err != nil {
 		return err
 	}
-	log.Printf("Updating model %s with %d addresses.", model.Name, len(cleanPings))
+	logging.Infof("Updating model %s with %d addresses.", model.Name, len(cleanPings))
 	start := time.Now()
-	model.UpdateMultiIP(cleanPings, conf.LogLoopEmitFreq, conf)
+	model.UpdateMultiIP(cleanPings, viper.GetInt("LogLoopEmitFreq"))
 	elapsed := time.Since(start)
 	modelUpdateCounter.Inc(int64(len(cleanPings)))
 	modelUpdateDurationTimer.Update(elapsed)
-	log.Printf("Model updated with %d addresses in %s.", len(cleanPings), elapsed)
-	outputPath := fs.GetTimedFilePath(conf.GetGeneratedModelDirPath())
-	log.Printf("Writing new model to output path at '%s'.", outputPath)
+	logging.Debugf("Model updated with %d addresses in %s.", len(cleanPings), elapsed)
+	outputPath := fs.GetTimedFilePath(config.GetGeneratedModelDirPath())
+	logging.Debugf("Writing new model to output path at '%s'.", outputPath)
 	err = model.Save(outputPath)
 	if err != nil {
 		return err
 	}
-	log.Printf("Model successfully updated and written to '%s'.", outputPath)
+	logging.Debugf("Model successfully updated and written to '%s'.", outputPath)
 	data.UpdateProbabilisticAddressModel(model, outputPath)
 	return nil
 }

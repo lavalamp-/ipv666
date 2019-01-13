@@ -1,15 +1,15 @@
 package filtering
 
 import (
-	"github.com/willf/bloom"
-	"os"
 	"errors"
 	"fmt"
-	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/spf13/viper"
+	"github.com/willf/bloom"
+	"os"
 )
 
-func NewFromConfig(conf *config.Configuration) (*bloom.BloomFilter) {
-	return bloom.New(conf.AddressFilterSize, conf.AddressFilterHashCount)
+func NewFromConfig() *bloom.BloomFilter {
+	return bloom.New(uint(viper.GetInt("AddressFilterSize")), uint(viper.GetInt("AddressFilterHashCount")))
 }
 
 func GetBloomFilterFromFile(filePath string, filterSize uint, keyCount uint) (*bloom.BloomFilter, error) {
@@ -28,7 +28,7 @@ func GetBloomFilterFromFile(filePath string, filterSize uint, keyCount uint) (*b
 	return filter, nil
 }
 
-func WriteBloomFilterToFile(filePath string, filter *bloom.BloomFilter) (error) {
+func WriteBloomFilterToFile(filePath string, filter *bloom.BloomFilter) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err

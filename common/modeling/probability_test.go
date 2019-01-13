@@ -1,32 +1,25 @@
 package modeling
 
 import (
-	"testing"
+	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/stretchr/testify/assert"
-	"github.com/lavalamp-/ipv666/common/addressing"
-	"log"
-	"time"
 	"math/rand"
 	"net"
+	"testing"
+	"time"
 )
 
-var conf *config.Configuration
-
 func init() {
-	loadedConf, err := config.LoadFromFile("../../config.json")
+	config.InitConfig()
 	rand.Seed(time.Now().UTC().UnixNano())
-	if err != nil {
-		log.Fatal(err)
-	}
-	conf = &loadedConf
 }
 
-func getNewAddressModel() (*ProbabilisticAddressModel) {
-	return NewAddressModel("Testing Model", conf)
+func getNewAddressModel() *ProbabilisticAddressModel {
+	return NewAddressModel("Testing Model")
 }
 
-func getFilterFunc() (addrProcessFunc) {
+func getFilterFunc() addrProcessFunc {
 	checker := 0
 	return func(toCheck *net.IP) (bool, error) {
 		checker++

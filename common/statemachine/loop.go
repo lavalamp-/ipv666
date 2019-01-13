@@ -1,13 +1,14 @@
 package statemachine
 
 import (
-	"log"
-	"time"
-	"io/ioutil"
 	"errors"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common/config"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"io/ioutil"
+	"time"
 )
 
 //noinspection GoSnakeCaseUsage
@@ -20,7 +21,6 @@ const (
 	REM_BAD_ADDR
 	UPDATE_MODEL
 	UPDATE_ADDR_FILE
-	PUSH_S3
 	CLEAN_UP
 	EMIT_METRICS
 )
@@ -67,104 +67,94 @@ func fetchStateFromFile(filePath string) (State, error) {
 	return State(state), nil
 }
 
-func SetStateFile(filePath string, curState State) (error) {
-	log.Printf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
+func SetStateFile(filePath string, curState State) error {
+	logging.Debugf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
 	var b []byte
 	b = append(b, byte(curState))
 	return ioutil.WriteFile(filePath, b, 0644)
 }
 
-func ResetStateFile(filePath string) (error) {
+func ResetStateFile(filePath string) error {
 	return SetStateFile(filePath, FIRST_STATE)
 }
 
-func InitStateFile(filePath string) (error) {
+func InitStateFile(filePath string) error {
 	return SetStateFile(filePath, FIRST_STATE)
 }
 
-func RunStateMachine(conf *config.Configuration) (error) {
+func RunStateMachine() error {
 
-	log.Print("Now starting to run the state machine.")
+	logging.Infof("Now starting to run the state machine.")
 
-	state, err := fetchStateFromFile(conf.GetStateFilePath())
+	state, err := fetchStateFromFile(config.GetStateFilePath())
 
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Starting at state %d.", state)
+	logging.Debugf("Starting at state %d.", state)
 
 	for {
 
-		log.Printf("Now entering state %d.", state)
+		logging.Debugf("Now entering state %d.", state)
 		start := time.Now()
 
 		switch state {
 		case GEN_ADDRESSES:
 			// Generate the candidate addressing to scan from the most recent model
-			err := generateCandidateAddresses(conf)
+			err := generateCandidateAddresses()
 			if err != nil {
 				return err
 			}
 		case PING_SCAN_ADDR:
 			// Perform a Zmap scan of the candidate addressing that were generated
-			err := zmapScanCandidateAddresses(conf)
+			err := zmapScanCandidateAddresses()
 			if err != nil {
 				return err
 			}
 		case NETWORK_GROUP:
 			// Process results of Zmap scan into a set of network ranges
-			err := generateScanResultsNetworkRanges(conf)
+			err := generateScanResultsNetworkRanges()
 			if err != nil {
 				return err
 			}
 		case SEEK_ALIASED_NETWORKS:
 			// Seek out aliased networks
-			err := seekAliasedNetworks(conf)
+			err := seekAliasedNetworks()
 			if err != nil {
 				return err
 			}
 		case PROCESS_ALIASED_NETWORKS:
 			// Process the results of aliased network seeking (add to blacklist and de-dupe)
-			err := processAliasedNetworks(conf)
+			err := processAliasedNetworks()
 			if err != nil {
 				return err
 			}
 		case REM_BAD_ADDR:
 			// Remove all the addressing from the Zmap results that are in ranges that failed
 			// the test in the previous step
-			err := cleanBlacklistedAddresses(conf)
+			err := cleanBlacklistedAddresses()
 			if err != nil {
 				return err
 			}
 		case UPDATE_MODEL:
 			// Update the statistical model with the valid IPv6 results we have left over
-			err := updateModelWithSuccessfulHosts(conf)
+			err := updateModelWithSuccessfulHosts()
 			if err != nil {
 				return err
 			}
 		case UPDATE_ADDR_FILE:
 			// Update the cumulative addresses file
-			err := updateAddressFile(conf)
+			err := updateAddressFile()
 			if err != nil {
 				return err
 			}
-		case PUSH_S3:
-			// Zip up all the most recent files and send them off to S3 (maintain dir structure)
-			if !conf.ExportEnabled {
-				log.Printf("Exporting to S3 is disabled. Skipping export step.")
-			} else {
-				err := pushFilesToS3(conf)
-				if err != nil {
-					return err
-				}
-			}
 		case CLEAN_UP:
 			// Remove all but the most recent files in each of the directories
-			if !conf.CleanUpEnabled {
-				log.Printf("Clean up disabled. Skipping clean up step.")
+			if !viper.GetBool("CleanUpEnabled") {
+				logging.Infof("Clean up disabled. Skipping clean up step.")
 			} else {
-				err := cleanUpNonRecentFiles(conf)
+				err := cleanUpNonRecentFiles()
 				if err != nil {
 					return err
 				}
@@ -174,19 +164,19 @@ func RunStateMachine(conf *config.Configuration) (error) {
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Completed state %d (took %s).", state, elapsed)
+		logging.Debugf("Completed state %d (took %s).", state, elapsed)
 
 		timer, found := getStateLoopTimer(state)
 		if !found {
-			log.Printf("Unable to find state loop timer for state %d.", state)
-			if conf.ExitOnFailedMetrics {
+			logging.Warnf("Unable to find state loop timer for state %d.", state)
+			if viper.GetBool("ExitOnFailedMetrics") {
 				return errors.New(fmt.Sprintf("Unable to find state loop timer for state %d.", state))
 			}
 		}
 		timer.Update(elapsed)
 
 		state = (state + 1) % (LAST_STATE + 1)
-		err = SetStateFile(conf.GetStateFilePath(), state)
+		err = SetStateFile(config.GetStateFilePath(), state)
 		if err != nil {
 			return err
 		}

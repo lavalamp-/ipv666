@@ -1,13 +1,14 @@
 package statemachine
 
 import (
+	"github.com/lavalamp-/ipv666/common/blacklist"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
-	"log"
-	"time"
 	"github.com/lavalamp-/ipv666/common/fs"
-	"github.com/lavalamp-/ipv666/common/blacklist"
+	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
+	"time"
 )
 
 var aliasProcessAddedCount = metrics.NewCounter()
@@ -26,20 +27,20 @@ func init() {
 	metrics.Register("aliasprocess.blacklist.clean.count", aliasBlacklistCleanCount)
 }
 
-func processAliasedNetworks(conf *config.Configuration) (error) {
+func processAliasedNetworks() error {
 
-	log.Print("Processing the aliased networks that were found into blacklist.")
+	logging.Infof("Processing the aliased networks that were found into blacklist.")
 
-	curBlacklist, err := data.GetBlacklist(conf.GetNetworkBlacklistDirPath())
+	curBlacklist, err := data.GetBlacklist()
 	if err != nil {
 		return err
 	}
-	aliasedNets, err := data.GetAliasedNetworks(conf)
+	aliasedNets, err := data.GetAliasedNetworks()
 	if err != nil {
 		return err
 	}
 
-	log.Print("Loaded all relevant data into memory. Processing aliased results now.")
+	logging.Debugf("Loaded all relevant data into memory. Processing aliased results now.")
 
 	start := time.Now()
 	added, skipped := curBlacklist.AddNetworks(aliasedNets)
@@ -48,28 +49,28 @@ func processAliasedNetworks(conf *config.Configuration) (error) {
 	aliasProcessSkippedCount.Inc(int64(skipped))
 	aliasProcessAddedCount.Inc(int64(added))
 
-	log.Printf("Successfully processed %d aliased networks in %s. %d were added, %d were skipped.", len(aliasedNets), elapsed, added, skipped)
+	logging.Debugf("Successfully processed %d aliased networks in %s. %d were added, %d were skipped.", len(aliasedNets), elapsed, added, skipped)
 
-	log.Printf("Cleaning blacklist now. Blacklist is starting at capacity %d.", curBlacklist.GetCount())
+	logging.Debugf("Cleaning blacklist now. Blacklist is starting at capacity %d.", curBlacklist.GetCount())
 	start = time.Now()
-	numCleaned := curBlacklist.Clean(conf.LogLoopEmitFreq)
+	numCleaned := curBlacklist.Clean(viper.GetInt("LogLoopEmitFreq"))
 	aliasBlacklistCleanTime.Update(time.Since(start))
 	aliasBlacklistCleanCount.Inc(int64(numCleaned))
-	log.Printf("%d networks were cleaned from the blacklist (down to %d capacity).", numCleaned, curBlacklist.GetCount())
+	logging.Debugf("%d networks were cleaned from the blacklist (down to %d capacity).", numCleaned, curBlacklist.GetCount())
 
-	outputPath := fs.GetTimedFilePath(conf.GetNetworkBlacklistDirPath())
-	log.Printf("Writing new blacklist to file at path '%s'.", outputPath)
+	outputPath := fs.GetTimedFilePath(config.GetNetworkBlacklistDirPath())
+	logging.Debugf("Writing new blacklist to file at path '%s'.", outputPath)
 	start = time.Now()
 	err = blacklist.WriteNetworkBlacklistToFile(outputPath, curBlacklist)
 	if err != nil {
-		log.Printf("Error thrown when writing blacklist to file '%s': %e", outputPath, err)
+		logging.Warnf("Error thrown when writing blacklist to file '%s': %e", outputPath, err)
 		return err
 	}
 	aliasBlacklistWriteTime.Update(time.Since(start))
 
 	data.UpdateBlacklist(curBlacklist, outputPath)
 
-	log.Print("Successfully updated blacklist based on the results of the aliased network checking.")
+	logging.Infof("Successfully updated blacklist based on the results of the aliased network checking.")
 
 	return nil
 
