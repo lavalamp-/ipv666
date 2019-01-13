@@ -18,7 +18,6 @@ const (
 	LEVEL_ERROR
 )
 
-var logLevel = -1
 var debugColor = color.New(color.FgHiWhite).SprintFunc()
 var infoColor = color.New(color.FgHiBlue).SprintFunc()
 var successColor = color.New(color.FgHiGreen).Add(color.Underline).SprintFunc()
@@ -26,25 +25,23 @@ var warnColor = color.New(color.FgYellow).SprintFunc()
 var errorColor = color.New(color.FgBlack).Add(color.BgRed).Add(color.Underline).SprintFunc()
 
 func getLogLevel() int {
-	if logLevel == -1 {
-		configLevel := viper.GetString("LogLevel")
-		configLevel = strings.ToLower(configLevel)
-		switch configLevel {
-		case "debug":
-			logLevel = LEVEL_DEBUG
-		case "info":
-			logLevel = LEVEL_INFO
-		case "success":
-			logLevel = LEVEL_SUCCESS
-		case "warn":
-			logLevel = LEVEL_WARNING
-		case "error":
-			logLevel = LEVEL_ERROR
-		default:
-			ErrorStringF(fmt.Sprintf("%s is not a valid log level", configLevel))
-		}
+	configLevel := viper.GetString("LogLevel")
+	configLevel = strings.ToLower(configLevel)
+	switch configLevel {
+	case "debug":
+		return LEVEL_DEBUG
+	case "info":
+		return LEVEL_INFO
+	case "success":
+		return LEVEL_SUCCESS
+	case "warn":
+		return LEVEL_WARNING
+	case "error":
+		return LEVEL_ERROR
+	default:
+		ErrorStringF(fmt.Sprintf("%s is not a valid log level", configLevel))
+		return -1
 	}
-	return logLevel
 }
 
 func printWithDate(toPrint string) {
