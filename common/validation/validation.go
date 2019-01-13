@@ -6,6 +6,7 @@ import (
 	"github.com/lavalamp-/ipv666/common/addressing"
 	"github.com/lavalamp-/ipv666/common/config"
 	"github.com/lavalamp-/ipv666/common/data"
+	"github.com/lavalamp-/ipv666/common/fs"
 	"github.com/spf13/viper"
 	"net"
 )
@@ -45,10 +46,10 @@ func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 }
 
 func ValidateOutputFileType(toCheck string) error {
-	if toCheck == "txt" || toCheck == "bin" {
+	if toCheck == "txt" || toCheck == "bin" || toCheck == "hex" {
 		return nil
 	} else {
-		return fmt.Errorf("%s is not a valid output file type (expected 'txt' or 'bin')", toCheck)
+		return fmt.Errorf("%s is not a valid output file type (expected 'txt', 'bin', or 'hex')", toCheck)
 	}
 }
 
@@ -57,5 +58,21 @@ func ValidateLogLevel(toCheck string) error {
 		return nil
 	} else {
 		return fmt.Errorf("'%s' is not a valid log level (expected one of 'debug', 'info', 'success', 'warning', or 'error')", toCheck)
+	}
+}
+
+func ValidateFileNotExist(filePath string) error {
+	if fs.CheckIfFileExists(filePath) {
+		return fmt.Errorf("a file already exists at path '%s'", filePath)
+	} else {
+		return nil
+	}
+}
+
+func ValidateFileExists(filePath string) error {
+	if !fs.CheckIfFileExists(filePath) {
+		return fmt.Errorf("no file found at path '%s'", filePath)
+	} else {
+		return nil
 	}
 }

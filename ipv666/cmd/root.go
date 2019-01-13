@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lavalamp-/ipv666/common/logging"
 	"github.com/lavalamp-/ipv666/common/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,6 +15,7 @@ func init() {
 	rootCmd.AddCommand(aliasCmd)
 	rootCmd.AddCommand(blgenCmd)
 	rootCmd.AddCommand(cleanCmd)
+	rootCmd.AddCommand(convertCmd)
 }
 
 var rootLongDesc = `
@@ -37,7 +37,5 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		logging.ErrorF(err)
-	}
+	rootCmd.Execute()
 }

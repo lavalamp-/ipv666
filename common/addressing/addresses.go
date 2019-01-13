@@ -3,6 +3,7 @@ package addressing
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/lavalamp-/ipv666/common"
@@ -42,7 +43,7 @@ func GetIPsFromStrings(toParse []string) []*net.IP {
 	return toReturn
 }
 
-func GetIPSet(ips []*net.IP) (map[string]*common.Empty) {
+func GetIPSet(ips []*net.IP) map[string]*common.Empty {
 	toReturn := make(map[string]*common.Empty)
 	blacklistEntry := &common.Empty{}
 	for _, ip := range ips {
@@ -71,26 +72,55 @@ func GetUniqueIPs(ips []*net.IP, updateFreq int) []*net.IP {
 	return toReturn
 }
 
+func FatHexStringToIP(toParse string) (*net.IP, error) {
+	data, err := hex.DecodeString(toParse)
+	if err != nil {
+		return nil, err
+	}
+	ip := net.IP(data)
+	return &ip, nil
+}
+
+func ReadIPsFromFatHexFileBytes(toParse []byte) []*net.IP {
+	parseString := strings.TrimSpace(string(toParse))
+	lines := strings.Split(parseString, "\n")
+	var toReturn []*net.IP
+	for _, line := range lines {
+		lineStrip := strings.TrimSpace(line)
+		newIp, err := FatHexStringToIP(lineStrip)
+		if err != nil {
+			logging.Warnf("Error thrown when processing bytes %s as fat hex: %s", line, err.Error())
+		} else {
+			toReturn = append(toReturn, newIp)
+		}
+	}
+	return toReturn
+}
+
+func ReadIPsFromHexFileBytes(toParse []byte) []*net.IP {
+	parseString := strings.TrimSpace(string(toParse))
+	lines := strings.Split(parseString, "\n")
+	var toReturn []*net.IP
+	for _, line := range lines {
+		newIP := net.ParseIP(strings.TrimSpace(line))
+		if newIP == nil {
+			logging.Warnf("No IP found from content '%s'.", line)
+			continue
+		}
+		toReturn = append(toReturn, &newIP)
+	}
+	return toReturn
+}
+
 func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	contentString := strings.TrimSpace(string(fileContent))
-	lines := strings.Split(contentString, "\n")
-	var toReturn []*net.IP
-	for i, line := range lines {
-		newIP := net.ParseIP(strings.TrimSpace(line))
-		if newIP == nil {
-			logging.Warnf("No IP found from content '%s' (line %d in file '%s').", line, i, filePath)
-			continue
-		}
-		toReturn = append(toReturn, &newIP)
-	}
-	return toReturn, nil
+	return ReadIPsFromHexFileBytes(fileContent), nil
 }
 
-func WriteIPsToHexFile(filePath string, addrs []*net.IP) (error) {
+func WriteIPsToHexFile(filePath string, addrs []*net.IP) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
@@ -110,6 +140,17 @@ func GetTextLinesFromIPs(addrs []*net.IP) (string) {
 		toReturn = append(toReturn, fmt.Sprintf("%s\n", addr.String()))
 	}
 	return strings.Join(toReturn, "")
+}
+
+func ReadIPsFromBinaryFileBytes(toParse []byte) []*net.IP {
+	var toReturn []*net.IP
+	for i := 0; i < len(toParse); i += 16 {
+		ipBytes := make([]byte, 16)
+		copy(ipBytes, toParse[i:i+16])
+		newIP := net.IP(ipBytes)
+		toReturn = append(toReturn, &newIP)
+	}
+	return toReturn
 }
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
@@ -144,7 +185,7 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 	return toReturn, nil
 }
 
-func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) (error) {
+func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
@@ -156,6 +197,45 @@ func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) (error) {
 	}
 	writer.Flush()
 	return nil
+}
+
+func WriteIPsToFatHexFile(filePath string, addrs []*net.IP) error {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
+	writer := bufio.NewWriter(file)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	buffer := make([]byte, 32)
+	for _, addr := range addrs {
+		hex.Encode(buffer, *addr)
+		writer.Write(buffer)
+		writer.Write([]byte("\n"))
+	}
+	writer.Flush()
+	return nil
+}
+
+func ReadIPsFromFile(filePath string) ([]*net.IP, error) {
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	return ParseIPsFromBytes(bytes)
+}
+
+func ParseIPsFromBytes(toParse []byte) ([]*net.IP, error) {
+	split := strings.Split(string(toParse), "\n")
+	toCheck := split[0]
+	if strings.Contains(toCheck, ":") {  // Standard ASCII hex with colons
+		return ReadIPsFromHexFileBytes(toParse), nil
+	} else if len(toCheck) == 32 {  // ASCII hex without colons
+		return ReadIPsFromFatHexFileBytes(toParse), nil
+	} else if len(toParse) % 16 != 0 {
+		return nil, errors.New("could not determine the format of IPv6 address bytes")
+	} else {  // Binary representation
+		return ReadIPsFromBinaryFileBytes(toParse), nil
+	}
 }
 
 func GetNybbleFromIP(ip *net.IP, index int) (uint8) {

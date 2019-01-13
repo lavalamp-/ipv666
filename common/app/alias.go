@@ -14,9 +14,12 @@ import (
 	"net"
 )
 
-func RunAlias() {
+func RunAlias(targetNetworkString string) {
 
-	targetNetwork, _ := config.GetTargetNetwork()
+	_, targetNetwork, err := net.ParseCIDR(targetNetworkString)
+	if err != nil {
+		logging.ErrorF(err)
+	}
 
 	ip, aliased, err := checkNetworkForAliased(targetNetwork)
 

@@ -13,15 +13,20 @@ import (
 func init() {
 	var targetNetwork string
 	aliasCmd.PersistentFlags().StringVarP(&targetNetwork, "target", "t", viper.GetString("ScanTargetNetwork"), "An IPv6 CIDR range to test as an aliased network.")
-	viper.BindPFlag("ScanTargetNetwork", aliasCmd.PersistentFlags().Lookup("target"))
 	aliasCmd.MarkPersistentFlagRequired("target")
 }
 
 //TODO move all validation into PersistentPreRun
 
-func validateAliasCommand() {
+func validateAliasCommand(cmd *cobra.Command) {
 
-	_, err := validation.ValidateIPv6NetworkStringForScanning(viper.GetString("ScanTargetNetwork"))
+	targetNetwork, err := cmd.PersistentFlags().GetString("target")
+
+	if err != nil {
+		logging.ErrorF(err)
+	}
+
+	_, err = validation.ValidateIPv6NetworkStringForScanning(targetNetwork)
 	if err != nil {
 		logging.ErrorF(err)
 	}
@@ -54,7 +59,8 @@ var aliasCmd = &cobra.Command{
 	Short:			"Test a network range for aliased characteristics",
 	Long:			aliasLongDesc,
 	Run: func(cmd *cobra.Command, args []string) {
-		validateAliasCommand()
-		app.RunAlias()
+		validateAliasCommand(cmd)
+		targetNetwork, _ := cmd.PersistentFlags().GetString("target")
+		app.RunAlias(targetNetwork)
 	},
 }

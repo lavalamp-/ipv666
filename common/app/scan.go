@@ -16,6 +16,8 @@ func init() {
 	metrics.Register("main.run.time", mainLoopRunTimer)
 }
 
+// TODO add functionality for writing results in hex format
+
 func RunScanning() {
 
 	targetNetwork, _ := config.GetTargetNetwork()
