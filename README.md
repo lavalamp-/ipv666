@@ -80,7 +80,7 @@ ipv666 scan discover
 
 Scan the network `2600:6000::/32` for live hosts over IPv6 with a maximum speed of 10 Mbps and write the results to a file entitled `addresses.txt`:
 ```$xslt
-ipv666 scan discover -b 10M -o addresses.txt -n 2600:6000::32
+ipv666 scan discover -b 10M -o addresses.txt -n 2600:6000::/32
 ```
 
 ## alias
