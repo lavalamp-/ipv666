@@ -72,7 +72,7 @@ func GetProbabilisticModelFromFile(filePath string) (*ProbabilisticAddressModel,
 	return &toReturn, err
 }
 
-func (addrModel *ProbabilisticAddressModel) Save(filePath string) (error) {
+func (addrModel *ProbabilisticAddressModel) Save(filePath string) error {
 	return persist.Save(filePath, addrModel)
 }
 

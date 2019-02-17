@@ -40,7 +40,7 @@ func Load(path string, v interface{}) error {
 }
 
 func Marshal(v interface{}) (io.Reader, error) {
-	b, err := json.MarshalIndent(v, "", "\t")
+	b, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
