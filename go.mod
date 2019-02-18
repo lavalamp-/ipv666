@@ -21,6 +21,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.3.0
+	github.com/vmihailenco/msgpack v4.0.2+incompatible
 	github.com/willf/bitset v1.1.9 // indirect
 	github.com/willf/bloom v2.0.3+incompatible
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3

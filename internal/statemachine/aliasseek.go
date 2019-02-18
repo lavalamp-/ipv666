@@ -182,7 +182,7 @@ func aliasSeekLoop(acs *blacklist.AliasCheckStates) error {
 		logging.Warnf("An error was thrown when running ping scan: %s", err)
 		return err
 	}
-	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
+	foundAddrs, err := fs.ReadIPsFromHexFile(outputPath)
 	if err != nil {
 		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 		return err
@@ -214,7 +214,7 @@ func checkNetworksForAliased(nets []*net.IPNet) ([]*seekPair, error) {
 	}
 	logging.Infof("Successfully scanned alias candidates to file '%s'.", outputPath)
 
-	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
+	foundAddrs, err := fs.ReadIPsFromHexFile(outputPath)
 	if err != nil {
 		return nil, err
 	}

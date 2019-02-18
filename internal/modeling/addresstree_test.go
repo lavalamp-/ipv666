@@ -2,7 +2,6 @@ package modeling
 
 import (
 	"github.com/lavalamp-/ipv666/internal/addressing"
-	"github.com/lavalamp-/ipv666/internal/fs"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"os"
@@ -127,7 +126,7 @@ func TestAddressTree_AddIPsCount(t *testing.T) {
 	})
 	firstCount := addrTree.ChildrenCount
 	addrTree.AddIPs(newIPs, 100)
-	assert.Equal(t, firstCount + int64(len(newIPs)), addrTree.ChildrenCount)
+	assert.Equal(t, firstCount + uint32(len(newIPs)), addrTree.ChildrenCount)
 }
 
 func TestAddressTree_AddIPsAdds(t *testing.T) {
@@ -281,7 +280,9 @@ func TestAddressTree_CountIPsInRange128(t *testing.T) {
 func TestAddressTree_SaveCreatesFile(t *testing.T) {
 	addrTree := getAddressTree()
 	addrTree.Save("/tmp/tester")
-	assert.True(t, fs.CheckIfFileExists("/tmp/tester"))
+	_, err := os.Stat("/tmp/tester")
+	exists := !os.IsNotExist(err)
+	assert.True(t, exists)
 	os.Remove("/tmp/tester")
 }
 

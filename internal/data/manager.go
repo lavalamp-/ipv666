@@ -97,7 +97,7 @@ func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
 
 func LoadBloomFilterFromOutput() (*bloom.BloomFilter, error) {
 	logging.Debugf("Creating Bloom filter from output file '%s'.", config.GetOutputFilePath())
-	ips, err := addressing.ReadIPsFromHexFile(config.GetOutputFilePath())
+	ips, err := fs.ReadIPsFromHexFile(config.GetOutputFilePath())
 	ips = addressing.GetUniqueIPs(ips, viper.GetInt("LogLoopEmitFreq"))
 	if err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func GetCandidatePingResults() ([]*net.IP, error) {
 		return curCandidatePingResults, nil
 	} else {
 		logging.Debugf("Loading candidate ping results from path '%s'.", filePath)
-		toReturn, err := addressing.ReadIPsFromHexFile(filePath)
+		toReturn, err := fs.ReadIPsFromHexFile(filePath)
 		if err == nil {
 			UpdateCandidatePingResults(toReturn, filePath)
 		}

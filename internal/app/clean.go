@@ -3,13 +3,14 @@ package app
 import (
 	"github.com/lavalamp-/ipv666/internal/addressing"
 	"github.com/lavalamp-/ipv666/internal/blacklist"
+	"github.com/lavalamp-/ipv666/internal/fs"
 	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/spf13/viper"
 )
 
 func RunClean(inputPath string, outputPath string, blist *blacklist.NetworkBlacklist) {
 
-	addrs, err := addressing.ReadIPsFromHexFile(inputPath)
+	addrs, err := fs.ReadIPsFromHexFile(inputPath)
 
 	if err != nil {
 		logging.ErrorStringFf("Error thrown when reading input list of IP addresses at path '%s': %e", inputPath, err)

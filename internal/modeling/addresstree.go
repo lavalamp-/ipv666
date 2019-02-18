@@ -9,14 +9,14 @@ import (
 )
 
 type AddressTree struct {
-	ChildrenCount		int64						`json:"count"`
-	Children			map[uint8]*AddressTreeNode	`json:"children"`
+	ChildrenCount		uint32						`msgpack:"c"`
+	Children			map[uint8]*AddressTreeNode	`msgpack:"h"`
 }
 
 type AddressTreeNode struct {
-	ChildrenCount		int64						`json:"count"`
-	Children			map[uint8]*AddressTreeNode	`json:"children"`
-	Depth				uint8						`json:"depth"`
+	ChildrenCount		uint32						`msgpack:"c"`
+	Children			map[uint8]*AddressTreeNode	`msgpack:"h"`
+	Depth				uint8						`msgpack:"d"`
 }
 
 func newAddressTree() *AddressTree {
@@ -113,10 +113,10 @@ func (addrTree *AddressTree) GetIPsInRange(fromRange *net.IPNet) ([]*net.IP, err
 	}
 }
 
-func (addrTree *AddressTree) CountIPsInRange(fromRange *net.IPNet) (int64, error) {
+func (addrTree *AddressTree) CountIPsInRange(fromRange *net.IPNet) (uint32, error) {
 	networkNybbles, err := addrTree.getSeekNybbles(fromRange)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 	if len(networkNybbles) == 0 {
 		return addrTree.ChildrenCount, nil
@@ -129,7 +129,7 @@ func (addrTree *AddressTree) CountIPsInRange(fromRange *net.IPNet) (int64, error
 	}
 	child, err := addrTree.seekChildByNybbles(networkNybbles)
 	if err != nil {
-		return -1, err
+		return 0, err
 	} else {
 		return child.ChildrenCount, nil
 	}

@@ -15,7 +15,7 @@ func init() {
 	var outputType string
 	convertCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "The file to process IPv6 addresses out of.")
 	convertCmd.PersistentFlags().StringVarP(&outputPath, "out", "o", "", "The file path to write the converted file to.")
-	convertCmd.PersistentFlags().StringVarP(&outputType, "type", "t", viper.GetString("OutputFileType"), "The format to write the IPv6 addresses in (one of 'txt', 'bin', 'hex').")
+	convertCmd.PersistentFlags().StringVarP(&outputType, "type", "t", viper.GetString("OutputFileType"), "The format to write the IPv6 addresses in (one of 'txt', 'bin', 'hex', 'tree').")
 	convertCmd.MarkPersistentFlagRequired("input")
 	convertCmd.MarkPersistentFlagRequired("out")
 }
