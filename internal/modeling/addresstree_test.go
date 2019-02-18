@@ -334,3 +334,95 @@ func TestAddressTree_ContainsIPTrue(t *testing.T) {
 	ip := net.ParseIP("2600:0:1:0000:0000:0000:0000:0000")
 	assert.True(t, addrTree.ContainsIP(&ip))
 }
+
+func TestAddressTree_GetIPsInGenRangeEmpty(t *testing.T) {
+	addrTree := getEmptyAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+		"2600:0:1:0000:0000:0000:0000:0003",
+		"2600:0:1:0000:0000:0000:0000:0004",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.GetIPsInGenRange(genRange)
+	assert.Empty(t, results)
+}
+
+func TestAddressTree_GetIPsInGenRangeNoWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.GetIPsInGenRange(genRange)
+	assert.Equal(t, 1, len(results))
+}
+
+func TestAddressTree_GetIPsInGenRangeOneWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.GetIPsInGenRange(genRange)
+	assert.Equal(t, 8, len(results))
+}
+
+func TestAddressTree_GetIPsInGenRangeTwoWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+		"2600:0:1:0000:0001:0000:0000:0000",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.GetIPsInGenRange(genRange)
+	assert.Equal(t, 16, len(results))
+}
+
+func TestAddressTree_CountIPsInGenRangeEmpty(t *testing.T) {
+	addrTree := getEmptyAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+		"2600:0:1:0000:0000:0000:0000:0003",
+		"2600:0:1:0000:0000:0000:0000:0004",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.CountIPsInGenRange(genRange)
+	assert.Equal(t, 0, results)
+}
+
+func TestAddressTree_CountIPsInGenRangeNoWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.CountIPsInGenRange(genRange)
+	assert.Equal(t, 1, results)
+}
+
+func TestAddressTree_CountIPsInGenRangeOneWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.CountIPsInGenRange(genRange)
+	assert.Equal(t, 8, results)
+}
+
+func TestAddressTree_CountIPsInGenRangeTwoWild(t *testing.T) {
+	addrTree := getAddressTree()
+	newIPs := addressing.GetIPsFromStrings([]string {
+		"2600:0:1:0000:0000:0000:0000:0001",
+		"2600:0:1:0000:0000:0000:0000:0002",
+		"2600:0:1:0000:0001:0000:0000:0000",
+	})
+	genRange := GetGenRangeFromIPs(newIPs)
+	results := addrTree.CountIPsInGenRange(genRange)
+	assert.Equal(t, 16, results)
+}

@@ -2,6 +2,7 @@ package modeling
 
 import (
 	"fmt"
+	"github.com/lavalamp-/ipv666/internal"
 	"github.com/lavalamp-/ipv666/internal/addressing"
 	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/lavalamp-/ipv666/internal/persist"
@@ -16,7 +17,7 @@ type AddressTree struct {
 type AddressTreeNode struct {
 	ChildrenCount		uint32						`msgpack:"c"`
 	Children			map[uint8]*AddressTreeNode	`msgpack:"h"`
-	Depth				uint8						`msgpack:"d"`
+	Depth				int							`msgpack:"d"`
 }
 
 func newAddressTree() *AddressTree {
@@ -26,7 +27,7 @@ func newAddressTree() *AddressTree {
 	}
 }
 
-func newAddressTreeNode(depth uint8) *AddressTreeNode {
+func newAddressTreeNode(depth int) *AddressTreeNode {
 	return &AddressTreeNode{
 		ChildrenCount:	0,
 		Children:		make(map[uint8]*AddressTreeNode),
@@ -46,7 +47,7 @@ func (addrTree *AddressTree) AddIP(toAdd *net.IP) bool {
 		return false
 	}
 	if _, ok := addrTree.Children[ipNybbles[0]]; !ok {
-		addrTree.Children[ipNybbles[0]] = newAddressTreeNode(0)
+		addrTree.Children[ipNybbles[0]] = newAddressTreeNode(1)
 	}
 	addrTree.Children[ipNybbles[0]].addNybbles(ipNybbles[1:])
 	addrTree.ChildrenCount++
@@ -113,6 +114,20 @@ func (addrTree *AddressTree) GetIPsInRange(fromRange *net.IPNet) ([]*net.IP, err
 	}
 }
 
+func (addrTree *AddressTree) GetIPsInGenRange(fromRange *GenRange) []*net.IP {
+	if _, ok := fromRange.WildIndices[0]; ok {
+		var toReturn []*net.IP
+		for k, v := range addrTree.Children {
+			toReturn = append(toReturn, v.getIPsInGenRange([]uint8{ k }, fromRange.AddrNybbles[1:], fromRange.WildIndices)...)
+		}
+		return toReturn
+	} else if val, ok := addrTree.Children[fromRange.AddrNybbles[0]]; !ok {
+		return []*net.IP{}
+	} else {
+		return val.getIPsInGenRange([]uint8 { fromRange.AddrNybbles[0] }, fromRange.AddrNybbles[1:], fromRange.WildIndices)
+	}
+}
+
 func (addrTree *AddressTree) CountIPsInRange(fromRange *net.IPNet) (uint32, error) {
 	networkNybbles, err := addrTree.getSeekNybbles(fromRange)
 	if err != nil {
@@ -132,6 +147,20 @@ func (addrTree *AddressTree) CountIPsInRange(fromRange *net.IPNet) (uint32, erro
 		return 0, err
 	} else {
 		return child.ChildrenCount, nil
+	}
+}
+
+func (addrTree *AddressTree) CountIPsInGenRange(fromRange *GenRange) int {
+	if _, ok := fromRange.WildIndices[0]; ok {
+		var toReturn = 0
+		for _, v := range addrTree.Children {
+			toReturn += v.countIPsInGenRange(fromRange.AddrNybbles[1:], fromRange.WildIndices)
+		}
+		return toReturn
+	} else if val, ok := addrTree.Children[fromRange.AddrNybbles[0]]; !ok {
+		return 0
+	} else {
+		return val.countIPsInGenRange(fromRange.AddrNybbles[1:], fromRange.WildIndices)
 	}
 }
 
@@ -179,7 +208,7 @@ func (addrTreeNode *AddressTreeNode) containsNybbles(nybbles []uint8) bool {
 }
 
 func (addrTreeNode *AddressTreeNode) getAllIPs(parentNybbles []uint8) []*net.IP {
-	if len(addrTreeNode.Children) == 0 && addrTreeNode.Depth != 31 {
+	if len(addrTreeNode.Children) == 0 && addrTreeNode.Depth != 32 {
 		logging.Warnf("Ran out of children at depth %d when getting all IPs. This shouldn't happen.", addrTreeNode.Depth)
 		return []*net.IP{}
 	} else if len(addrTreeNode.Children) == 0 {
@@ -194,13 +223,13 @@ func (addrTreeNode *AddressTreeNode) getAllIPs(parentNybbles []uint8) []*net.IP 
 	}
 }
 
-func (addrTreeNode *AddressTreeNode) getAllIPsInRange(parentNybbles []uint8, searchNybbles []uint8) []*net.IP {
+func (addrTreeNode *AddressTreeNode) getIPsInRange(parentNybbles []uint8, searchNybbles []uint8) []*net.IP {
 	if len(searchNybbles) == 0 {
 		return addrTreeNode.getAllIPs(parentNybbles)
 	} else if val, ok := addrTreeNode.Children[searchNybbles[0]]; !ok {
 		return []*net.IP{}
 	} else {
-		return val.getAllIPsInRange(append(parentNybbles, searchNybbles[0]), searchNybbles[1:])
+		return val.getIPsInRange(append(parentNybbles, searchNybbles[0]), searchNybbles[1:])
 	}
 }
 
@@ -211,5 +240,41 @@ func (addrTreeNode *AddressTreeNode) seekNode(seekNybbles []uint8) *AddressTreeN
 		return nil
 	} else {
 		return val.seekNode(seekNybbles[1:])
+	}
+}
+
+func (addrTreeNode *AddressTreeNode) getIPsInGenRange(parentNybbles []uint8, rangeNybbles []uint8, wildIndices map[int]internal.Empty) []*net.IP {
+	if len(addrTreeNode.Children) == 0 && addrTreeNode.Depth != 32 {
+		logging.Warnf("Ran out of children at depth %d when getting all IPs. This shouldn't happen.", addrTreeNode.Depth)
+		return []*net.IP{}
+	} else if len(addrTreeNode.Children) == 0 {
+		toAdd := addressing.NybblesToIP(parentNybbles)
+		return []*net.IP{ toAdd }
+	} else if _, ok := wildIndices[addrTreeNode.Depth]; ok {
+		var toReturn []*net.IP
+		for k, v := range addrTreeNode.Children {
+			toReturn = append(toReturn, v.getIPsInGenRange(append(parentNybbles, k), rangeNybbles[1:], wildIndices)...)
+		}
+		return toReturn
+	} else if val, ok := addrTreeNode.Children[rangeNybbles[0]]; !ok {
+		return []*net.IP{}
+	} else {
+		return val.getIPsInGenRange(append(parentNybbles, rangeNybbles[0]), rangeNybbles[1:], wildIndices)
+	}
+}
+
+func (addrTreeNode *AddressTreeNode) countIPsInGenRange(rangeNybbles []uint8, wildIndices map[int]internal.Empty) int {
+	if len(rangeNybbles) == 0 {
+		return 1
+	} else if _, ok := wildIndices[addrTreeNode.Depth]; ok {
+		var toReturn = 0
+		for _, v := range addrTreeNode.Children {
+			toReturn += v.countIPsInGenRange(rangeNybbles[1:], wildIndices)
+		}
+		return toReturn
+	} else if val, ok := addrTreeNode.Children[rangeNybbles[0]]; !ok {
+		return 0
+	} else {
+		return val.countIPsInGenRange(rangeNybbles[1:], wildIndices)
 	}
 }
