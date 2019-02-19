@@ -245,6 +245,33 @@ func GetByteWithBitsMasked(bitMaskLength uint) byte {
 	return (byte)(^(0xff >> bitMaskLength))
 }
 
+func NetworkToUints(toProcess *net.IPNet) (uint64, uint64, uint64, uint64) {
+	ones, _ := toProcess.Mask.Size()
+	lowerFirst, lowerSecond := AddressToUints(toProcess.IP)
+	var upperFirst uint64
+	var upperSecond uint64
+	if ones == 0 || ones == 128 {
+		upperFirst, upperSecond = lowerFirst, lowerSecond
+	} else if ones == 64 {
+		upperFirst, upperSecond = lowerFirst, ^uint64(0)
+	} else if ones < 64 {
+		upperSecond = ^uint64(0)
+		upperFirst = uint64(0)
+		for i := 0; i < 64 - ones; i++ {
+			upperFirst ^= uint64(1) << uint(i)
+		}
+		upperFirst ^= lowerFirst
+	} else {
+		upperFirst = lowerFirst
+		upperSecond = uint64(0)
+		for i := 0; i < 128 - ones; i++ {
+			upperSecond ^= uint64(1) << uint(i)
+		}
+		upperSecond ^= lowerSecond
+	}
+	return lowerFirst, lowerSecond, upperFirst, upperSecond
+}
+
 func GetNetworkFromUints(uints [2]uint64, length uint8) *net.IPNet {
 	//TODO there has to be a better way to do this, esp with the creating a mask approach
 	var addrBytes []byte

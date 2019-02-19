@@ -1,4 +1,4 @@
-package cmd
+package generate
 
 import (
 	"github.com/lavalamp-/ipv666/internal/app"

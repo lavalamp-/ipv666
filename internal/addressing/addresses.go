@@ -127,11 +127,12 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 
 func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
-	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	writer := bufio.NewWriter(file)
+
 	for _, addr := range addrs {
 		writer.Write(*addr)
 	}
@@ -245,4 +246,28 @@ func FlipBitsInAddress(toFlip *net.IP, startIndex uint8, endIndex uint8) *net.IP
 	toReturn := net.IP(flipBytes)
 	return &toReturn
 
+}
+
+func AddressToUints(toProcess net.IP) (uint64, uint64) {
+	var first uint64 = 0
+	var second uint64 = 0
+	for i := range toProcess {
+		if i < 8 {
+			first ^= uint64(toProcess[i]) << ((7 - uint(i)) * 8)
+		} else {
+			second ^= uint64(toProcess[i]) << ((15 - uint(i)) * 8)
+		}
+	}
+	return first, second
+}
+
+func UintsToAddress(first uint64, second uint64) *net.IP {
+	var addrBytes []byte
+	processBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(processBytes, first)
+	addrBytes = append(addrBytes, processBytes...)
+	binary.BigEndian.PutUint64(processBytes, second)
+	addrBytes = append(addrBytes, processBytes...)
+	newIP := net.IP(addrBytes)
+	return &newIP
 }

@@ -17,7 +17,6 @@ func init() {
 	Cmd.PersistentFlags().StringVarP(&targetNetwork, "network", "n", viper.GetString("ScanTargetNetwork"), "The IPv6 CIDR range to scan.")
 	viper.BindPFlag("PingScanBandwidth", Cmd.PersistentFlags().Lookup("bandwidth"))
 	viper.BindPFlag("ScanTargetNetwork", Cmd.PersistentFlags().Lookup("network"))
-
 	Cmd.AddCommand(discoverCmd)
 	Cmd.AddCommand(aliasCmd)
 }

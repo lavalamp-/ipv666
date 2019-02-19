@@ -60,8 +60,16 @@ func InitConfig() {
 	// Modeling
 
 	viper.BindEnv("ModelDefaultWeight")				// The default weight to give to model probability maps
+	viper.BindEnv("ModelDefaultSizePercent")			// The default percentage size of an address corpus for a predictive model
+	viper.BindEnv("ModelDefaultPickThreshold")		// The default percentage threshold for the cutoff in candidate cluster selection
+	viper.BindEnv("ModelDefaultDensityThreshold")	// The default minimum density threshold for clustering models
+	viper.BindEnv("ModelGenerationJitter")			// The default jitter (ie: % likelihood of a random wildcard) to use when generating new addresses
 
 	viper.SetDefault("ModelDefaultWeight", 10000)
+	viper.SetDefault("ModelDefaultSizePercent", 0.10)
+	viper.SetDefault("ModelDefaultPickThreshold", 0.25)
+	viper.SetDefault("ModelDefaultDensityThreshold", 0.2) //TODO figure out why configuration stuff isn't working with cobra's bindpflags
+	viper.SetDefault("ModelGenerationJitter", 0.01)
 
 	// Existing address bloom filter
 

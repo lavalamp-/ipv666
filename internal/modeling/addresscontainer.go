@@ -9,4 +9,7 @@ type AddressContainer interface {
 	GetIPsInRange(fromRange *net.IPNet) ([]*net.IP, error)
 	CountIPsInRange(fromRange *net.IPNet) (uint32, error)
 	ContainsIP(toCheck *net.IP) bool
+	CountIPsInGenRange(fromRange *GenRange) int
+	GetIPsInGenRange(fromRange *GenRange) []*net.IP
+	Size() int
 }

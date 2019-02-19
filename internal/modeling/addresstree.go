@@ -41,6 +41,10 @@ func CreateFromAddresses(toAdd []*net.IP, emitFreq int) *AddressTree {
 	return toReturn
 }
 
+func (addrTree *AddressTree) Size() int {
+	return int(addrTree.ChildrenCount)
+}
+
 func (addrTree *AddressTree) AddIP(toAdd *net.IP) bool {
 	ipNybbles := addressing.GetNybblesFromIP(toAdd, 32)
 	if addrTree.containsIPByNybbles(ipNybbles) {
@@ -57,7 +61,7 @@ func (addrTree *AddressTree) AddIP(toAdd *net.IP) bool {
 func (addrTree *AddressTree) AddIPs(toAdd []*net.IP, emitFreq int) (int, int) {
 	added, skipped := 0, 0
 	for i, curAdd := range toAdd {
-		if i % emitFreq == 0 {
+		if i % emitFreq == 0 && i != 0 {
 			logging.Infof("Adding IP address %d out of %d to address tree.", i, len(toAdd))
 		}
 		if addrTree.AddIP(curAdd) {
