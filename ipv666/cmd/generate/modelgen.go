@@ -15,7 +15,7 @@ func init() {
 	var densityThreshold float64 //TODO add functionality for providing model and pick sizes to command line
 	modelgenCmd.PersistentFlags().StringVarP(&inputPath, "input", "i", "", "An input file containing IPv6 addresses to use for the model.")
 	modelgenCmd.PersistentFlags().StringVarP(&outputPath, "out", "o", "", "The file path to write the resulting model to.")
-	modelgenCmd.PersistentFlags().Float64VarP(&densityThreshold, "density", "d", 0.2, "The minimum density threshold to build a model against.")
+	modelgenCmd.PersistentFlags().Float64VarP(&densityThreshold, "density", "d", 0.1, "The minimum density threshold to build a model against.")
 	modelgenCmd.MarkPersistentFlagRequired("input") //TODO figure out why persistentflagrequired ain't working
 	modelgenCmd.MarkPersistentFlagRequired("out")
 }

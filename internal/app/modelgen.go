@@ -27,16 +27,16 @@ func RunModelgen(inputPath string, outputPath string, density float64) {
 
 	modelSize = 500000
 	pickSize := 10000
-	pickCount = 5000
+	pickCount = 2500
 
-	if (modelSize / pickCount) * pickSize > len(addrs) {
-		logging.ErrorStringFf("With a size percentage of %f and a pick percentage of %f, there are not enough candidates generate the initial seeds.", modelSizePercent, modelPickPercent)
-	}
+	//if (modelSize / pickCount) * pickSize > len(addrs) {
+	//	logging.ErrorStringFf("With a size percentage of %f and a pick percentage of %f, there are not enough candidates generate the initial seeds.", modelSizePercent, modelPickPercent)
+	//}
 
 	logging.Infof("Building cluster set from %d with a base seed count of %d (top %d of %d each iteration).", len(addrs), modelSize, pickCount, pickSize)
 	logging.Infof("Density threshold is %f.", density)
 
-	model := modeling.GetBestClusterSetFromIPs(addrs, modelSize, pickCount, pickSize, density)
+	model := modeling.CreateClusteringModel(addrs)
 
 	logging.Infof("Done generating model. Now writing to output path at '%s'.", outputPath)
 

@@ -14,23 +14,29 @@ import (
 	"strings"
 )
 
+type ClusterModel struct {
+	ClusterSet			*ClusterSet					`msgpack:"c"`
+	NybbleCounts		[]map[uint8]int				`msgpack:"n"`
+	normalizedCounts	[][]uint8
+}
+
 type ClusterSet struct {
-	Clusters		[]*GenCluster
-	Captured		int
-	RangeSize		int
-	Density			float64
+	Clusters			[]*GenCluster				`msgpack:"c"`
+	Captured			int							`msgpack:"a"`
+	RangeSize			int							`msgpack:"s"`
+	Density				float64						`msgpack:"d"`
 }
 
 type GenCluster struct {
-	Range			*GenRange
-	Captured		int
-	Density			float64
-	Size			int
+	Range				*GenRange					`msgpack:"r"`
+	Captured			int							`msgpack:"c"`
+	Density				float64						`msgpack:"d"`
+	Size				int							`msgpack:"s"`
 }
 
 type GenRange struct {
-	AddrNybbles		[]uint8
-	WildIndices		map[int]internal.Empty
+	AddrNybbles			[]uint8						`msgpack:"n"`
+	WildIndices			map[int]internal.Empty		`msgpack:"w"`
 }
 
 type GenRangeMask struct {
@@ -44,6 +50,227 @@ type GenRangeMask struct {
 	SecondMax      uint64
 }
 
+type upgradeTracker struct {
+	count				int
+	candidateIndex		int
+}
+
+type upgradeCandidate struct {
+	tracker				*upgradeTracker
+	candidate			*GenCluster
+}
+
+type clusterList []*GenCluster
+
+// Model
+
+func CreateClusteringModel(fromAddrs []*net.IP) *ClusterModel {
+
+	// Convert all IPs to clusters and create corpus
+
+	logging.Infof("Preparing initial data structures from %d addresses.", len(fromAddrs))
+
+	clusters := newGenClusters(fromAddrs)
+	corpus := CreateFromAddresses(fromAddrs, viper.GetInt("LogLoopEmitFreq"))
+
+	logging.Infof("Done creating data structures from %d addresses.", len(fromAddrs))
+
+	// Calculate upgrade potential and create stardust from poor performers
+
+	logging.Infof("Now reviewing %d initial cluster candidates for poor performers.", len(fromAddrs))
+	var dustAddrs []*net.IP
+	var clusterMap = make(map[string]*internal.Empty)
+	var modelCandidates clusterList
+	empty := &internal.Empty{}
+
+	for i, cluster := range clusters {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
+			logging.Infof("Processing cluster %d out of %d for poor performers.", i, len(clusters))
+		}
+		upgradeDensity, upgradeCount, upgradeIndices := cluster.getBestUpgradeOptions(corpus)
+		if len(upgradeIndices) == 32 {  // If all upgrades are equivalent then all upgrades are bad
+			dustAddrs = append(dustAddrs, cluster.Range.GetIP())
+		} else {
+			for _, curIndex := range upgradeIndices {
+				newRange := cluster.Range.CopyWithIndices([]int{ curIndex })
+				newCluster := GenCluster{
+					Range: 		newRange,
+					Captured:	upgradeCount,
+					Density:	upgradeDensity,
+					Size:		int(newRange.Size()), // TODO undo silly typecasting
+				}
+				sig := newCluster.signature()
+				if _, ok := clusterMap[sig]; ok {
+					continue
+				} else {
+					modelCandidates = append(modelCandidates, &newCluster)
+					clusterMap[sig] = empty
+				}
+			}
+		}
+	}
+
+	initialModelCandidateSize := len(modelCandidates)
+	logging.Infof("Reviewed %d initial cluster candidates. %d are now stardust, %d are model candidates.", len(fromAddrs), len(dustAddrs), initialModelCandidateSize)
+
+	// Generate upgrade candidates
+
+	logging.Infof("Processing %d model candidates into upgrade candidates.", len(modelCandidates))
+	skipped := 0
+	var upgradeMap = make(map[string]*internal.Empty)
+	var upgradeCandidates clusterList
+
+	for i, cluster := range modelCandidates {
+		if i % viper.GetInt("LogLoopEmitFreq") == 0 {
+			logging.Infof("Processing model candidate %d out of %d for upgrade candidates.", i, len(modelCandidates))
+		}
+		upgradeDensity, upgradeCount, upgradeIndices := cluster.getBestUpgradeOptions(corpus)
+		if len(upgradeIndices) == 31 {  // Thee case where all upgrades are the same is not an upgrade
+			skipped++
+		} else {
+			for _, curIndex := range upgradeIndices {
+				newRange := cluster.Range.CopyWithIndices([]int{ curIndex })
+				newCluster := GenCluster{
+					Range: 		newRange,
+					Captured:	upgradeCount,
+					Density:	upgradeDensity,
+					Size:		int(newRange.Size()), // TODO undo silly typecasting
+				}
+				sig := newCluster.signature()
+				if _, ok := upgradeMap[sig]; !ok {
+					upgradeCandidates = append(upgradeCandidates, &newCluster)
+					upgradeMap[sig] = empty
+				} else {
+					skipped++
+				}
+			}
+		}
+	}
+
+	logging.Infof("Processed %d model candidates into %d upgrade candidates (skipped %d). Sorting results now.", len(modelCandidates), len(upgradeCandidates), skipped)
+	sort.Slice(upgradeCandidates, func(i, j int) bool {
+		return upgradeCandidates[i].Density > upgradeCandidates[j].Density
+	})
+	logging.Infof("Upgrade candidates sorted by density.")
+
+	// Enter into processing loop
+
+	iteration := 0
+	var lastScore float64
+	var lastClusterSet *ClusterSet
+
+	for {
+
+		// Take the next upgrade candidate in line
+
+		candidate := upgradeCandidates[0]
+		upgradeCandidates = upgradeCandidates[1:]
+		sig := candidate.signature()
+
+		// Test to see if this cluster has already been added
+
+		if _, ok := clusterMap[sig]; ok {
+			continue
+		}
+
+		// Calculate its upgrade candidates and insert them into the upgrade candidate list
+
+		upgradeDensity, upgradeCount, upgradeIndices := candidate.getBestUpgradeOptions(corpus)
+		if len(upgradeIndices) + len(candidate.Range.WildIndices) != 32 {  // So long as upgrade is not worst case scenario, we add them to upgrade candidates
+			for _, curIndex := range upgradeIndices {
+				newRange := candidate.Range.CopyWithIndices([]int{ curIndex })
+				newCluster := &GenCluster{
+					Range: 		newRange,
+					Captured:	upgradeCount,
+					Density:	upgradeDensity,
+					Size:		int(newRange.Size()), // TODO undo silly typecasting
+				}
+				sig := newCluster.signature()
+				if _, ok := upgradeMap[sig]; !ok {
+					upgradeCandidates = upgradeCandidates.insertByDensity(newCluster)
+					upgradeMap[sig] = empty
+				}
+			}
+		}
+
+		// Add the upgrade candidate to the list of model candidates
+
+		modelCandidates = append(modelCandidates, candidate)
+
+		// Add to the iteration counter and check to see if checkpoint should be evaluated
+
+		iteration++
+		if iteration % viper.GetInt("ModelCheckCount") == 0 {
+
+			logging.Infof("Evaluating %d model candidates for cluster model.", len(modelCandidates))
+
+			// Remove all redundant candidates
+
+			logging.Infof("Removing redundant clusters from model candidates...")
+			modelCandidates = modelCandidates.removeRedundant()
+			logging.Infof("Resulting model candidate list is down to length of %d.", len(modelCandidates))
+
+			// Create new cluster set from candidates
+
+			toCheck := newClusterSetFromClusters(modelCandidates)
+			toCheck.ResetCounts(corpus)
+
+			// Calculate cluster set score
+
+			capturedScore := float64(toCheck.Captured) / float64(len(fromAddrs))
+			densityScore := toCheck.Density
+			clusterCountScore := float64(initialModelCandidateSize - len(toCheck.Clusters)) / float64(initialModelCandidateSize)
+			cumulativeScore := (0.5 * densityScore) + (0.333333333 * capturedScore) + (0.16666666667 * clusterCountScore)
+
+			logging.Infof("Cluster set has %f density, %d captured, and %d size with %d clusters. Cluster set score is %f.", toCheck.Density, toCheck.Captured, toCheck.RangeSize, len(toCheck.Clusters), cumulativeScore)
+
+			if lastClusterSet == nil {
+				logging.Infof("No existing cluster set to compare against yet...")
+				lastScore = cumulativeScore
+				lastClusterSet = toCheck
+			} else if cumulativeScore >= lastScore {
+				logging.Infof("New cluster set has better score than last cluster set (%f vs %f). Continuing analysis.", cumulativeScore, lastScore)
+				lastScore = cumulativeScore
+				lastClusterSet = toCheck
+			} else {
+				logging.Infof("New cluster set's score of %f is worse than last score (%f). No more improvements to be made.", cumulativeScore, lastScore)
+				break
+			}
+		}
+	}
+
+	return &ClusterModel{
+		ClusterSet:	lastClusterSet,
+		NybbleCounts: addrsToNybbleCounts(dustAddrs),
+	}
+}
+
+func addrsToNybbleCounts(toProcess []*net.IP) []map[uint8]int {
+	var toReturn []map[uint8]int
+	for i := 0; i < 32; i++ {
+		toReturn = append(toReturn, make(map[uint8]int))
+	}
+	for _, curAddr := range toProcess {
+		for i, curNybble := range addressing.GetNybblesFromIP(curAddr, 32) {
+			if _, ok := toReturn[i][curNybble]; !ok {
+				toReturn[i][curNybble] = 0
+			}
+			toReturn[i][curNybble]++
+		}
+	}
+	return toReturn
+}
+
+func (clusterModel *ClusterModel) Save(filePath string) error {
+	return persist.Save(filePath, clusterModel)
+}
+
+func LoadModelFromFile(filePath string) (*ClusterModel, error) {
+	var toReturn ClusterModel
+	err := persist.Load(filePath, &toReturn)
+	return &toReturn, err
+}
+
 // ClusterSet
 
 func (clusterSet *ClusterSet) GenerateAddresses(generateCount int, jitter float64) []*net.IP {
@@ -51,7 +278,7 @@ func (clusterSet *ClusterSet) GenerateAddresses(generateCount int, jitter float6
 	iteration := 0
 	for {
 		if iteration % viper.GetInt("LogLoopEmitFreq") == 0 {
-			logging.Infof("Generating address %d out of %d using clustering model.", iteration, generateCount)
+			logging.Infof("Generating new candidate address %d using clustering model. Unique count size is %d.", iteration, toReturn.Size())
 		}
 		cluster := clusterSet.Clusters[rand.Int63n(int64(len(clusterSet.Clusters)))]
 		newAddr := cluster.generateAddr(jitter)
@@ -72,7 +299,7 @@ func (clusterSet *ClusterSet) Save(filePath string) error {
 
 func LoadClusterSetFromFile(filePath string) (*ClusterSet, error) {
 	var toReturn ClusterSet
-	err := persist.Load(filePath, toReturn)
+	err := persist.Load(filePath, &toReturn)
 	return &toReturn, err
 }
 
@@ -188,7 +415,7 @@ func (clusterSet *ClusterSet) GetUpgrade(corpus AddressContainer, densityThresho
 		logging.Infof("New density is the same but has more captured (%d vs %d).", nClusterSet.Captured, clusterSet.Captured)
 		return nClusterSet
 	} else {
-		logging.Infof("The new cluster set is not an upgrade.")
+		logging.Infof("The new cluster set is not an upgrade. Old captured and density: %d, %f, new captured and density: %d, %f.", clusterSet.Captured, clusterSet.Density, nClusterSet.Captured, nClusterSet.Density)
 		return nil
 	}
 }
@@ -346,6 +573,14 @@ func (clusterSet *ClusterSet) AddClusters(toAdd []*GenCluster) {
 
 // Cluster
 
+func newGenClusters(addrs []*net.IP) []*GenCluster {
+	var toReturn []*GenCluster
+	for _, addr := range addrs {
+		toReturn = append(toReturn, newGenCluster(addr))
+	}
+	return toReturn
+}
+
 func newGenCluster(firstIP *net.IP) *GenCluster {
 	return &GenCluster{
 		Range:			newGenRange(firstIP),
@@ -355,12 +590,101 @@ func newGenCluster(firstIP *net.IP) *GenCluster {
 	}
 }
 
+func (list clusterList) removeRedundant() clusterList {
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Size > list[j].Size
+	})
+	rangeTree := NewRangeTree()
+	var toReturn clusterList
+	for _, curCluster := range list {
+		if rangeTree.AddRange(curCluster.Range) {
+			toReturn = append(toReturn, curCluster)
+		}
+	}
+	return toReturn
+	//var toRemove = make(map[int]*internal.Empty)
+	//var empty = &internal.Empty{}
+	//for i := 0; i < len(list) - 1; i++ {
+	//	if i % 1000 == 0 {
+	//		logging.Infof("REDUN: %d", i)
+	//	}
+	//	for j := i+1; j < len(list); j++ {
+	//		if list[i].Range.Contains(list[j].Range) {
+	//			toRemove[j] = empty
+	//		}
+	//	}
+	//}
+	//var toReturn clusterList
+	//for i := range list {
+	//	if _, ok := toRemove[i]; !ok {
+	//		toReturn = append(toReturn, list[i])
+	//	}
+	//}
+	//return toReturn
+}
+
+func (list clusterList) insertByDensity(toInsert *GenCluster) clusterList {
+	if len(list) == 0 {
+		return []*GenCluster{ toInsert }
+	} else if len(list) == 1 {
+		if list[0].Density > toInsert.Density {
+			return []*GenCluster{ list[0], toInsert }
+		} else {
+			return []*GenCluster{ toInsert, list[0] }
+		}
+	} else {
+		index, _ := list.seekDensity(toInsert.Density)
+		list = append(list, &GenCluster{})
+		copy(list[index+1:], list[index:])
+		list[index] = toInsert
+		return list
+	}
+}
+
+func (list clusterList) seekDensity(density float64) (int, bool) {
+	if len(list) == 0 {
+		return 0, false
+	} else if density > list[0].Density {
+		return 0, false
+	} else if density == list[0].Density {
+		return 0, true
+	} else if density < list[len(list) - 1].Density {
+		return len(list), false
+	} else if density == list[len(list) - 1].Density {
+		return list.findFirstOfDensity(len(list) - 1, density), true
+	}
+	curLower := 0
+	curUpper := len(list)
+	for {
+		middle := curLower + (curUpper - curLower) / 2
+		if list[middle].Density == density {
+			return list.findFirstOfDensity(middle, density), true
+		} else if list[middle].Density > density {
+			curLower = middle
+		} else {
+			curUpper = middle
+		}
+		if curUpper - curLower == 1 {
+			return curUpper, false
+		}
+	}
+}
+
+func (list clusterList) findFirstOfDensity(searchStart int, density float64) int {
+	for i := searchStart; i >= 0; i-- {
+		if list[i].Density > density {
+			return i + 1
+		}
+	}
+	return 0
+}
+
 func (cluster *GenCluster) generateAddr(jitter float64) *net.IP {
 	var addrNybbles []uint8
 	for i := range cluster.Range.AddrNybbles {
 		if _, ok := cluster.Range.WildIndices[i]; ok {
 			addrNybbles = append(addrNybbles, uint8(rand.Int31n(16)))
-		} else if float64(rand.Int31n(10000)) / 100.0 <= jitter {
+		} else if float64(rand.Int31n(10000)) / 100.0 <= jitter * 100 {
 			addrNybbles = append(addrNybbles, uint8(rand.Int31n(16)))
 		} else {
 			addrNybbles = append(addrNybbles, cluster.Range.AddrNybbles[i])
@@ -417,6 +741,29 @@ func (cluster *GenCluster) getBestUpgradeOptions(corpus AddressContainer) (float
 }
 
 // Range
+
+func (genRange *GenRange) GetTreeNybbles() []uint16 {
+	var toReturn []uint16
+	for i := range genRange.AddrNybbles {
+		if _, ok := genRange.WildIndices[i]; ok {
+			toReturn = append(toReturn, 16)
+		} else {
+			toReturn = append(toReturn, uint16(genRange.AddrNybbles[i]))
+		}
+	}
+	return toReturn
+}
+
+func (genRange *GenRange) Contains(toCheck *GenRange) bool {
+	for i := range genRange.AddrNybbles {
+		if _, ok := genRange.WildIndices[i]; !ok {
+			if genRange.AddrNybbles[i] != toCheck.AddrNybbles[i] {
+				return false
+			}
+		}
+	}
+	return true
+}
 
 func (genRange *GenRange) GetIP() *net.IP {
 	return addressing.NybblesToIP(genRange.AddrNybbles)
