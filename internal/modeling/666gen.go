@@ -50,19 +50,143 @@ type GenRangeMask struct {
 	SecondMax      uint64
 }
 
-type upgradeTracker struct {
-	count				int
-	candidateIndex		int
-}
-
-type upgradeCandidate struct {
-	tracker				*upgradeTracker
-	candidate			*GenCluster
-}
-
 type clusterList []*GenCluster
 
 // Model
+
+func (clusterModel *ClusterModel) GenerateAddresses(generateCount int, jitter float64) []*net.IP {
+	addrTree := newAddressTree()
+	var toReturn []*net.IP
+	iteration := 0
+	for {
+		if iteration % viper.GetInt("LogLoopEmitFreq") == 0 {
+			logging.Infof("Generating new candidate address %d using clustering model. Unique count size is %d.", iteration, addrTree.Size())
+		}
+		newAddr := clusterModel.GenerateAddress(jitter)
+		if addrTree.AddIP(newAddr) {
+			toReturn = append(toReturn, newAddr)
+			if len(toReturn) >= generateCount {
+				break
+			}
+		}
+		iteration++
+	}
+	logging.Infof("Successfully generated %d addresses in %d iterations.", len(toReturn), iteration)
+	return toReturn
+}
+
+func (clusterModel *ClusterModel) GenerateAddress(jitter float64) *net.IP {
+	if len(clusterModel.normalizedCounts) == 0 {
+		clusterModel.generateNormalizedCounts()
+	}
+	index := rand.Int63n(int64(len(clusterModel.ClusterSet.Clusters)))
+	cluster := clusterModel.ClusterSet.Clusters[index]
+	var nybbles []uint8
+	for i := range cluster.Range.AddrNybbles {
+		if _, ok := cluster.Range.WildIndices[i]; ok {
+			nybbles = append(nybbles, uint8(rand.Int31n(16)))
+		} else if float64(rand.Int31n(10000)) / 100.0 <= jitter * 100 {
+			index := rand.Int63n(int64(len(clusterModel.normalizedCounts[i])))
+			nybbles = append(nybbles, clusterModel.normalizedCounts[i][index])
+		} else {
+			nybbles = append(nybbles, cluster.Range.AddrNybbles[i])
+		}
+	}
+	return addressing.NybblesToIP(nybbles)
+}
+
+func (clusterModel *ClusterModel) generateNormalizedCounts() {
+	var normalizedCounts [][]uint8
+	for _, curCounts := range clusterModel.NybbleCounts {
+		if len(curCounts) == 0 {
+			normalizedCounts = append(normalizedCounts, getCountsEvenDist())
+		} else if len(curCounts) < 16 {
+			normalizedCounts = append(normalizedCounts, getCountsWithMinDist(curCounts, viper.GetFloat64("ModelMinNybblePercent")))
+		} else {
+			normalizedCounts = append(normalizedCounts, normalizeCountsToMinPercent(curCounts, viper.GetFloat64("ModelMinNybblePercent")))
+		}
+	}
+	clusterModel.normalizedCounts = normalizedCounts
+}
+
+func getCountsEvenDist() []uint8 {
+	var addPercents = make(map[uint8]float64)
+	var i uint8
+	for i = 0; i < 16; i++ {
+		addPercents[i] = 1.0 / 16.0
+	}
+	return percentsToNybbleCounts(addPercents, viper.GetInt("ModelDistributionSize"))
+}
+
+func getCountsWithMinDist(counts map[uint8]int, minPercent float64) []uint8 {
+	existingCount := 0.0
+	for _, v := range counts {
+		existingCount += float64(v)
+	}
+	var i uint8
+	populateIndices := make(map[uint8]*internal.Empty)
+	calculateCount := 0
+	for i = 0; i < 16; i++ {
+		if val, ok := counts[i]; ok {
+			if float64(val) / existingCount < minPercent {
+				populateIndices[i] = &internal.Empty{}
+			} else {
+				calculateCount += val
+			}
+		} else {
+			populateIndices[i] = &internal.Empty{}
+		}
+	}
+	totalSize := float64(calculateCount) / (1.0 - (minPercent * float64(len(populateIndices))))
+	var addPercents = make(map[uint8]float64)
+	for i = 0; i < 16; i++ {
+		if _, ok := populateIndices[i]; ok {
+			addPercents[i] = minPercent
+		} else {
+			val, _ := counts[i]
+			addPercents[i] = float64(val) / totalSize
+		}
+	}
+	return percentsToNybbleCounts(addPercents, viper.GetInt("ModelDistributionSize"))
+}
+
+func normalizeCountsToMinPercent(counts map[uint8]int, minPercent float64) []uint8 {
+	var minFound = 999999999999999.0
+	var maxFound = -1.0
+	var totalFound = 0
+	for _, v := range counts {
+		minFound = math.Min(minFound, float64(v))
+		maxFound = math.Max(maxFound, float64(v))
+		totalFound += v
+	}
+	var addPercents = make(map[uint8]float64)
+	if minFound / float64(totalFound) < minPercent {
+		//middle := minFound + ((maxFound - minFound) / 2.0)
+		middle := float64(totalFound) / 16.0
+		toGrow := (minPercent * float64(totalFound)) - minFound
+		middleDistance := middle - minFound
+		middleShrinkPercent := (middleDistance - toGrow) / middleDistance
+		for k, v := range counts {
+			newVal := middle - ((middle - float64(v)) * middleShrinkPercent)
+			addPercents[k] = newVal / float64(totalFound)
+		}
+	} else {
+		for k, v := range counts {
+			addPercents[k] = float64(v) / float64(totalFound)
+		}
+	}
+	return percentsToNybbleCounts(addPercents, viper.GetInt("ModelDistributionSize"))
+}
+
+func percentsToNybbleCounts(fromPercents map[uint8]float64, distSize int) []uint8 {
+	var toReturn []uint8
+	for k, v := range fromPercents {
+		for i := 0; i < int(math.Ceil(v * float64(distSize))); i++ {
+			toReturn = append(toReturn, k)
+		}
+	}
+	return toReturn
+}
 
 func CreateClusteringModel(fromAddrs []*net.IP) *ClusterModel {
 
@@ -602,25 +726,6 @@ func (list clusterList) removeRedundant() clusterList {
 		}
 	}
 	return toReturn
-	//var toRemove = make(map[int]*internal.Empty)
-	//var empty = &internal.Empty{}
-	//for i := 0; i < len(list) - 1; i++ {
-	//	if i % 1000 == 0 {
-	//		logging.Infof("REDUN: %d", i)
-	//	}
-	//	for j := i+1; j < len(list); j++ {
-	//		if list[i].Range.Contains(list[j].Range) {
-	//			toRemove[j] = empty
-	//		}
-	//	}
-	//}
-	//var toReturn clusterList
-	//for i := range list {
-	//	if _, ok := toRemove[i]; !ok {
-	//		toReturn = append(toReturn, list[i])
-	//	}
-	//}
-	//return toReturn
 }
 
 func (list clusterList) insertByDensity(toInsert *GenCluster) clusterList {

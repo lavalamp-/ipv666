@@ -65,6 +65,8 @@ func InitConfig() {
 	viper.BindEnv("ModelDefaultDensityThreshold")	// The default minimum density threshold for clustering models
 	viper.BindEnv("ModelGenerationJitter")			// The default jitter (ie: % likelihood of a random wildcard) to use when generating new addresses
 	viper.BindEnv("ModelCheckCount")					// The number of upgrades to wait between checking for cluster model improvement
+	viper.BindEnv("ModelMinNybblePercent")			// The minimum percent probability of a nybble occurring in a cluster model
+	viper.BindEnv("ModelDistributionSize")			// The size of startdust distributions used for random nybble generation
 
 	viper.SetDefault("ModelDefaultWeight", 10000)
 	viper.SetDefault("ModelDefaultSizePercent", 0.10)
@@ -72,6 +74,8 @@ func InitConfig() {
 	viper.SetDefault("ModelDefaultDensityThreshold", 0.1) //TODO figure out why configuration stuff isn't working with cobra's bindpflags
 	viper.SetDefault("ModelGenerationJitter", 0.01)
 	viper.SetDefault("ModelCheckCount", 1000)
+	viper.SetDefault("ModelMinNybblePercent", 0.01)
+	viper.SetDefault("ModelDistributionSize", 1000)
 
 	// Existing address bloom filter
 
