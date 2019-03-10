@@ -23,7 +23,7 @@ for the 'scan' command.
 `)
 
 var blgenCmd = &cobra.Command{
-	Use:			"blgen",
+	Use:			"blacklist",
 	Short:			"Generate a scanning blacklist",
 	Long:			blgenLongDesc,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {

@@ -9,6 +9,7 @@ import (
 	"github.com/lavalamp-/ipv666/internal/zrandom"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"net"
 	"os"
@@ -294,4 +295,10 @@ func GetBorderAddressesFromNetwork(network *net.IPNet) (*net.IP, *net.IP) {
 	baseAddr := net.IP(baseAddrBytes)
 	topAddr := net.IP(topAddrBytes)
 	return &baseAddr, &topAddr
+}
+
+func GetNybblesFromNetwork(network *net.IPNet) []uint8 {
+	ones, _ := network.Mask.Size()
+	nybbleCount := int(math.Ceil(float64(ones) / 4.0))
+	return GetNybblesFromIP(&network.IP, nybbleCount)
 }

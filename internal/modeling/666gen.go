@@ -75,6 +75,32 @@ func (clusterModel *ClusterModel) GenerateAddresses(generateCount int, jitter fl
 	return toReturn
 }
 
+func (clusterModel *ClusterModel) GenerateAddressesFromNetwork(generateCount int, jitter float64, network *net.IPNet) ([]*net.IP, error) {
+	ones, _ := network.Mask.Size()
+	if ones % 4 != 0 {
+		return nil, fmt.Errorf("generating addresses in a network requires a network length that is divisible by 4 (got length of %d)", ones)
+	}
+	networkNybbles := addressing.GetNybblesFromNetwork(network)
+	var toReturn []*net.IP
+	iteration := 0
+	addrTree := newAddressTree()
+	for {
+		if iteration % viper.GetInt("LogLoopEmitFreq") == 0 {
+			logging.Infof("Generating new candidate address %d using clustering model. Unique count size is %d.", iteration, addrTree.Size())
+		}
+		newAddr := clusterModel.generateAddressFromNybbles(jitter, networkNybbles)
+		if addrTree.AddIP(newAddr) {
+			toReturn = append(toReturn, newAddr)
+			if len(toReturn) >= generateCount {
+				break
+			}
+		}
+		iteration++
+	}
+	logging.Infof("Successfully generated %d addresses in %d iterations.", len(toReturn), iteration)
+	return toReturn, nil
+}
+
 func (clusterModel *ClusterModel) GenerateAddress(jitter float64) *net.IP {
 	if len(clusterModel.normalizedCounts) == 0 {
 		clusterModel.generateNormalizedCounts()
@@ -93,6 +119,26 @@ func (clusterModel *ClusterModel) GenerateAddress(jitter float64) *net.IP {
 		}
 	}
 	return addressing.NybblesToIP(nybbles)
+}
+
+func (clusterModel *ClusterModel) generateAddressFromNybbles(jitter float64, fromNybbles []uint8) *net.IP {
+	if len(clusterModel.normalizedCounts) == 0 {
+		clusterModel.generateNormalizedCounts()
+	}
+	index := rand.Int63n(int64(len(clusterModel.ClusterSet.Clusters)))
+	cluster := clusterModel.ClusterSet.Clusters[index]
+	var nybbles []uint8
+	for i := len(fromNybbles); i < 32; i++ {
+		if _, ok := cluster.Range.WildIndices[i]; ok {
+			nybbles = append(nybbles, uint8(rand.Int31n(16)))
+		} else if float64(rand.Int31n(10000)) / 100.0 <= jitter * 100 {
+			index := rand.Int63n(int64(len(clusterModel.normalizedCounts[i])))
+			nybbles = append(nybbles, clusterModel.normalizedCounts[i][index])
+		} else {
+			nybbles = append(nybbles, cluster.Range.AddrNybbles[i])
+		}
+	}
+	return addressing.NybblesToIP(append(fromNybbles, nybbles...))
 }
 
 func (clusterModel *ClusterModel) generateNormalizedCounts() {
@@ -161,7 +207,6 @@ func normalizeCountsToMinPercent(counts map[uint8]int, minPercent float64) []uin
 	}
 	var addPercents = make(map[uint8]float64)
 	if minFound / float64(totalFound) < minPercent {
-		//middle := minFound + ((maxFound - minFound) / 2.0)
 		middle := float64(totalFound) / 16.0
 		toGrow := (minPercent * float64(totalFound)) - minFound
 		middleDistance := middle - minFound
