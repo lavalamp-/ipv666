@@ -112,9 +112,6 @@ func (clusterModel *ClusterModel) GenerateAddressesFromNetworkWithCallback(gener
 	var toReturn []*net.IP
 	iteration := 0
 	for len(toReturn) < generateCount {
-		if iteration % viper.GetInt("LogLoopEmitFreq") == 0 {
-			logging.Infof("Generating new candidate address %d using clustering model w/ callback function. Unique count size is %d.", iteration, len(toReturn))
-		}
 		newIP := clusterModel.generateAddressFromNybbles(jitter, networkNybbles)
 		isFiltered, err := fn(newIP)
 		if err != nil {
