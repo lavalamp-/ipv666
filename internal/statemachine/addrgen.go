@@ -38,7 +38,7 @@ func generateCandidateAddresses() error {
 
 	// Load the statistical model, blacklist, and bloom filter
 
-	model, err := data.GetProbabilisticAddressModel()
+	model, err := data.GetProbabilisticClusterModel()
 	if err != nil {
 		return err
 	}
@@ -63,10 +63,8 @@ func generateCandidateAddresses() error {
 	// Generate all of the addresses and filter out based on Bloom filter and blacklist
 
 	logging.Infof(
-		"Generating a total of %d addresses based on the content of model '%s' (%d digest count). Network range is %s.",
+		"Generating a total of %d addresses based on the content of cluster model. Network range is %s.",
 		viper.GetInt("GenerateAddressCount"),
-		model.Name,
-		model.DigestCount,
 		targetNetwork,
 	)
 	var addresses []*net.IP
@@ -110,7 +108,7 @@ func generateCandidateAddresses() error {
 		logging.Warnf("Error thrown when getting target network from config: %e", err)
 		return err
 	}
-	addresses, err = model.GenerateMultiIPFromNetwork(targetNetwork, viper.GetInt("GenerateAddressCount"), addrProcessFunc)
+	addresses, err = model.GenerateAddressesFromNetworkWithCallback(viper.GetInt("GenerateAddressCount"), viper.GetFloat64("ModelGenerationJitter"), targetNetwork, addrProcessFunc)
 	if err != nil {
 		logging.Warnf("Error thrown when generating multiple IP addresses for network %s: %e", targetNetwork, err)
 		return err

@@ -3,7 +3,6 @@ package data
 import (
 	"bytes"
 	"compress/zlib"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gobuffalo/packr/v2"
@@ -22,8 +21,6 @@ import (
 	"path/filepath"
 )
 
-var curAddressModel *modeling.ProbabilisticAddressModel
-var curAddressModelPath string
 var curCandidatePingResults []*net.IP
 var curCandidatePingResultsPath string
 var curScanResultsNetworkRanges []*net.IPNet
@@ -298,67 +295,6 @@ func GetCandidatePingResults() ([]*net.IP, error) {
 			UpdateCandidatePingResults(toReturn, filePath)
 		}
 		return toReturn, err
-	}
-}
-
-func UpdateProbabilisticAddressModel(model *modeling.ProbabilisticAddressModel, filePath string) {
-	curAddressModelPath = filePath
-	curAddressModel = model
-}
-
-func GetProbabilisticAddressModel() (*modeling.ProbabilisticAddressModel, error) {
-	modelDir := config.GetGeneratedModelDirPath()
-	logging.Debugf("Attempting to retrieve most recent probabilistic model from directory '%s'.", modelDir)
-	fileName, err := fs.GetMostRecentFileFromDirectory(modelDir)
-	if err != nil {
-		logging.Warnf("Error thrown when retrieving probabilistic model from directory '%s': %s", modelDir, err)
-		return &modeling.ProbabilisticAddressModel{}, err
-	} else if fileName == "" {
-		logging.Debugf("The directory at '%s' was empty.", modelDir)
-		if curAddressModel != nil {
-			logging.Debugf("Already have a model loaded from box. Using it.")
-			return curAddressModel, nil
-		}
-		logging.Debugf("Loading model from box.")
-		toReturn, err := getModelFromBox()
-		if err != nil {
-			return &modeling.ProbabilisticAddressModel{}, err
-		}
-		UpdateProbabilisticAddressModel(toReturn, "")
-		return toReturn, nil
-	}
-	filePath := filepath.Join(modelDir, fileName)
-	logging.Debugf("Most recent probabilistic address model is at path '%s'.", filePath)
-	if filePath == curAddressModelPath {
-		logging.Debugf("Already have model at path '%s' loaded in memory. Returning.", filePath)
-		return curAddressModel, nil
-	} else {
-		logging.Debugf("Loading probabilistic address model from path '%s'.", filePath)
-		toReturn, err := modeling.GetProbabilisticModelFromFile(filePath)
-		if err == nil {
-			UpdateProbabilisticAddressModel(toReturn, filePath)
-		}
-		return toReturn, err
-	}
-}
-
-func getModelFromBox() (*modeling.ProbabilisticAddressModel, error) {
-	content, err := packedBox.Find("model.zlib")
-	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
-	}
-	b := bytes.NewReader(content)
-	z, err := zlib.NewReader(b)
-	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
-	}
-	defer z.Close()
-	var toReturn modeling.ProbabilisticAddressModel
-	err = json.NewDecoder(z).Decode(&toReturn)
-	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
-	} else {
-		return &toReturn, nil
 	}
 }
 

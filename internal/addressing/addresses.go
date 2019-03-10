@@ -15,16 +15,6 @@ import (
 	"strings"
 )
 
-func FilterIPv4FromList(toParse []*net.IP) []*net.IP {
-	var toReturn []*net.IP
-	for _, curIP := range toParse {
-		if curIP.To4() == nil {
-			toReturn = append(toReturn, curIP)
-		}
-	}
-	return toReturn
-}
-
 func IsAddressIPv4(toCheck *net.IP) bool {
 	return toCheck.To4() != nil
 }

@@ -52,6 +52,8 @@ type GenRangeMask struct {
 
 type clusterList []*GenCluster
 
+type addrProcessFunc func(*net.IP) (bool, error)
+
 // Model
 
 func (clusterModel *ClusterModel) GenerateAddresses(generateCount int, jitter float64) []*net.IP {
@@ -98,6 +100,30 @@ func (clusterModel *ClusterModel) GenerateAddressesFromNetwork(generateCount int
 		iteration++
 	}
 	logging.Infof("Successfully generated %d addresses in %d iterations.", len(toReturn), iteration)
+	return toReturn, nil
+}
+
+func (clusterModel *ClusterModel) GenerateAddressesFromNetworkWithCallback(generateCount int, jitter float64, network *net.IPNet, fn addrProcessFunc) ([]*net.IP, error) {
+	ones, _ := network.Mask.Size()
+	if ones % 4 != 0 {
+		return nil, fmt.Errorf("generating addresses in a network requires a network length that is divisible by 4 (got length of %d)", ones)
+	}
+	networkNybbles := addressing.GetNybblesFromNetwork(network)
+	var toReturn []*net.IP
+	iteration := 0
+	for len(toReturn) < generateCount {
+		if iteration % viper.GetInt("LogLoopEmitFreq") == 0 {
+			logging.Infof("Generating new candidate address %d using clustering model w/ callback function. Unique count size is %d.", iteration, len(toReturn))
+		}
+		newIP := clusterModel.generateAddressFromNybbles(jitter, networkNybbles)
+		isFiltered, err := fn(newIP)
+		if err != nil {
+			return nil, err
+		} else if !isFiltered {
+			toReturn = append(toReturn, newIP)
+		}
+		iteration++
+	}
 	return toReturn, nil
 }
 

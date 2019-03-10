@@ -19,7 +19,6 @@ const (
 	SEEK_ALIASED_NETWORKS
 	PROCESS_ALIASED_NETWORKS
 	REM_BAD_ADDR
-	UPDATE_MODEL
 	UPDATE_ADDR_FILE
 	CLEAN_UP
 	EMIT_METRICS
@@ -33,7 +32,6 @@ type State int8
 var stateLoopTimers = make(map[string]metrics.Timer)
 
 func init() {
-	//TODO get rid of conf.MetricsStateLoopPrefix
 	for i := FIRST_STATE; i <= LAST_STATE; i++ {
 		key := getTimerKeyForLoop((int)(i))
 		timer := metrics.NewTimer()
@@ -134,12 +132,6 @@ func RunStateMachine() error {
 			// Remove all the addressing from the Zmap results that are in ranges that failed
 			// the test in the previous step
 			err := cleanBlacklistedAddresses()
-			if err != nil {
-				return err
-			}
-		case UPDATE_MODEL:
-			// Update the statistical model with the valid IPv6 results we have left over
-			err := updateModelWithSuccessfulHosts()
 			if err != nil {
 				return err
 			}

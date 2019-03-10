@@ -2,10 +2,15 @@ package modeling
 
 import (
 	"github.com/lavalamp-/ipv666/internal/addressing"
+	"github.com/lavalamp-/ipv666/internal/config"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 )
+
+func init() {
+	config.InitConfig()
+}
 
 func bytesToUint(bytes []byte) uint64 {  //TODO move helper functions to common test lib
 	toReturn := uint64(0)
