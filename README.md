@@ -4,13 +4,13 @@
 
 `ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
-If you're interested in how these tools work please refer to [this blog post](https://l.avala.mp/?p=285).
-
 The tools included in this codebase are as follows:
 
-* [`discover`](#discover) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
-* [`alias`](#alias) - Tests a single IPv6 network range to see if the network range is aliased
-* [`blgen`](#blgen) - Adds the contents of a file containing IPv6 network ranges to the aliased network blacklist
+* [`scan discover`](#scan-discover) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
+* [`scan alias`](#scan-alias) - Tests a single IPv6 network range to see if the network range is aliased
+* [`generate addresses`](#generate-addresses) - Generate IPv6 addresses based on the content of a probabilistic clustering model
+* [`generate model`](#generate-model) - Generate a probabilistic clustering model based off an input set of IPv6 addresses
+* [`generate blacklist`](#generate-blacklist) - Adds the contents of a file containing IPv6 network ranges to the aliased network blacklist
 * [`clean`](#clean) - Cleans the contents of a file containing IPv6 addresses based on an aliased network blacklist
 * [`convert`](#convert) - Converts the contents of a file containing IPv6 addresses to another IP address representation
 
@@ -41,9 +41,9 @@ Once this command completes you should have the `ipv666` binary on your path. If
 
 **NOTE** - This software is only intended to be run on Linux-based operating systems. Support for other operating systems is not presently planned.
 
-## discover
+## scan discover
 
-The `discover` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
+The `scan discover` tool is the main workhorse of this toolset. It uses some fairly complicated statistical modeling, analysis, and blacklisting to predict legitimate IPv6 addresses and scan for their presence. More details on how exactly this tool works can be found [in this blog post](https://l.avala.mp/?p=285).
 
 Please note that any networks that you scan with this tool will receive a considerable amount of traffic for a significant variety of IPv6 addresses. In some cases the networking infrastructure that is carrying your traffic will be unhappy and may either fall over and/or block you. We recommend exercising caution when using this tool (especially for targeted network scans) and choosing a `bandwidth` value with care (default is currently 20 Mbps).
 
@@ -83,9 +83,9 @@ Scan the network `2600:6000::/32` for live hosts over IPv6 with a maximum speed 
 ipv666 scan discover -b 10M -o addresses.txt -n 2600:6000::/32
 ```
 
-## alias
+## scan alias
 
-The `alias` tool will test a target network to see if it exhibits traits of being an aliased network (ie: all addresses in the range respond to ICMP pings). If the target network is aliased it will perform a binary search to find the exact network length for how large the aliased network is.
+The `scan alias` tool will test a target network to see if it exhibits traits of being an aliased network (ie: all addresses in the range respond to ICMP pings). If the target network is aliased it will perform a binary search to find the exact network length for how large the aliased network is.
 
 ### Usage
 
@@ -122,23 +122,96 @@ Test the network range `2600:9000:2173:6d50:5dca:2d48::/96` to see ifit's aliase
 ipv666 scan alias -n 2600:9000:2173:6d50:5dca:2d48::/96 -b 10M -l debug
 ```
 
-## blgen
+## generate addresses
 
-The `blgen` tool processes the content of a file containing IPv6 CIDR ranges (new-line delimited) and adds all of the network ranges to either (1) a new blacklist or (2) your existing blacklist. These blacklists are automatically located and loaded from specific file paths during the operation of [`discover`](#discover), [`alias`](#alias), and [`clean`](#clean).
+The `generate addresses` tool uses a predictive clustering model to generate a set number of IPv6 addresses. The addresses are subsequently written to a specified file.
+
+### Usage
+
+```$xslt
+This utility will generate IPv6 addresses in target network range (or in the global address 
+space) based on the default included cluster model or a cluster model that you specify.
+
+Usage:
+  ipv666 generate addresses [flags]
+
+Flags:
+  -c, --count int        The number of IP addresses to generate. (default 1000000)
+  -h, --help             help for addresses
+  -m, --model string     Local file path to the model to generate addresses from (if empty, 
+                         uses the default model packaged with ipv666).
+  -n, --network string   The address range to generate addresses within (if empty, generates 
+                         addresses in the global address space of ::/0).
+  -o, --out string       File path to where the generated IP addresses should be written.
+
+Global Flags:
+  -f, --force        Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string   The log level to emit logs at (one of debug, info, success, warn, error).
+```
+
+### Examples
+
+Generate 1,000,000 addresses in the global address space based on the default clustering model packaged with `ipv666` and write the results to a file at `/tmp/output`:
+
+```$xslt
+ipv666 generate addresses -o /tmp/output
+```
+
+Generate 500,000 addresses in the network `2600::/4` based on the model contained in the file at `/tmp/model` and write the results to a file at `/tmp/output`:
+
+```$xslt
+ipv666 generate addresses -c 500000 -n 2600::/4 -m /tmp/model -o /tmp/output
+``` 
+
+## generate model
+
+The `generate model` tool creates a new predictive clustering model based on a list of known IPv6 addresses.
+
+### Usage
+
+```$xslt
+This utility will generate a predictive clustering model based on the contents of
+an IPv6 address file.
+
+Usage:
+  ipv666 generate model [flags]
+
+Flags:
+  -h, --help           help for model
+  -i, --input string   An input file containing IPv6 addresses to use for the model.
+  -o, --out string     The file path to write the resulting model to.
+
+Global Flags:
+  -f, --force        Whether or not to force accept all prompts (useful for daemonized scanning).
+  -l, --log string   The log level to emit logs at (one of debug, info, success, warn, error).
+```
+
+### Examples
+
+Generate a new clustering model based on the IP addresses in the file `/tmp/addresses` and write the resulting model to the file `/tmp/model`:
+
+```$xslt
+ipv666 generate model -i /tmp/addresses -o /tmp/model
+```
+
+## generate blacklist
+
+The `generate blacklist` tool processes the content of a file containing IPv6 CIDR ranges (new-line delimited) and adds all of the network ranges to either (1) a new blacklist or (2) your existing blacklist. These blacklists are automatically located and loaded from specific file paths during the operation of [`discover`](#discover), [`alias`](#alias), and [`clean`](#clean).
 
 You will be prompted after invocation asking whether you'd like to create a new blacklist or add these new networks to your existing blacklist.
 
 ### Usage
 
 ```$xslt
-This utility takes a list of IPv6 CIDR ranges from a text file (new-line delimited), adds them to the 
-current network blacklist, and sets the new blacklist as the one to use for the 'scan' command.
+This utility takes a list of IPv6 CIDR ranges from a text file (new-line delimited),
+adds them to the current network blacklist, and sets the new blacklist as the one to use
+for the 'scan' command.
 
 Usage:
-  ipv666 blgen [flags]
+  ipv666 generate blacklist [flags]
 
 Flags:
-  -h, --help           help for blgen
+  -h, --help           help for blacklist
   -i, --input string   An input file containing IPv6 network ranges to build a blacklist from.
 
 Global Flags:
@@ -151,12 +224,12 @@ Global Flags:
 Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist:
 
 ```$xslt
-ipv666 blgen -i /tmp/addrranges
+ipv666 generate blacklist -i /tmp/addrranges
 ```
 
 Add the IPv6 CIDR ranges found in the file `/tmp/addrranges` to a blacklist and force accept all prompts:
 ```$xslt
-ipv666 blgen -i /tmp/addrranges -f
+ipv666 generate blacklist -i /tmp/addrranges -f
 ```
 
 ## clean
@@ -239,6 +312,16 @@ Convert the contents of the file at `/tmp/addresses` (in binary format) to fat h
 ```$xslt
 ipv666 convert -i /tmp/addresses -o /tmp/out -t hex
 ```
+
+## References
+
+We've given a few talks on `ipv666` and a few folks have had kind words to say about it. Here's a running list:
+
+* [The Daily Swig - IPv6 Scanning Tool Opens Up New Cybersphere for Researchers](https://portswigger.net/daily-swig/ipv6-scanning-tool-opens-up-new-cybersphere-for-researchers)
+* [Decipher - Mapping the Spectral Landscape of IPv6 Networks](https://duo.com/decipher/mapping-the-spectral-landscape-of-ipv6-networks)
+* [IPv666 - Address of the Beast Blog Post](https://l.avala.mp/?p=285)
+* [IPv666 - Address of the Beast @ ShmooCon 2019](https://www.youtube.com/watch?v=AayifEqLbhI)
+* [IPv666 - Address of the Beast @ Hack in the Box Dubai 2018](https://www.youtube.com/watch?v=bNp2nBvxkIQ)
 
 ## License
 
