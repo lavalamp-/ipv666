@@ -440,6 +440,12 @@ func LoadModelFromFile(filePath string) (*ClusterModel, error) {
 	return &toReturn, err
 }
 
+func LoadModelFromBytes(fromBytes []byte) (*ClusterModel, error) {
+	var toReturn ClusterModel
+	err := persist.Unmarshal(fromBytes, &toReturn)
+	return &toReturn, err
+}
+
 // ClusterSet
 
 func (clusterSet *ClusterSet) GenerateAddresses(generateCount int, jitter float64) []*net.IP {

@@ -36,6 +36,7 @@ var curBloomFilter *bloom.BloomFilter
 var curBloomFilterPath string
 var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
+var curClusterModel *modeling.ClusterModel
 var packedBox = packr.New("box","../../assets")
 
 //TODO add unit tests for making sure that the boxed assets are returned
@@ -361,6 +362,37 @@ func getModelFromBox() (*modeling.ProbabilisticAddressModel, error) {
 	}
 }
 
+func GetProbabilisticClusterModel() (*modeling.ClusterModel, error) {
+	if curClusterModel != nil {
+		logging.Debugf("Already have a cluster model loaded from box. Returning.")
+		return curClusterModel, nil
+	}
+	logging.Debugf("Loading cluster model from box...")
+	toReturn, err := getClusterModelFromBox()
+	if err != nil {
+		return &modeling.ClusterModel{}, err
+	}
+	curClusterModel = toReturn
+	return toReturn, nil
+}
+
+func getClusterModelFromBox() (*modeling.ClusterModel, error) {  //TODO generalize fetching from box and decompressing zlib
+	content, err := packedBox.Find("clustermodel.zlib")
+	if err != nil {
+		return &modeling.ClusterModel{}, err
+	}
+	b := bytes.NewReader(content)
+	z, err := zlib.NewReader(b)
+	if err != nil {
+		return &modeling.ClusterModel{}, err
+	}
+	defer z.Close()
+	modelBytes, err := ioutil.ReadAll(z)
+	if err != nil {
+		return &modeling.ClusterModel{}, err
+	}
+	return modeling.LoadModelFromBytes(modelBytes)
+}
 
 func GetMostRecentFilePathFromDir(candidateDir string) (string, error) {
 	logging.Debugf("Attempting to find most recent file path in directory '%s'.", candidateDir)
