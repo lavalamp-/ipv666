@@ -30,12 +30,12 @@ var modelgenCmd = &cobra.Command{
 
 		inputPath, err := cmd.PersistentFlags().GetString("input")
 
-		if inputPath == "" {
-			logging.ErrorStringFf("No input path supplied (-input or -i)")
-		}
-
 		if err != nil {
 			logging.ErrorF(err)
+		}
+
+		if inputPath == "" {
+			logging.ErrorStringFf("No input path supplied (-input or -i)")
 		}
 
 		if _, err := os.Stat(inputPath); os.IsNotExist(err) {
@@ -43,6 +43,10 @@ var modelgenCmd = &cobra.Command{
 		}
 
 		outputPath, err := cmd.PersistentFlags().GetString("out")
+
+		if err != nil {
+			logging.ErrorF(err)
+		}
 
 		if _, err := os.Stat(outputPath); !os.IsNotExist(err) {
 			logging.ErrorStringFf("A file already exists at the path '%s'. Please choose a different file path.", outputPath)

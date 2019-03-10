@@ -72,7 +72,7 @@ func InitConfig() {
 	viper.SetDefault("ModelDefaultSizePercent", 0.10)
 	viper.SetDefault("ModelDefaultPickThreshold", 0.25)
 	viper.SetDefault("ModelDefaultDensityThreshold", 0.1) //TODO figure out why configuration stuff isn't working with cobra's bindpflags
-	viper.SetDefault("ModelGenerationJitter", 0.01)
+	viper.SetDefault("ModelGenerationJitter", 0.1)
 	viper.SetDefault("ModelCheckCount", 1000)
 	viper.SetDefault("ModelMinNybblePercent", 0.01)
 	viper.SetDefault("ModelDistributionSize", 1000)
