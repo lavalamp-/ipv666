@@ -1,4 +1,4 @@
-package cmd
+package generate
 
 import (
 	"github.com/lavalamp-/ipv666/internal/app"
@@ -23,7 +23,7 @@ for the 'scan' command.
 `)
 
 var blgenCmd = &cobra.Command{
-	Use:			"blgen",
+	Use:			"blacklist",
 	Short:			"Generate a scanning blacklist",
 	Long:			blgenLongDesc,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {

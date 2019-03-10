@@ -50,10 +50,10 @@ func ValidateIPv6NetworkStringForScanning(toParse string) (*net.IPNet, error) {
 }
 
 func ValidateOutputFileType(toCheck string) error {
-	if toCheck == "txt" || toCheck == "bin" || toCheck == "hex" {
+	if toCheck == "txt" || toCheck == "bin" || toCheck == "hex" || toCheck == "tree" {
 		return nil
 	} else {
-		return fmt.Errorf("%s is not a valid output file type (expected 'txt', 'bin', or 'hex')", toCheck)
+		return fmt.Errorf("%s is not a valid output file type (expected 'txt', 'bin', 'tree', or 'hex')", toCheck)
 	}
 }
 

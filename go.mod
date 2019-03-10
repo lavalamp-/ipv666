@@ -9,6 +9,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.0.0-rc.13
 	github.com/google/uuid v1.1.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/mitchellh/go-homedir v1.0.0
@@ -21,6 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.3.0
+	github.com/vmihailenco/msgpack v4.0.2+incompatible
 	github.com/willf/bitset v1.1.9 // indirect
 	github.com/willf/bloom v2.0.3+incompatible
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3

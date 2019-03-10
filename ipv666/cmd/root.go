@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/lavalamp-/ipv666/internal/validation"
+	"github.com/lavalamp-/ipv666/ipv666/cmd/generate"
 	"github.com/lavalamp-/ipv666/ipv666/cmd/scan"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,10 +18,10 @@ func init() {
 	viper.BindPFlag("LogLevel", rootCmd.PersistentFlags().Lookup("log"))
 	viper.BindPFlag("ForceAcceptPrompts", rootCmd.PersistentFlags().Lookup("force"))
 
-	rootCmd.AddCommand(blgenCmd)
 	rootCmd.AddCommand(cleanCmd)
 	rootCmd.AddCommand(convertCmd)
 	rootCmd.AddCommand(scan.Cmd)
+	rootCmd.AddCommand(generate.Cmd)
 }
 
 var rootLongDesc = strings.TrimSpace(`

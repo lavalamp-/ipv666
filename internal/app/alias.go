@@ -87,7 +87,7 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP) (*net.IPNet, error
 			logging.Warnf("An error was thrown when trying to run ping scan: %s", err)
 			return nil, err
 		}
-		foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
+		foundAddrs, err := fs.ReadIPsFromHexFile(outputPath)
 		if err != nil {
 			logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 			return nil, err
@@ -144,7 +144,7 @@ func checkNetworkForAliased(inputNet *net.IPNet) (*net.IP, bool, error) {
 		return nil, false, err
 	}
 
-	foundAddrs, err := addressing.ReadIPsFromHexFile(outputPath)
+	foundAddrs, err := fs.ReadIPsFromHexFile(outputPath)
 	if err != nil {
 		logging.Warnf("Error thrown when reading IP addresses from file '%s': %e", outputPath, err)
 		return nil, false, err

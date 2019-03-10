@@ -10,23 +10,12 @@ import (
 	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/lavalamp-/ipv666/internal/zrandom"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
 )
 
-func FilterIPv4FromList(toParse []*net.IP) ([]*net.IP) {
-	var toReturn []*net.IP
-	for _, curIP := range toParse {
-		if curIP.To4() == nil {
-			toReturn = append(toReturn, curIP)
-		}
-	}
-	return toReturn
-}
-
-func IsAddressIPv4(toCheck *net.IP) (bool) {
+func IsAddressIPv4(toCheck *net.IP) bool {
 	return toCheck.To4() != nil
 }
 
@@ -72,54 +61,6 @@ func GetUniqueIPs(ips []*net.IP, updateFreq int) []*net.IP {
 	return toReturn
 }
 
-func FatHexStringToIP(toParse string) (*net.IP, error) {
-	data, err := hex.DecodeString(toParse)
-	if err != nil {
-		return nil, err
-	}
-	ip := net.IP(data)
-	return &ip, nil
-}
-
-func ReadIPsFromFatHexFileBytes(toParse []byte) []*net.IP {
-	parseString := strings.TrimSpace(string(toParse))
-	lines := strings.Split(parseString, "\n")
-	var toReturn []*net.IP
-	for _, line := range lines {
-		lineStrip := strings.TrimSpace(line)
-		newIp, err := FatHexStringToIP(lineStrip)
-		if err != nil {
-			logging.Warnf("Error thrown when processing bytes %s as fat hex: %s", line, err.Error())
-		} else {
-			toReturn = append(toReturn, newIp)
-		}
-	}
-	return toReturn
-}
-
-func ReadIPsFromHexFileBytes(toParse []byte) []*net.IP {
-	parseString := strings.TrimSpace(string(toParse))
-	lines := strings.Split(parseString, "\n")
-	var toReturn []*net.IP
-	for _, line := range lines {
-		newIP := net.ParseIP(strings.TrimSpace(line))
-		if newIP == nil {
-			logging.Warnf("No IP found from content '%s'.", line)
-			continue
-		}
-		toReturn = append(toReturn, &newIP)
-	}
-	return toReturn
-}
-
-func ReadIPsFromHexFile(filePath string) ([]*net.IP, error) {
-	fileContent, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return ReadIPsFromHexFileBytes(fileContent), nil
-}
-
 func WriteIPsToHexFile(filePath string, addrs []*net.IP) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
@@ -134,23 +75,12 @@ func WriteIPsToHexFile(filePath string, addrs []*net.IP) error {
 	return nil
 }
 
-func GetTextLinesFromIPs(addrs []*net.IP) (string) {
+func GetTextLinesFromIPs(addrs []*net.IP) string {
 	var toReturn []string
 	for _, addr := range addrs {
 		toReturn = append(toReturn, fmt.Sprintf("%s\n", addr.String()))
 	}
 	return strings.Join(toReturn, "")
-}
-
-func ReadIPsFromBinaryFileBytes(toParse []byte) []*net.IP {
-	var toReturn []*net.IP
-	for i := 0; i < len(toParse); i += 16 {
-		ipBytes := make([]byte, 16)
-		copy(ipBytes, toParse[i:i+16])
-		newIP := net.IP(ipBytes)
-		toReturn = append(toReturn, &newIP)
-	}
-	return toReturn
 }
 
 func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
@@ -187,11 +117,12 @@ func ReadIPsFromBinaryFile(filePath string) ([]*net.IP, error) {
 
 func WriteIPsToBinaryFile(filePath string, addrs []*net.IP) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
-	writer := bufio.NewWriter(file)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	writer := bufio.NewWriter(file)
+
 	for _, addr := range addrs {
 		writer.Write(*addr)
 	}
@@ -216,29 +147,9 @@ func WriteIPsToFatHexFile(filePath string, addrs []*net.IP) error {
 	return nil
 }
 
-func ReadIPsFromFile(filePath string) ([]*net.IP, error) {
-	bytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-	return ParseIPsFromBytes(bytes)
-}
 
-func ParseIPsFromBytes(toParse []byte) ([]*net.IP, error) {
-	split := strings.Split(string(toParse), "\n")
-	toCheck := split[0]
-	if strings.Contains(toCheck, ":") {  // Standard ASCII hex with colons
-		return ReadIPsFromHexFileBytes(toParse), nil
-	} else if len(toCheck) == 32 {  // ASCII hex without colons
-		return ReadIPsFromFatHexFileBytes(toParse), nil
-	} else if len(toParse) % 16 != 0 {
-		return nil, errors.New("could not determine the format of IPv6 address bytes")
-	} else {  // Binary representation
-		return ReadIPsFromBinaryFileBytes(toParse), nil
-	}
-}
 
-func GetNybbleFromIP(ip *net.IP, index int) (uint8) {
+func GetNybbleFromIP(ip *net.IP, index int) uint8 {
 	// TODO fatal error if index > 31
 	byteIndex := index / 2
 	addrBytes := ([]byte)(*ip)
@@ -250,7 +161,7 @@ func GetNybbleFromIP(ip *net.IP, index int) (uint8) {
 	}
 }
 
-func GetNybblesFromIP(ip *net.IP, nybbleCount int) ([]uint8) {
+func GetNybblesFromIP(ip *net.IP, nybbleCount int) []uint8 {
 	var toReturn []uint8
 	for i := 0; i < nybbleCount; i++ {
 		toReturn = append(toReturn, GetNybbleFromIP(ip, i))
@@ -258,13 +169,29 @@ func GetNybblesFromIP(ip *net.IP, nybbleCount int) ([]uint8) {
 	return toReturn
 }
 
-func GenerateRandomAddress() (*net.IP) {
+func NybblesToIP(nybbles []uint8) *net.IP {
+	var bytes []byte
+	var curByte byte = 0x0
+	for i, curNybble := range nybbles {
+		if i % 2 == 0 {
+			curByte ^= curNybble << 4
+		} else {
+			curByte ^= curNybble
+			bytes = append(bytes, curByte)
+			curByte = 0x0
+		}
+	}
+	newIP := net.IP(bytes)
+	return &newIP
+}
+
+func GenerateRandomAddress() *net.IP {
 	bytes := zrandom.GenerateHostBits(128)
 	toReturn := net.IP(bytes)
 	return &toReturn
 }
 
-func FlipBitsInAddress(toFlip *net.IP, startIndex uint8, endIndex uint8) (*net.IP) {
+func FlipBitsInAddress(toFlip *net.IP, startIndex uint8, endIndex uint8) *net.IP {
 	toFlipBytes := *toFlip
 	endIndex++
 	startByte := startIndex / 8
@@ -309,4 +236,28 @@ func FlipBitsInAddress(toFlip *net.IP, startIndex uint8, endIndex uint8) (*net.I
 	toReturn := net.IP(flipBytes)
 	return &toReturn
 
+}
+
+func AddressToUints(toProcess net.IP) (uint64, uint64) {
+	var first uint64 = 0
+	var second uint64 = 0
+	for i := range toProcess {
+		if i < 8 {
+			first ^= uint64(toProcess[i]) << ((7 - uint(i)) * 8)
+		} else {
+			second ^= uint64(toProcess[i]) << ((15 - uint(i)) * 8)
+		}
+	}
+	return first, second
+}
+
+func UintsToAddress(first uint64, second uint64) *net.IP {
+	var addrBytes []byte
+	processBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(processBytes, first)
+	addrBytes = append(addrBytes, processBytes...)
+	binary.BigEndian.PutUint64(processBytes, second)
+	addrBytes = append(addrBytes, processBytes...)
+	newIP := net.IP(addrBytes)
+	return &newIP
 }

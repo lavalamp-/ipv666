@@ -52,16 +52,20 @@ func InitConfig() {
 	// Candidate address generation
 
 	viper.BindEnv("GenerateAddressCount")			// How many addressing to generate in a given iteration
-	viper.BindEnv("GenerateFirstNybble")				// The first nybble of IPv6 addressing to generate
 
 	viper.SetDefault("GenerateAddressCount", 1000000)
-	viper.SetDefault("GenerateFirstNybble", 2)
 
 	// Modeling
 
-	viper.BindEnv("ModelDefaultWeight")				// The default weight to give to model probability maps
+	viper.BindEnv("ModelGenerationJitter")			// The default jitter (ie: % likelihood of a random wildcard) to use when generating new addresses
+	viper.BindEnv("ModelCheckCount")					// The number of upgrades to wait between checking for cluster model improvement
+	viper.BindEnv("ModelMinNybblePercent")			// The minimum percent probability of a nybble occurring in a cluster model
+	viper.BindEnv("ModelDistributionSize")			// The size of startdust distributions used for random nybble generation
 
-	viper.SetDefault("ModelDefaultWeight", 10000)
+	viper.SetDefault("ModelGenerationJitter", 0.1) //TODO figure out why configuration stuff isn't working with cobra's bindpflags
+	viper.SetDefault("ModelCheckCount", 1000)
+	viper.SetDefault("ModelMinNybblePercent", 0.01)
+	viper.SetDefault("ModelDistributionSize", 1000)
 
 	// Existing address bloom filter
 
@@ -125,7 +129,6 @@ func InitConfig() {
 
 	// Metrics
 
-	viper.BindEnv("MetricsStateLoopPrefix")			// The prefix for the state loop metric
 	viper.BindEnv("ExitOnFailedMetrics")				// Whether or not to exit the program when a metrics operation fails
 	viper.BindEnv("MetricsToStdout")					// Whether or not to print metrics to Stdout
 	viper.BindEnv("MetricsStdoutFreq")				// The frequency in seconds of how often to print metrics to Stdout
@@ -134,7 +137,6 @@ func InitConfig() {
 	viper.BindEnv("GraphitePort")					// The Graphite port
 	viper.BindEnv("GraphiteEmitFreq")				// How often to emit metrics to Graphite in seconds
 
-	viper.SetDefault("MetricsStateLoopPrefix", "stateloop")
 	viper.SetDefault("ExitOnFailedMetrics", false)
 	viper.SetDefault("MetricsToStdout", false)
 	viper.SetDefault("MetricsStdoutFreq", 300)
@@ -148,19 +150,13 @@ func InitConfig() {
 	viper.BindEnv("OutputFileName")					// The file name for the file to write addresses to
 	viper.BindEnv("OutputFileType")					// The output file type
 
-	viper.SetDefault("OutputFileName", "discovered_addrs")
+	viper.SetDefault("OutputFileName", "discovered_addrs")  //TODO remove default output file name and type
 	viper.SetDefault("OutputFileType", "txt")
 
 	// Input
 
-	viper.BindEnv("InputEntropyThreshold")			// The threshold upon which addresses having more entropy will be removed
-	viper.BindEnv("InputEntropyBitLength")			// The number of bits within IP addresses to calculate entropy based on
-	viper.BindEnv("InputMinAddresses")				// The recommended minimum number of addresses to require for a given statistical model
 	viper.BindEnv("InputMinTargetCount")				// The minimum bit count for network sizes to scan
 
-	viper.SetDefault("InputEntropyThreshold", 0.9)
-	viper.SetDefault("InputEntropyBitLength", 64)
-	viper.SetDefault("InputMinAddresses", 100000)
 	viper.SetDefault("InputMinTargetCount", 30)
 
 	// Runtime

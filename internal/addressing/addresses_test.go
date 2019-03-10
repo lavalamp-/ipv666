@@ -47,3 +47,64 @@ func TestFlipBitsInAddress(t *testing.T) {
 	expectedAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:5555:5555:5555:5555")
 	assert.Equal(t, expectedAddr.String(), flipAddr.String())
 }
+
+func TestAddressToUintsZeroesFirst(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0000:0000:0000:0000:0000")
+	first, _ := AddressToUints(testAddr)
+	assert.EqualValues(t, 0, first)
+}
+
+func TestAddressToUintsZeroesSecond(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0000:0000:0000:0000:0000")
+	_, second := AddressToUints(testAddr)
+	assert.EqualValues(t, 0, second)
+}
+
+func TestAddressToUintsOnesFirst(t *testing.T) {
+	testAddr := net.ParseIP("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+	first, _ := AddressToUints(testAddr)
+	assert.EqualValues(t, ^uint64(0), first)
+}
+
+func TestAddressToUintsOnesSecond(t *testing.T) {
+	testAddr := net.ParseIP("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+	_, second := AddressToUints(testAddr)
+	assert.EqualValues(t, ^uint64(0), second)
+}
+
+func TestAddressToUintsOneFirst(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0001:0000:0000:0000:0001")
+	first, _ := AddressToUints(testAddr)
+	assert.EqualValues(t, 1, first)
+}
+
+func TestAddressToUintsOneSecond(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0001:0000:0000:0000:0001")
+	_, second := AddressToUints(testAddr)
+	assert.EqualValues(t, 1, second)
+}
+
+func TestUintsToAddressZeroes(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0000:0000:0000:0000:0000")
+	resultAddr := UintsToAddress(uint64(0), uint64(0))
+	assert.EqualValues(t, testAddr, *resultAddr)
+}
+
+func TestUintsToAddressOnes(t *testing.T) {
+	testAddr := net.ParseIP("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+	resultAddr := UintsToAddress(^uint64(0), ^uint64(0))
+	assert.EqualValues(t, testAddr, *resultAddr)
+}
+
+func TestUintsToAddressLow(t *testing.T) {
+	testAddr := net.ParseIP("0000:0000:0000:0001:0000:0000:0000:0001")
+	resultAddr := UintsToAddress(uint64(1), uint64(1))
+	assert.EqualValues(t, testAddr, *resultAddr)
+}
+
+func TestUintsToAddressHigh(t *testing.T) {
+	testAddr := net.ParseIP("8000:0000:0000:0000:8000:0000:0000:0000")
+	baseUint := uint64(1) << 63
+	resultAddr := UintsToAddress(baseUint, baseUint)
+	assert.EqualValues(t, testAddr, *resultAddr)
+}

@@ -2,7 +2,10 @@ package app
 
 import (
 	"github.com/lavalamp-/ipv666/internal/addressing"
+	"github.com/lavalamp-/ipv666/internal/fs"
 	"github.com/lavalamp-/ipv666/internal/logging"
+	"github.com/lavalamp-/ipv666/internal/modeling"
+	"github.com/spf13/viper"
 )
 
 func RunConvert(inputPath string, outputPath string, outputType string) {
@@ -10,7 +13,7 @@ func RunConvert(inputPath string, outputPath string, outputType string) {
 	logging.Infof("Reading IPv6 addresses from path at '%s', converting to type '%s', and writing results to '%s'.", inputPath, outputType, outputPath)
 
 	var err error
-	addrs, err := addressing.ReadIPsFromFile(inputPath)
+	addrs, err := fs.ReadIPsFromFile(inputPath)
 
 	if err != nil {
 		logging.ErrorF(err)
@@ -24,6 +27,9 @@ func RunConvert(inputPath string, outputPath string, outputType string) {
 		err = addressing.WriteIPsToBinaryFile(outputPath, addrs)
 	case "hex":
 		err = addressing.WriteIPsToFatHexFile(outputPath, addrs)
+	case "tree":
+		newTree := modeling.CreateFromAddresses(addrs, viper.GetInt("LogLoopEmitFreq"))
+		err = newTree.Save(outputPath)
 	}
 
 	if err != nil {

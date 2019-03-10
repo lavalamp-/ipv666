@@ -3,7 +3,6 @@ package data
 import (
 	"bytes"
 	"compress/zlib"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gobuffalo/packr/v2"
@@ -22,8 +21,6 @@ import (
 	"path/filepath"
 )
 
-var curAddressModel *modeling.ProbabilisticAddressModel
-var curAddressModelPath string
 var curCandidatePingResults []*net.IP
 var curCandidatePingResultsPath string
 var curScanResultsNetworkRanges []*net.IPNet
@@ -36,6 +33,7 @@ var curBloomFilter *bloom.BloomFilter
 var curBloomFilterPath string
 var curAliasedNetworks []*net.IPNet
 var curAliasedNetworksPath string
+var curClusterModel *modeling.ClusterModel
 var packedBox = packr.New("box","../../assets")
 
 //TODO add unit tests for making sure that the boxed assets are returned
@@ -97,7 +95,7 @@ func UpdateBloomFilter(filter *bloom.BloomFilter, filePath string) {
 
 func LoadBloomFilterFromOutput() (*bloom.BloomFilter, error) {
 	logging.Debugf("Creating Bloom filter from output file '%s'.", config.GetOutputFilePath())
-	ips, err := addressing.ReadIPsFromHexFile(config.GetOutputFilePath())
+	ips, err := fs.ReadIPsFromHexFile(config.GetOutputFilePath())
 	ips = addressing.GetUniqueIPs(ips, viper.GetInt("LogLoopEmitFreq"))
 	if err != nil {
 		return nil, err
@@ -292,7 +290,7 @@ func GetCandidatePingResults() ([]*net.IP, error) {
 		return curCandidatePingResults, nil
 	} else {
 		logging.Debugf("Loading candidate ping results from path '%s'.", filePath)
-		toReturn, err := addressing.ReadIPsFromHexFile(filePath)
+		toReturn, err := fs.ReadIPsFromHexFile(filePath)
 		if err == nil {
 			UpdateCandidatePingResults(toReturn, filePath)
 		}
@@ -300,67 +298,37 @@ func GetCandidatePingResults() ([]*net.IP, error) {
 	}
 }
 
-func UpdateProbabilisticAddressModel(model *modeling.ProbabilisticAddressModel, filePath string) {
-	curAddressModelPath = filePath
-	curAddressModel = model
+func GetProbabilisticClusterModel() (*modeling.ClusterModel, error) {
+	if curClusterModel != nil {
+		logging.Debugf("Already have a cluster model loaded from box. Returning.")
+		return curClusterModel, nil
+	}
+	logging.Debugf("Loading cluster model from box...")
+	toReturn, err := getClusterModelFromBox()
+	if err != nil {
+		return &modeling.ClusterModel{}, err
+	}
+	curClusterModel = toReturn
+	return toReturn, nil
 }
 
-func GetProbabilisticAddressModel() (*modeling.ProbabilisticAddressModel, error) {
-	modelDir := config.GetGeneratedModelDirPath()
-	logging.Debugf("Attempting to retrieve most recent probabilistic model from directory '%s'.", modelDir)
-	fileName, err := fs.GetMostRecentFileFromDirectory(modelDir)
+func getClusterModelFromBox() (*modeling.ClusterModel, error) {  //TODO generalize fetching from box and decompressing zlib
+	content, err := packedBox.Find("clustermodel.zlib")
 	if err != nil {
-		logging.Warnf("Error thrown when retrieving probabilistic model from directory '%s': %s", modelDir, err)
-		return &modeling.ProbabilisticAddressModel{}, err
-	} else if fileName == "" {
-		logging.Debugf("The directory at '%s' was empty.", modelDir)
-		if curAddressModel != nil {
-			logging.Debugf("Already have a model loaded from box. Using it.")
-			return curAddressModel, nil
-		}
-		logging.Debugf("Loading model from box.")
-		toReturn, err := getModelFromBox()
-		if err != nil {
-			return &modeling.ProbabilisticAddressModel{}, err
-		}
-		UpdateProbabilisticAddressModel(toReturn, "")
-		return toReturn, nil
-	}
-	filePath := filepath.Join(modelDir, fileName)
-	logging.Debugf("Most recent probabilistic address model is at path '%s'.", filePath)
-	if filePath == curAddressModelPath {
-		logging.Debugf("Already have model at path '%s' loaded in memory. Returning.", filePath)
-		return curAddressModel, nil
-	} else {
-		logging.Debugf("Loading probabilistic address model from path '%s'.", filePath)
-		toReturn, err := modeling.GetProbabilisticModelFromFile(filePath)
-		if err == nil {
-			UpdateProbabilisticAddressModel(toReturn, filePath)
-		}
-		return toReturn, err
-	}
-}
-
-func getModelFromBox() (*modeling.ProbabilisticAddressModel, error) {
-	content, err := packedBox.Find("model.zlib")
-	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
+		return &modeling.ClusterModel{}, err
 	}
 	b := bytes.NewReader(content)
 	z, err := zlib.NewReader(b)
 	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
+		return &modeling.ClusterModel{}, err
 	}
 	defer z.Close()
-	var toReturn modeling.ProbabilisticAddressModel
-	err = json.NewDecoder(z).Decode(&toReturn)
+	modelBytes, err := ioutil.ReadAll(z)
 	if err != nil {
-		return &modeling.ProbabilisticAddressModel{}, err
-	} else {
-		return &toReturn, nil
+		return &modeling.ClusterModel{}, err
 	}
+	return modeling.LoadModelFromBytes(modelBytes)
 }
-
 
 func GetMostRecentFilePathFromDir(candidateDir string) (string, error) {
 	logging.Debugf("Attempting to find most recent file path in directory '%s'.", candidateDir)

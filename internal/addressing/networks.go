@@ -9,17 +9,18 @@ import (
 	"github.com/lavalamp-/ipv666/internal/zrandom"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"net"
 	"os"
 	"strings"
 )
 
-func getFirst64BitsOfNetwork(network *net.IPNet) (uint64) {
+func getFirst64BitsOfNetwork(network *net.IPNet) uint64 {
 	return GetFirst64BitsOfIP(&network.IP)
 }
 
-func GenerateRandomNetworks(toGenerate int, minMaskLen int32) ([]*net.IPNet) {
+func GenerateRandomNetworks(toGenerate int, minMaskLen int32) []*net.IPNet {
 	var toReturn []*net.IPNet
 	for len(toReturn) < toGenerate {
 		addrBytes := zrandom.GenerateRandomBits(128)
@@ -30,7 +31,7 @@ func GenerateRandomNetworks(toGenerate int, minMaskLen int32) ([]*net.IPNet) {
 	return toReturn
 }
 
-func GetNetworksFromStrings(toParse []string) ([]*net.IPNet) {
+func GetNetworksFromStrings(toParse []string) []*net.IPNet {
 	var toReturn []*net.IPNet
 	for i, curParse := range toParse {
 		_, network, err := net.ParseCIDR(curParse)
@@ -45,7 +46,7 @@ func GetNetworksFromStrings(toParse []string) ([]*net.IPNet) {
 	return toReturn
 }
 
-func GetBaseAddressString(network *net.IPNet) (string) {
+func GetBaseAddressString(network *net.IPNet) string {
 	ipBytes := ([]byte)(network.IP)
 	maskBytes := ([]byte)(network.Mask)
 	var normalized []byte
@@ -57,7 +58,7 @@ func GetBaseAddressString(network *net.IPNet) (string) {
 	return fmt.Sprintf("%s/%d", ip, ones)
 }
 
-func GenerateRandomAddressesInNetwork(network *net.IPNet, addrCount int) ([]*net.IP) {
+func GenerateRandomAddressesInNetwork(network *net.IPNet, addrCount int) []*net.IP {
 	var existsMap = make(map[string]bool)
 	var toReturn []*net.IP
 	for len(toReturn) < addrCount {
@@ -70,7 +71,7 @@ func GenerateRandomAddressesInNetwork(network *net.IPNet, addrCount int) ([]*net
 	return toReturn
 }
 
-func GenerateRandomAddressInNetwork(network *net.IPNet) (*net.IP) {
+func GenerateRandomAddressInNetwork(network *net.IPNet) *net.IP {
 	ones, _ := network.Mask.Size()
 	randomBytes := zrandom.GenerateHostBits(128 - ones)
 	var newBytes []byte
@@ -81,7 +82,7 @@ func GenerateRandomAddressInNetwork(network *net.IPNet) (*net.IP) {
 	return &genIP
 }
 
-func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
+func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) []*net.IPNet {
 	checkMap := make(map[string]bool)
 	var toReturn []*net.IPNet
 	for i, curNet := range networks {
@@ -97,7 +98,7 @@ func GetUniqueNetworks(networks []*net.IPNet, updateFreq int) ([]*net.IPNet) {
 	return toReturn
 }
 
-func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
+func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
@@ -113,7 +114,7 @@ func WriteIPv6NetworksToFile(filePath string, networks []*net.IPNet) (error) {
 	return nil
 }
 
-func WriteIPv6NetworksToHexFile(filePath string, networks []*net.IPNet) (error) {
+func WriteIPv6NetworksToHexFile(filePath string, networks []*net.IPNet) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	writer := bufio.NewWriter(file)
 	if err != nil {
@@ -224,7 +225,7 @@ func ReadIPv6NetworksFromFile(filePath string) ([]*net.IPNet, error) {
 	return toReturn, nil
 }
 
-func GetByteMask(maskLength uint8) ([]byte) {
+func GetByteMask(maskLength uint8) []byte {
 	var toReturn []byte
 	byteCount := maskLength / 8
 	var i uint8
@@ -241,11 +242,38 @@ func GetByteMask(maskLength uint8) ([]byte) {
 	return toReturn
 }
 
-func GetByteWithBitsMasked(bitMaskLength uint) (byte) {
+func GetByteWithBitsMasked(bitMaskLength uint) byte {
 	return (byte)(^(0xff >> bitMaskLength))
 }
 
-func GetNetworkFromUints(uints [2]uint64, length uint8) (*net.IPNet) {
+func NetworkToUints(toProcess *net.IPNet) (uint64, uint64, uint64, uint64) {
+	ones, _ := toProcess.Mask.Size()
+	lowerFirst, lowerSecond := AddressToUints(toProcess.IP)
+	var upperFirst uint64
+	var upperSecond uint64
+	if ones == 0 || ones == 128 {
+		upperFirst, upperSecond = lowerFirst, lowerSecond
+	} else if ones == 64 {
+		upperFirst, upperSecond = lowerFirst, ^uint64(0)
+	} else if ones < 64 {
+		upperSecond = ^uint64(0)
+		upperFirst = uint64(0)
+		for i := 0; i < 64 - ones; i++ {
+			upperFirst ^= uint64(1) << uint(i)
+		}
+		upperFirst ^= lowerFirst
+	} else {
+		upperFirst = lowerFirst
+		upperSecond = uint64(0)
+		for i := 0; i < 128 - ones; i++ {
+			upperSecond ^= uint64(1) << uint(i)
+		}
+		upperSecond ^= lowerSecond
+	}
+	return lowerFirst, lowerSecond, upperFirst, upperSecond
+}
+
+func GetNetworkFromUints(uints [2]uint64, length uint8) *net.IPNet {
 	//TODO there has to be a better way to do this, esp with the creating a mask approach
 	var addrBytes []byte
 	processBytes := make([]byte, 8)
@@ -267,4 +295,10 @@ func GetBorderAddressesFromNetwork(network *net.IPNet) (*net.IP, *net.IP) {
 	baseAddr := net.IP(baseAddrBytes)
 	topAddr := net.IP(topAddrBytes)
 	return &baseAddr, &topAddr
+}
+
+func GetNybblesFromNetwork(network *net.IPNet) []uint8 {
+	ones, _ := network.Mask.Size()
+	nybbleCount := int(math.Ceil(float64(ones) / 4.0))
+	return GetNybblesFromIP(&network.IP, nybbleCount)
 }

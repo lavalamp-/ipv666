@@ -4,7 +4,7 @@ import (
 	"math/rand"
 )
 
-func GenerateHostBits(bitCount int) ([]byte) {
+func GenerateHostBits(bitCount int) []byte {
 	var toReturn []byte
 	var curByte byte = 0x00
 	curPos := 0
@@ -26,7 +26,7 @@ func GenerateHostBits(bitCount int) ([]byte) {
 	return toReturn
 }
 
-func GenerateRandomBits(bitCount uint8) ([]byte) {
+func GenerateRandomBits(bitCount uint8) []byte {
 	var toReturn []byte
 	var curByte byte = 0x00
 	curPos := 0
