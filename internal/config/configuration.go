@@ -94,14 +94,14 @@ func InitConfig() {
 	viper.SetDefault("BlacklistFlushInterval", 500000)
 
 	// Fan-out ping-scanning
-	viper.BindEnv("FanOutNetworkBlockSize")        // Number of contiguous neighboring /64 networks to attempt at a time
-	viper.BindEnv("FanOutNetworkHitThreshold")     // Minimum number of hits in a network block to warrant attempting the next block
-	viper.BindEnv("FanOutHostBlockSize")           // Number of contiguous neighboring /64 hosts to attempt at a time
-	viper.BindEnv("FanOutHostHitThreshold")        // Minimum number of hits in a host block to warrant attempting the next block
-	viper.SetDefault("FanOutNetworkBlockSize", 1000)
-	viper.SetDefault("FanOutNetworkHitThreshold", 1)
-	viper.SetDefault("FanOutHostBlockSize", 256)
-	viper.SetDefault("FanOutHostHitThreshold", 1)
+	viper.BindEnv("FanOutNetworkBlockSize")        // Number of contiguous neighboring /64 networks to attempt
+	viper.BindEnv("FanOutHostBlockSize")           // Number of contiguous hosts to attempt, monotonically increasing from each /64
+	viper.BindEnv("FanOutMaxNetworks")             // Maximum networks to attempt during fan-out scanning
+	viper.BindEnv("FanOutMaxHosts")                // Maximum hosts to attempt during fan-out scanning
+	viper.SetDefault("FanOutNetworkBlockSize", 500)
+	viper.SetDefault("FanOutHostBlockSize", 100)
+	viper.SetDefault("FanOutMaxNetworks", 1000000)
+	viper.SetDefault("FanOutMaxHosts", 1000000)
 
 	// Logging
 

@@ -63,10 +63,15 @@ func FanOut(bandwidth string) (string, error) {
 
   ips :=  make(chan net.IPAddr)
   newIps := make(map[string]struct{})
+
+  // Kick off the receive processor
+  outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
+  hitCount := uint64(0)
+  go processReplies(conn, outputPath, newIps, &hitCount)
+
   done := make(chan bool, 1)
   blockSize := viper.GetInt("FanOutNetworkBlockSize")
-  hitThreshold := viper.GetInt("FanOutNetworkHitThreshold")
-  up := true
+  maxNetworks := viper.GetInt("FanOutMaxHosts")
   go func(newIps map[string]struct{}) {
 
     // Load the discovered addresses
@@ -83,122 +88,95 @@ func FanOut(bandwidth string) (string, error) {
       }
     }
 
-    logging.Infof("Fanning out from %d discovered /64 networks", len(netIps))
+    logging.Infof("Fanning out from %d discovered /64 networks (network disovery)", len(netIps))
 
+    count := 0
     for k, _ := range netIps {
 
-      for k := range newIps {
-        delete(newIps, k)
-      }
-      seed := net.IP(*k)
-      seedBase := net.IP(*k)
+      seedUp := net.IP(*k)
+      seedDown := net.IP(*k)
 
-      // Network discovery
-      for 1 > 0 {
-
-        // Starting size
-        start := len(newIps)
-
-        // Generate $blockSize addresses
-        for x := 0; x < blockSize; x++ {
-          for d := 7; d >= 1; d-- {
-            if up == true {
-              seed[d] += 1
-              if seed[d] != 0 {
-                break
-              }  
-            } else {
-              seed[d] -= 1
-              if seed[d] != 0 {
-                break
-              }
-            }
-            
-          }
-          nextIp := net.IP(seed)
-          dstAddr := net.IPAddr{ IP: nextIp }
-          ips <- dstAddr
-        }
-
-        // Wait until they are all processed
-        for len(ips) > 0 {
-          fmt.Println(len(ips))
-          time.Sleep(1*time.Second)
-        }
-        time.Sleep(2*time.Second)
-
-        // Ending size
-        end := len(newIps)
-        if end - start < hitThreshold {
-          if up == true {
-            // When we hit the limit scanning up, scan down
-            up = false
-            seed = net.IP(seedBase)
-            continue
-          } else {
-            // If we've hit the limit both up and down, stop scanning
+      // Generate $blockSize addresses
+      for x := 0; x < blockSize; x++ {
+        for d := 7; d >= 1; d-- {
+          seedUp[d] += 1
+          if seedUp[d] != 0 {
             break
           }
         }
+        ips <- net.IPAddr{ IP: net.IP(seedUp) }
+        count += 1
       }
 
-      time.Sleep(1*time.Second)
-
-      // Host discovery
-      toScan := make(map[string]struct{})
-      for k, _ := range newIps {
-        toScan[k] = struct{}{}
-      }
-
-      blockSize = viper.GetInt("FanOutHostBlockSize")
-      hitThreshold = viper.GetInt("FanOutHostHitThreshold")
-
-      for k, _ := range toScan {
-        
-        for 1 > 0 {
-
-          seed = net.ParseIP(k)
-
-          // Starting size
-          start := len(newIps)
-
-          // Generate $blockSize addresses
-          for x := 0; x < blockSize; x++ {
-            for d := 15; d >= 8; d-- {
-              seed[d] += 1
-              if seed[d] != 0 {
-                break
-              }  
-            }
-
-            nextIp := net.IP(seed)
-            dstAddr := net.IPAddr{ IP: nextIp }
-            ips <- dstAddr
-          }
-
-          // Wait until they are all processed
-          for len(ips) > 0 {
-            time.Sleep(1*time.Second)
-          }
-
-          // Ending size
-          end := len(newIps)
-          if end - start < hitThreshold {
+      // Generate $blockSize addresses
+      for x := 0; x < blockSize; x++ {
+        for d := 7; d >= 1; d-- {
+          seedDown[d] -= 1
+          if seedDown[d] != 0 {
             break
           }
-
-          break
         }
+        ips <- net.IPAddr{ IP: net.IP(seedDown) }
+        count += 1
+      }
+
+      if count >= maxNetworks {
+        break
       }
     }
 
+    // Wait until the networks are all processed
+    for len(ips) > 0 {
+      logging.Debugf("Fan-out has %d networks remaining", len(ips))
+      time.Sleep(1*time.Second)
+    }
+    time.Sleep(2*time.Second)
+
+    logging.Infof("Fanning out from %d discovered /64 networks (host disovery)", (len(netIps) + len(newIps)))
+
+    // Host discovery
+    toScan := make(map[string]struct{})
+    for k, _ := range newIps {
+      toScan[k] = struct{}{}
+    }
+    for k, _ := range netIps {
+      toScan[k.String()] = struct{}{}
+    }
+
+    blockSize = viper.GetInt("FanOutHostBlockSize")
+    maxHosts := viper.GetInt("FanOutMaxHosts")
+
+    count = 0
+    for k, _ := range toScan {
+
+      seed := net.ParseIP(k)
+
+      // Generate $blockSize addresses
+      for x := 0; x < blockSize; x++ {
+        for d := 15; d >= 8; d-- {
+          seed[d] += 1
+          if seed[d] != 0 {
+            break
+          }  
+        }
+        ips <- net.IPAddr{ IP: net.IP(seed) }
+        count += 1
+      }
+
+      if count >= maxHosts {
+        break
+      }
+    }
+
+    // Wait until they are all processed
+    for len(ips) > 0 {
+      logging.Debugf("Fan-out has %d networks remaining", len(ips))
+      time.Sleep(1*time.Second)
+    }
+    time.Sleep(1*time.Second)
+
     done <- true    
   }(newIps)
-
-  // Kick off the receive processor
-  outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
-  hitCount := uint64(0)
-  go processReplies(conn, outputPath, newIps, &hitCount)
 
   // Ping each address
   seq := uint16(0)
