@@ -93,6 +93,16 @@ func InitConfig() {
 
 	viper.SetDefault("BlacklistFlushInterval", 500000)
 
+	// Fan-out ping-scanning
+	viper.BindEnv("FanOutNetworkBlockSize")        // Number of contiguous neighboring /64 networks to attempt at a time
+	viper.BindEnv("FanOutNetworkHitThreshold")     // Minimum number of hits in a network block to warrant attempting the next block
+	viper.BindEnv("FanOutHostBlockSize")           // Number of contiguous neighboring /64 hosts to attempt at a time
+	viper.BindEnv("FanOutHostHitThreshold")        // Minimum number of hits in a host block to warrant attempting the next block
+	viper.SetDefault("FanOutNetworkBlockSize", 1000)
+	viper.SetDefault("FanOutNetworkHitThreshold", 1)
+	viper.SetDefault("FanOutHostBlockSize", 256)
+	viper.SetDefault("FanOutHostHitThreshold", 1)
+
 	// Logging
 
 	viper.BindEnv("LogLevel")						// The level to log at (debug, info, success, warn, error)
@@ -198,6 +208,10 @@ func GetCandidateAddressDirPath() string {
 
 func GetPingResultDirPath() string {
 	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("PingResultDirectory"))
+}
+
+func GetFanOutResultDirPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("FanOutResultDirectory"))
 }
 
 func GetNetworkGroupDirPath() string {

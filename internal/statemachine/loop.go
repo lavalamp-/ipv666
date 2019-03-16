@@ -20,6 +20,12 @@ const (
 	PROCESS_ALIASED_NETWORKS
 	REM_BAD_ADDR
 	UPDATE_ADDR_FILE
+	FAN_OUT
+	NETWORK_GROUP_FAN
+	SEEK_ALIASED_NETWORKS_FAN
+	PROCESS_ALIASED_NETWORKS_FAN
+	REM_BAD_ADDR_FAN
+	UPDATE_ADDR_FILE_FAN
 	CLEAN_UP
 	EMIT_METRICS
 )
@@ -111,7 +117,7 @@ func RunStateMachine() error {
 				return err
 			}
 		case NETWORK_GROUP:
-			// Process results of Zmap scan into a set of network ranges
+			// Process results of ping scan into a set of network ranges
 			err := generateScanResultsNetworkRanges()
 			if err != nil {
 				return err
@@ -129,13 +135,51 @@ func RunStateMachine() error {
 				return err
 			}
 		case REM_BAD_ADDR:
-			// Remove all the addressing from the Zmap results that are in ranges that failed
+			// Remove all the addressing from the ping scan results that are in ranges that failed
 			// the test in the previous step
 			err := cleanBlacklistedAddresses()
 			if err != nil {
 				return err
 			}
 		case UPDATE_ADDR_FILE:
+			// Update the cumulative addresses file
+			err := updateAddressFile()
+			if err != nil {
+				return err
+			}
+		case FAN_OUT:
+			// Fan out to find neighboring /64 networks from the discovered address set, and 
+			// monotonically-increasing addresses from each /64
+			err := fanOut()
+			if err != nil {
+				return err
+			}
+		case NETWORK_GROUP_FAN:
+			// Process results of ping scan into a set of network ranges
+			err := generateScanResultsNetworkRanges()
+			if err != nil {
+				return err
+			}
+		case SEEK_ALIASED_NETWORKS_FAN:
+			// Seek out aliased networks
+			err := seekAliasedNetworks()
+			if err != nil {
+				return err
+			}
+		case PROCESS_ALIASED_NETWORKS_FAN:
+			// Process the results of aliased network seeking (add to blacklist and de-dupe)
+			err := processAliasedNetworks()
+			if err != nil {
+				return err
+			}
+		case REM_BAD_ADDR_FAN:
+			// Remove all the addressing from the ping scan results that are in ranges that failed
+			// the test in the previous step
+			err := cleanBlacklistedAddresses()
+			if err != nil {
+				return err
+			}
+		case UPDATE_ADDR_FILE_FAN:
 			// Update the cumulative addresses file
 			err := updateAddressFile()
 			if err != nil {
