@@ -1,10 +1,117 @@
 package addressing
 
 import (
-	"testing"
-	"net"
+	"github.com/lavalamp-/ipv666/internal/config"
 	"github.com/stretchr/testify/assert"
+	"net"
+	"testing"
 )
+
+func init() {
+	config.InitConfig()
+}
+
+func getTestingIP() *net.IP {
+	toReturn := net.ParseIP("2600::1")
+	return &toReturn
+}
+
+func getTestingIPs() []*net.IP {
+	ips := []net.IP{
+		net.ParseIP("2600::0"),
+		net.ParseIP("2600::1"),
+		net.ParseIP("2601::1"),
+	}
+	var toReturn []*net.IP
+	for i := 0; i < len(ips); i++ {
+		toReturn = append(toReturn, &ips[i])
+	}
+	return toReturn
+}
+
+func getExpectedAdjacentIPs() []*net.IP {
+	ips := []net.IP{
+		net.ParseIP("2600::0"),
+		net.ParseIP("2600::1"),
+		net.ParseIP("2600::2"),
+		net.ParseIP("2600::3"),
+		net.ParseIP("2600::4"),
+		net.ParseIP("2600::5"),
+		net.ParseIP("2600::6"),
+		net.ParseIP("2600::7"),
+		net.ParseIP("2600::8"),
+		net.ParseIP("2600::9"),
+		net.ParseIP("2600::a"),
+		net.ParseIP("2600::b"),
+		net.ParseIP("2600::c"),
+		net.ParseIP("2600::d"),
+		net.ParseIP("2600::e"),
+		net.ParseIP("2600::f"),
+	}
+	var toReturn []*net.IP
+	for i := 0; i < len(ips); i++ {
+		toReturn = append(toReturn, &ips[i])
+	}
+	return toReturn
+}
+
+func TestGetAdjacentNetworkAddressesFromIPsBadFromNybble(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIPs(getTestingIPs(), -1, 32)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPsBadToNybble(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIPs(getTestingIPs(), 0, 33)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPsBadFromAndToNybbles(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIPs(getTestingIPs(), 10, 10)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPsCount(t *testing.T) {
+	results, _ := GetAdjacentNetworkAddressesFromIPs(getTestingIPs(), 0, 32)
+	assert.EqualValues(t, 1410, len(results))
+}
+
+func TestGetAdjacentNetworkAddressesFromIPsNoDuplicates(t *testing.T) {
+	results, _ := GetAdjacentNetworkAddressesFromIPs(getTestingIPs(), 0, 32)
+	firstCount := len(results)
+	results = GetUniqueIPs(results, 99999)
+	secondCount := len(results)
+	assert.Equal(t, firstCount, secondCount)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPBadFromNybble(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIP(getTestingIP(), -1, 32)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPBadToNybble(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIP(getTestingIP(), 0, 33)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPBadFromAndToNybbles(t *testing.T) {
+	_, err := GetAdjacentNetworkAddressesFromIP(getTestingIP(), 10, 10)
+	assert.NotNil(t, err)
+}
+
+func TestGetAdjacentNetworkAddressesFromIPSmallCount(t *testing.T) {
+	results, _ := GetAdjacentNetworkAddressesFromIP(getTestingIP(), 31, 32)
+	assert.EqualValues(t, 16, len(results))
+}
+
+func TestGetAdjacentNetworkAddressesFromIPLargeCount(t *testing.T) {
+	results, _ := GetAdjacentNetworkAddressesFromIP(getTestingIP(), 0, 32)
+	assert.EqualValues(t, 16 * 32 - 32 + 1, len(results))
+}
+
+func TestGetAdjacentNetworkAddressesFromIPSmallContent(t *testing.T) {
+	results, _ := GetAdjacentNetworkAddressesFromIP(getTestingIP(), 31, 32)
+	assert.ElementsMatch(t, getExpectedAdjacentIPs(), results)
+}
 
 func TestFlipBitsInAddressOnBoundaries(t *testing.T) {
 	testAddr := net.ParseIP("aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa:aaaa")

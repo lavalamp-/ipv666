@@ -9,11 +9,51 @@ import (
 	"github.com/lavalamp-/ipv666/internal"
 	"github.com/lavalamp-/ipv666/internal/logging"
 	"github.com/lavalamp-/ipv666/internal/zrandom"
+	"github.com/spf13/viper"
 	"io"
 	"net"
 	"os"
 	"strings"
 )
+
+func GetAdjacentNetworkAddressesFromIPs(toParse []*net.IP, fromNybble int, toNybble int) ([]*net.IP, error) {
+	var toReturn []*net.IP
+	for _, curIP := range toParse {
+		newIPs, err := GetAdjacentNetworkAddressesFromIP(curIP, fromNybble, toNybble)
+		if err != nil {
+			return nil, err
+		} else {
+			toReturn = append(toReturn, newIPs...)
+		}
+	}
+	return GetUniqueIPs(toReturn, viper.GetInt("LogLoopEmitFreq")), nil
+}
+
+func GetAdjacentNetworkAddressesFromIP(toParse *net.IP, fromNybble int, toNybble int) ([]*net.IP, error) {
+	if fromNybble < 0 {
+		return nil, fmt.Errorf("fromNybble must be >= 0 (got %d)", fromNybble)
+	} else if toNybble > 32 {
+		return nil, fmt.Errorf("toNybble must be <= 32 (got %d)", toNybble)
+	} else if fromNybble == toNybble {
+		return nil, fmt.Errorf("fromNybble and toNybble must be at least one apart (got %d, %d)", fromNybble, toNybble)
+	}
+	toReturn := []*net.IP{ toParse }
+	ipNybbles := GetNybblesFromIP(toParse, 32)
+	var j uint8
+	curNybbles := make([]uint8, len(ipNybbles))
+	for i := fromNybble; i < toNybble; i++ {
+		copy(curNybbles, ipNybbles)
+		for j = 0; j < 16; j++ {
+			if ipNybbles[i] == j {
+				continue
+			} else {
+				curNybbles[i] = j
+				toReturn = append(toReturn, NybblesToIP(curNybbles))
+			}
+		}
+	}
+	return toReturn, nil
+}
 
 func IsAddressIPv4(toCheck *net.IP) bool {
 	return toCheck.To4() != nil
@@ -46,7 +86,7 @@ func GetFirst64BitsOfIP(ip *net.IP) uint64 {
 	return binary.LittleEndian.Uint64(ipBytes[:8])
 }
 
-func GetUniqueIPs(ips []*net.IP, updateFreq int) []*net.IP {
+func GetUniqueIPs(ips []*net.IP, updateFreq int) []*net.IP { // TODO refactor this to use addr tree
 	checkMap := make(map[string]bool)
 	var toReturn []*net.IP
 	for i, ip := range ips {
