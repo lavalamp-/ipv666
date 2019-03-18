@@ -15,19 +15,19 @@ func RunClean(inputPath string, outputPath string, blist *blacklist.NetworkBlack
 	if err != nil {
 		logging.ErrorStringFf("Error thrown when reading input list of IP addresses at path '%s': %e", inputPath, err)
 	}
-	logging.Debugf("Successfully loaded IP addresses from '%s'.", inputPath)
+	logging.Infof("Successfully loaded IP addresses from '%s'.", inputPath)
 
 	uniqAddrs := addressing.GetUniqueIPs(addrs, viper.GetInt("LogLoopEmitFreq"))
 
-	logging.Debugf("Whittled %d input addresses down to %d unique addresses.", len(addrs), len(uniqAddrs))
+	logging.Infof("Whittled %d input addresses down to %d unique addresses.", len(addrs), len(uniqAddrs))
 
 	outAddrs := blist.CleanIPList(uniqAddrs, viper.GetInt("LogLoopEmitFreq"))
 
-	logging.Debugf("%d addresses remain after cleaning from blacklist (started with %d).", len(outAddrs), len(uniqAddrs))
+	logging.Infof("%d addresses remain after cleaning from blacklist (started with %d).", len(outAddrs), len(uniqAddrs))
 
 	// Write results to disk
 
-	logging.Debugf("Writing cleaned address list to file at path '%s'.", outputPath)
+	logging.Infof("Writing cleaned address list to file at path '%s'.", outputPath)
 
 	err = addressing.WriteIPsToHexFile(outputPath, outAddrs)
 
