@@ -412,7 +412,8 @@ func CreateClusteringModel(fromAddrs []*net.IP) *ClusterModel {
 			capturedScore := float64(toCheck.Captured) / float64(len(fromAddrs))
 			densityScore := toCheck.Density
 			clusterCountScore := float64(initialModelCandidateSize - len(toCheck.Clusters)) / float64(initialModelCandidateSize)
-			cumulativeScore := (0.5 * densityScore) + (0.333333333 * capturedScore) + (0.16666666667 * clusterCountScore)
+			cumulativeScore := (0.16666666667 * densityScore) + (0.333333333 * capturedScore) + (0.5 * clusterCountScore)
+			//cumulativeScore := (0.5 * densityScore) + (0.333333333 * capturedScore) + (0.16666666667 * clusterCountScore)
 
 			logging.Infof("Cluster set has %f density, %d captured, and %d size with %d clusters. Cluster set score is %f.", toCheck.Density, toCheck.Captured, toCheck.RangeSize, len(toCheck.Clusters), cumulativeScore)
 

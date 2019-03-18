@@ -63,7 +63,7 @@ func InitConfig() {
 	viper.BindEnv("ModelDistributionSize")			// The size of startdust distributions used for random nybble generation
 
 	viper.SetDefault("ModelGenerationJitter", 0.1) //TODO figure out why configuration stuff isn't working with cobra's bindpflags
-	viper.SetDefault("ModelCheckCount", 1000)
+	viper.SetDefault("ModelCheckCount", 10000)
 	viper.SetDefault("ModelMinNybblePercent", 0.01)
 	viper.SetDefault("ModelDistributionSize", 1000)
 
