@@ -5,7 +5,10 @@ import (
   "github.com/spf13/viper"
 )
 
-func fanOut() (error) {
-  _, err := fanout.FanOut(viper.GetString("PingScanBandwidth"))
-  return err
+func fanOutSlash64s() (error) {
+  return fanout.FanOutSlash64s(viper.GetString("PingScanBandwidth"))
+}
+
+func fanOutNybbleAdjacent() (error) {
+  return fanout.FanOutNybbleAdjacent(viper.GetString("PingScanBandwidth"))
 }

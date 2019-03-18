@@ -16,8 +16,10 @@ const (
 	GEN_ADDRESSES	State = iota
 	PING_SCAN_ADDR
 	PING_SCAN_ALIAS_REMOVAL
-	FAN_OUT
-	FAN_OUT_ALIAS_REMOVAL
+	FAN_OUT_NYBBLE_ADJACENT
+	FAN_OUT_NYBBLE_ADJACENT_ALIAS_REMOVAL
+	FAN_OUT_64
+	FAN_OUT_64_ALIAS_REMOVAL
 	CLEAN_UP
 	EMIT_METRICS
 )
@@ -150,14 +152,26 @@ func RunStateMachine() error {
 			if err != nil {
 				return err
 			}
-		case FAN_OUT:
-			// Fan out to find neighboring /64 networks from the discovered address set, and 
-			// monotonically-increasing addresses from each /64
-			err := fanOut()
+		case FAN_OUT_NYBBLE_ADJACENT:
+			// Fan out to find neighboring nybble-adjacent addresses
+			err := fanOutNybbleAdjacent()
 			if err != nil {
 				return err
 			}
-		case FAN_OUT_ALIAS_REMOVAL:
+		case FAN_OUT_NYBBLE_ADJACENT_ALIAS_REMOVAL:
+			// Perform alias network detection and cleanup
+			err := postScanCleanup()
+			if err != nil {
+				return err
+			}
+		case FAN_OUT_64:
+			// Fan out to find neighboring /64 networks from the discovered address set, and 
+			// monotonically-increasing addresses from each /64
+			err := fanOutSlash64s()
+			if err != nil {
+				return err
+			}
+		case FAN_OUT_64_ALIAS_REMOVAL:
 			// Perform alias network detection and cleanup
 			err := postScanCleanup()
 			if err != nil {
@@ -194,7 +208,6 @@ func RunStateMachine() error {
 		if err != nil {
 			return err
 		}
-
 	}
-
+	return nil
 }

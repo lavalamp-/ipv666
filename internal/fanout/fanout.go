@@ -19,10 +19,17 @@ import (
   "time"
 )
 
+func FanOutSlash64s(bandwidth string) error {
+  _, err := fanOut(bandwidth, true, false)
+  return err
+}
 
-func FanOut(bandwidth string) (string, error) {
+func FanOutNybbleAdjacent(bandwidth string) error {
+  _, err := fanOut(bandwidth, false, true)
+  return err
+}
 
-  logging.Infof("Performing fan-out ping scan on discovered /64 networks")
+func fanOut(bandwidth string, slash64FanOut bool, nybbleFanOut bool) (string, error) {
 
   // Instantiate ICMPv6 packet listener
   listener, err := net.ListenPacket("ip6:58", "::")
@@ -60,123 +67,76 @@ func FanOut(bandwidth string) (string, error) {
   rateLimiter := rate.NewLimiter(rateLimit, 10)
   ctx := context.Background()
 
-
-  ips :=  make(chan net.IPAddr)
-  newIps := make(map[string]struct{})
-
   // Kick off the receive processor
   outputPath := fs.GetTimedFilePath(config.GetPingResultDirPath())
   hitCount := uint64(0)
+  ips :=  make(chan net.IPAddr)
+  newIps := make(map[string]struct{})
   go processReplies(conn, outputPath, newIps, &hitCount)
 
+  // Generate neighboring networks
   done := make(chan bool, 1)
-  blockSize := viper.GetInt("FanOutNetworkBlockSize")
-  maxNetworks := viper.GetInt("FanOutMaxHosts")
   go func(newIps map[string]struct{}) {
 
-    // Load the discovered addresses
-    cleanPings, err := data.GetCleanPingResults()
-    if err != nil {
-      return
-    }
+    if slash64FanOut == true {
 
-    netIps := make(map[*net.IP]struct{})
-    for _, v := range cleanPings {
-      _, v2 := addressing.AddressToUints(*v)
-      if v2 == 1 {
-        netIps[v] = struct{}{}
-      }
-    }
-
-    logging.Infof("Fanning out from %d discovered /64 networks (network disovery)", len(netIps))
-
-    count := 0
-    for k, _ := range netIps {
-
-      seedUp := net.IP(*k)
-      seedDown := net.IP(*k)
-
-      // Generate $blockSize addresses
-      for x := 0; x < blockSize; x++ {
-        for d := 7; d >= 1; d-- {
-          seedUp[d] += 1
-          if seedUp[d] != 0 {
-            break
-          }
-        }
-        ips <- net.IPAddr{ IP: net.IP(seedUp) }
-        count += 1
+      // Generate neighboring /64s
+      netIps := make(map[*net.IP]struct{})
+      err := generateNeighboring64Networks(ips, netIps)
+      if err != nil {
+        return
       }
 
-      // Generate $blockSize addresses
-      for x := 0; x < blockSize; x++ {
-        for d := 7; d >= 1; d-- {
-          seedDown[d] -= 1
-          if seedDown[d] != 0 {
-            break
-          }
-        }
-        ips <- net.IPAddr{ IP: net.IP(seedDown) }
-        count += 1
+      // Wait until the networks are all processed
+      for len(ips) > 0 {
+        logging.Debugf("Fan-out has %d networks remaining", len(ips))
+        time.Sleep(1*time.Second)
+      }
+      time.Sleep(2*time.Second)
+
+      // Generate neighboring /64s
+      err = generate64NetworkHosts(ips, netIps, newIps)
+      if err != nil {
+        return
       }
 
-      if count >= maxNetworks {
-        break
+      // Wait until they are all processed
+      for len(ips) > 0 {
+        logging.Debugf("Fan-out has %d networks remaining", len(ips))
+        time.Sleep(1*time.Second)
       }
-    }
-
-    // Wait until the networks are all processed
-    for len(ips) > 0 {
-      logging.Debugf("Fan-out has %d networks remaining", len(ips))
       time.Sleep(1*time.Second)
-    }
-    time.Sleep(2*time.Second)
 
-    logging.Infof("Fanning out from %d discovered /64 networks (host disovery)", (len(netIps) + len(newIps)))
-
-    // Host discovery
-    toScan := make(map[string]struct{})
-    for k, _ := range newIps {
-      toScan[k] = struct{}{}
-    }
-    for k, _ := range netIps {
-      toScan[k.String()] = struct{}{}
     }
 
-    blockSize = viper.GetInt("FanOutHostBlockSize")
-    maxHosts := viper.GetInt("FanOutMaxHosts")
+    if nybbleFanOut == true {
 
-    count = 0
-    for k, _ := range toScan {
-
-      seed := net.ParseIP(k)
-
-      // Generate $blockSize addresses
-      for x := 0; x < blockSize; x++ {
-        for d := 15; d >= 8; d-- {
-          seed[d] += 1
-          if seed[d] != 0 {
-            break
-          }  
-        }
-        ips <- net.IPAddr{ IP: net.IP(seed) }
-        count += 1
+      // Generate addresses
+      err := generateNybbleAdjacentAddrs(ips)
+      if err != nil {
+        return
       }
 
-      if count >= maxHosts {
-        break
+      // Wait until the networks are all processed
+      for len(ips) > 0 {
+        logging.Debugf("Fan-out has %d networks remaining", len(ips))
+        time.Sleep(1*time.Second)
       }
+      time.Sleep(2*time.Second) 
     }
 
-    // Wait until they are all processed
-    for len(ips) > 0 {
-      logging.Debugf("Fan-out has %d networks remaining", len(ips))
-      time.Sleep(1*time.Second)
-    }
-    time.Sleep(1*time.Second)
 
     done <- true    
   }(newIps)
+
+  bloom, err := data.GetBloomFilter()
+  if err != nil {
+    return "", err
+  }
+  blacklist, err := data.GetBlacklist()
+  if err != nil {
+    return "", err
+  }
 
   // Ping each address
   seq := uint16(0)
@@ -191,6 +151,14 @@ func FanOut(bandwidth string) (string, error) {
       // Read
       case ip := <-ips:
        
+        if blacklist.IsIPBlacklisted(&ip.IP) {
+          continue
+        } else if bloom.Test(ip.IP) {
+          continue
+        } else {
+          bloom.Add(ip.IP)
+        }
+
         // Rate limit outgoing connections
         rateLimiter.Wait(ctx)
 
@@ -242,6 +210,167 @@ func FanOut(bandwidth string) (string, error) {
   return "", err
 }
 
+
+func generateNybbleAdjacentAddrs(ips chan net.IPAddr) error {
+
+  // Load the discovered addresses
+  cleanPings, err := data.GetCleanPingResults()
+  if err != nil {
+    return err
+  }
+
+  logging.Infof("Performing nybble-adjacent ping scan from %d discovered addresses", len(cleanPings))
+
+  // Get the target network
+  network, err := config.GetTargetNetwork()
+  if err != nil {
+    return err
+  }
+
+  nybbleCount := 32
+  for x := 0; x < 16; x++ {
+    if network.Mask[x] & 0xF0 == 0xF0 {
+      nybbleCount -= 1
+    } else {
+      break
+    }
+    if network.Mask[x] & 0x0F == 0x0F {
+      nybbleCount -= 1
+    } else {
+      break
+    }
+  }
+
+  // Generate nybble-adjacent addresses
+  addrs, err := addressing.GetAdjacentNetworkAddressesFromIPs(cleanPings, 32-nybbleCount, nybbleCount)
+  if err != nil {
+    return err
+  }
+  for _, v := range addrs {
+    ips <- net.IPAddr{ IP: *v }
+  }
+
+  return nil
+}
+
+
+func generate64NetworkHosts(ips chan net.IPAddr, netIps map[*net.IP]struct{}, newIps map[string]struct{}) error {
+
+  logging.Infof("Fanning out from %d discovered /64 networks (host disovery)", (len(netIps) + len(newIps)))
+
+  // Host discovery
+  toScan := make(map[string]struct{})
+  for k, _ := range newIps {
+    toScan[k] = struct{}{}
+  }
+  for k, _ := range netIps {
+    toScan[k.String()] = struct{}{}
+  }
+
+  blockSize := viper.GetInt("FanOutHostBlockSize")
+  maxHosts := viper.GetInt("FanOutMaxHosts")
+  genIps := make(map[string]struct{})
+  count := 0
+  for k, _ := range toScan {
+
+    seed := net.ParseIP(k)
+
+    // Generate $blockSize addresses
+    for x := 0; x < blockSize; x++ {
+      for d := 15; d >= 8; d-- {
+        seed[d] += 1
+        if seed[d] != 0 {
+          break
+        }
+      }
+      ip := net.IP(seed)
+      if _, ok := genIps[ip.String()]; !ok {
+        ips <- net.IPAddr{ IP: ip }
+        genIps[ip.String()] = struct{}{}
+        count += 1
+      }
+    }
+
+    if count >= maxHosts {
+      break
+    }
+  }
+
+  return nil
+}
+
+
+func generateNeighboring64Networks(ips chan net.IPAddr, netIps map[*net.IP]struct{}) error {
+
+  // Load the discovered addresses
+  cleanPings, err := data.GetCleanPingResults()
+  if err != nil {
+    return err
+  }
+
+  // Find the /64 networks
+  for _, v := range cleanPings {
+    _, v2 := addressing.AddressToUints(*v)
+    if v2 == 1 {
+      netIps[v] = struct{}{}
+    }
+  }
+
+  logging.Infof("Fanning out from %d discovered /64 networks (network disovery)", len(netIps))
+
+  // Generate neighboring /64 networks
+  genIps := make(map[string]struct{})
+  blockSize := viper.GetInt("FanOutNetworkBlockSize")
+  maxNetworks := viper.GetInt("FanOutMaxHosts")
+  count := 0
+  for k, _ := range netIps {
+
+    seedUp := net.IP(*k)
+    seedDown := net.IP(*k)
+
+    // Generate $blockSize addresses
+    for x := 0; x < blockSize; x++ {
+      for d := 7; d >= 1; d-- {
+        seedUp[d] += 1
+        if seedUp[d] != 0 {
+          break
+        }
+      }
+
+      ip := net.IP(seedUp)
+      if _, ok := genIps[ip.String()]; !ok {
+        ips <- net.IPAddr{ IP: ip }
+        genIps[ip.String()] = struct{}{}
+        count += 1
+      }
+    }
+
+    // Generate $blockSize addresses
+    for x := 0; x < blockSize; x++ {
+      for d := 7; d >= 1; d-- {
+        seedDown[d] -= 1
+        if seedDown[d] != 0 {
+          break
+        }
+      }
+
+      ip := net.IP(seedDown)
+      if _, ok := genIps[ip.String()]; !ok {
+        ips <- net.IPAddr{ IP: ip }
+        genIps[ip.String()] = struct{}{}
+        count += 1
+      }
+    }
+
+    if count >= maxNetworks {
+      break
+    }
+  }
+
+  return nil
+}
+
+
 func processReplies(conn *ipv6.PacketConn, outputPath string, newIps map[string]struct{}, hitCount *uint64) {
 
   // Output file
@@ -253,6 +382,7 @@ func processReplies(conn *ipv6.PacketConn, outputPath string, newIps map[string]
   defer file.Close()
 
   // Receive loop
+  rxIps := make(map[string]struct{})
   buff := make([]byte, 1500)
   for {
 
@@ -277,15 +407,19 @@ func processReplies(conn *ipv6.PacketConn, outputPath string, newIps map[string]
 
     newIps[raddr.String()] = struct{}{}
 
-    // Parse the response
-    rm, err := icmp.ParseMessage(58, buff[:rlen])
-    if err != nil {
-      logging.ErrorF(err)
+    // Deduplicate received packets
+    if _, ok := rxIps[raddr.String()]; !ok {
+
+      // Parse the response
+      rm, err := icmp.ParseMessage(58, buff[:rlen])
+      if err != nil {
+        logging.ErrorF(err)
+      }
+      atomic.AddUint64(hitCount, 1)
+      fmt.Fprintf(file, "%s\n", raddr.String())
+      file.Sync()
+      logging.Debugf("receiver got response from %s %v (%v)", raddr, buff[:rlen], rm)
     }
-    atomic.AddUint64(hitCount, 1)
-    fmt.Fprintf(file, "%s\n", raddr.String())
-    file.Sync()
-    logging.Debugf("receiver got response from %s %v (%v)", raddr, buff[:rlen], rm)
 
     continue
   }

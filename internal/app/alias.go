@@ -94,7 +94,7 @@ func seekAliasedNetwork(inputNet *net.IPNet, inputIP *net.IP) (*net.IPNet, error
 		}
 		logging.Debugf("%d addresses responded to ICMP pings.", len(foundAddrs))
 		foundAddrSet := addressing.GetIPSet(foundAddrs)
-		logging.Debugf("Updating check list with results from Zmap scan.")
+		logging.Debugf("Updating check list with results from ping scan.")
 		acs.Update(foundAddrSet)
 		acs.PrintStates()
 		if acs.GetAllFound() {
