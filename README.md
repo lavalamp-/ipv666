@@ -14,7 +14,7 @@ The tools included in this codebase are as follows:
 * [`clean`](#clean) - Cleans the contents of a file containing IPv6 addresses based on an aliased network blacklist
 * [`convert`](#convert) - Converts the contents of a file containing IPv6 addresses to another IP address representation
 
-Unless you're doing more complicated IPv6 research it is likely that the [`discover`](#discover) tool is what you're looking for. 
+Unless you're doing more complicated IPv6 research it is likely that the [`scan discover`](#scan-discover) tool is what you're looking for. 
 
 To get started check out the [Installation](#installation) section first and then head to whichever section details the tool you're looking to use.
 
