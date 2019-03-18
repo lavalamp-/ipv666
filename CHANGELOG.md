@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2019-03-18
+### Added
+- Utility for generating IPv6 addresses from a cluster model
+- New predictive clustering model based off of [6gen](https://zakird.com/papers/imc17-6gen.pdf)
+- Fanning out from initial discovered addresses
+
+### Changed
+- Command line syntax for a few of the subcommands
+
+### Removed
+- A bunch of unused configuration values
+
 ## [0.2.0] - 2019-01-20
 ### Added
 - Utility for converting IPv6 files to different formats
@@ -29,4 +41,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reliance on Zmapv6
 - Dependent on file structure in present working directory
 
-[0.0.2]: https://github.com/lavalamp-/ipv666/compare/v0.1...v0.2
+[0.3.0]: https://github.com/lavalamp-/ipv666/compare/20b731c...f86fe91
+[0.2.0]: https://github.com/lavalamp-/ipv666/compare/20b731c...f86fe91
