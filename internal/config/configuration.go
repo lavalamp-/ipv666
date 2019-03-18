@@ -210,10 +210,6 @@ func GetPingResultDirPath() string {
 	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("PingResultDirectory"))
 }
 
-func GetFanOutResultDirPath() string {
-	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("FanOutResultDirectory"))
-}
-
 func GetNetworkGroupDirPath() string {
 	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("NetworkGroupDirectory"))
 }

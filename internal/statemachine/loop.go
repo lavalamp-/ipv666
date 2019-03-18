@@ -15,17 +15,9 @@ import (
 const (
 	GEN_ADDRESSES	State = iota
 	PING_SCAN_ADDR
-	NETWORK_GROUP
-	SEEK_ALIASED_NETWORKS
-	PROCESS_ALIASED_NETWORKS
-	REM_BAD_ADDR
-	UPDATE_ADDR_FILE
+	PING_SCAN_ALIAS_REMOVAL
 	FAN_OUT
-	NETWORK_GROUP_FAN
-	SEEK_ALIASED_NETWORKS_FAN
-	PROCESS_ALIASED_NETWORKS_FAN
-	REM_BAD_ADDR_FAN
-	UPDATE_ADDR_FILE_FAN
+	FAN_OUT_ALIAS_REMOVAL
 	CLEAN_UP
 	EMIT_METRICS
 )
@@ -69,6 +61,42 @@ func fetchStateFromFile(filePath string) (State, error) {
 		return -1, errors.New(fmt.Sprintf("State with value %d was unexpected (expected between %d and %d, inclusive).", state, FIRST_STATE, LAST_STATE))
 	}
 	return State(state), nil
+}
+
+func postScanCleanup() error {
+	
+	// Process results of ping scan into a set of network ranges
+	err := generateScanResultsNetworkRanges()
+	if err != nil {
+		return err
+	}
+
+	// Seek out aliased networks
+	err = seekAliasedNetworks()
+	if err != nil {
+		return err
+	}
+
+	// Process the results of aliased network seeking (add to blacklist and de-dupe)
+	err = processAliasedNetworks()
+	if err != nil {
+		return err
+	}
+
+	// Remove all the addressing from the ping scan results that are in ranges that failed
+	// the test in the previous step
+	err = cleanBlacklistedAddresses()
+	if err != nil {
+		return err
+	}
+
+	// Update the cumulative addresses file
+	err = updateAddressFile()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SetStateFile(filePath string, curState State) error {
@@ -116,34 +144,9 @@ func RunStateMachine() error {
 			if err != nil {
 				return err
 			}
-		case NETWORK_GROUP:
-			// Process results of ping scan into a set of network ranges
-			err := generateScanResultsNetworkRanges()
-			if err != nil {
-				return err
-			}
-		case SEEK_ALIASED_NETWORKS:
-			// Seek out aliased networks
-			err := seekAliasedNetworks()
-			if err != nil {
-				return err
-			}
-		case PROCESS_ALIASED_NETWORKS:
-			// Process the results of aliased network seeking (add to blacklist and de-dupe)
-			err := processAliasedNetworks()
-			if err != nil {
-				return err
-			}
-		case REM_BAD_ADDR:
-			// Remove all the addressing from the ping scan results that are in ranges that failed
-			// the test in the previous step
-			err := cleanBlacklistedAddresses()
-			if err != nil {
-				return err
-			}
-		case UPDATE_ADDR_FILE:
-			// Update the cumulative addresses file
-			err := updateAddressFile()
+		case PING_SCAN_ALIAS_REMOVAL:
+			// Perform alias network detection and cleanup
+			err := postScanCleanup()
 			if err != nil {
 				return err
 			}
@@ -154,34 +157,9 @@ func RunStateMachine() error {
 			if err != nil {
 				return err
 			}
-		case NETWORK_GROUP_FAN:
-			// Process results of ping scan into a set of network ranges
-			err := generateScanResultsNetworkRanges()
-			if err != nil {
-				return err
-			}
-		case SEEK_ALIASED_NETWORKS_FAN:
-			// Seek out aliased networks
-			err := seekAliasedNetworks()
-			if err != nil {
-				return err
-			}
-		case PROCESS_ALIASED_NETWORKS_FAN:
-			// Process the results of aliased network seeking (add to blacklist and de-dupe)
-			err := processAliasedNetworks()
-			if err != nil {
-				return err
-			}
-		case REM_BAD_ADDR_FAN:
-			// Remove all the addressing from the ping scan results that are in ranges that failed
-			// the test in the previous step
-			err := cleanBlacklistedAddresses()
-			if err != nil {
-				return err
-			}
-		case UPDATE_ADDR_FILE_FAN:
-			// Update the cumulative addresses file
-			err := updateAddressFile()
+		case FAN_OUT_ALIAS_REMOVAL:
+			// Perform alias network detection and cleanup
+			err := postScanCleanup()
 			if err != nil {
 				return err
 			}
