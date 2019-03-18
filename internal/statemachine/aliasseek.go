@@ -53,7 +53,7 @@ func newSeekPair(network *net.IPNet, addr *net.IP, count uint8) *seekPair {
 
 func seekAliasedNetworks() error {
 
-	logging.Infof("Starting to seek aliased networks from results of Zmap scan.")
+	logging.Infof("Starting to seek aliased networks from results of ping scan.")
 
 	scanNets, err := data.GetScanResultsNetworkRanges()
 	aliasInitialNetsCounter.Inc(int64(len(scanNets)))
