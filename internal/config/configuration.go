@@ -29,6 +29,8 @@ func InitConfig() {
 	viper.BindEnv("BloomFilterDirectory")			// Subdirectory where the Bloom filter is kept
 	viper.BindEnv("StateFileName")					// The file name for the file that contains the current state
 	viper.BindEnv("TargetNetworkFileName")			// The file name for the file that contains the last network that was targeted
+	viper.BindEnv("CloudSyncOptInPath")			// Cloud sync opt-in status file path
+	viper.BindEnv("CloudSyncOptIn")			// Cloud sync opt-in status
 
 	home, err := homedir.Dir()
 	if err != nil {
@@ -48,6 +50,8 @@ func InitConfig() {
 	viper.SetDefault("BloomFilterDirectory", "bloom")
 	viper.SetDefault("StateFileName", "state.bin")
 	viper.SetDefault("TargetNetworkFileName", "network.bin")
+	viper.SetDefault("CloudSyncOptInPath", ".cloudsyncoptin")
+	viper.SetDefault("CloudSyncOptIn", false)
 
 	// Candidate address generation
 
@@ -184,6 +188,18 @@ func InitConfig() {
 	viper.SetDefault("AliasDuplicateScanCount", 3)
 
 	viper.AutomaticEnv()
+}
+
+func GetCloudSyncOptInPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("CloudSyncOptInPath"))
+}
+
+func GetCloudSyncOptIn() bool {
+	return viper.GetBool("CloudSyncOptIn")
+}
+
+func SetCloudSyncOptIn(state bool) {
+	viper.Set("CloudSyncOptIn", state)
 }
 
 func GetOutputFilePath() string {
