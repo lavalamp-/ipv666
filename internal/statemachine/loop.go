@@ -1,7 +1,6 @@
 package statemachine
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/lavalamp-/ipv666/internal/config"
@@ -9,8 +8,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 	"io/ioutil"
-	"net/http"
-	"os"
 	"time"
 )
 
@@ -104,65 +101,6 @@ func postScanCleanup() error {
 	return nil
 }
 
-func doCloudSync() error {
-
-	client := http.Client {
-		Timeout: time.Second * 30,
-	}
-
-	url := "https://ipv6.exposed/api/v1/get-upload-url"
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed on signed URL fetch!")
-		return err
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed on signed URL fetch!")
-		return err
-	}
-
-	type urlRes struct {
-		UploadUrl string `json:"upload_url"`
-	}
-	ur := urlRes{}
-	err = json.Unmarshal(body, &ur)
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed on signed URL fetch JSON parsing!")
-		return err	
-	}
-
-	file, err := os.Open(config.GetOutputFilePath())
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed opening address list!")
-		return err
-	}
-	defer file.Close()
-
-	logging.Infof("Syncing discovered address list to S3")
-
-	req, err = http.NewRequest(http.MethodPut, ur.UploadUrl, file)
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed uploading address list!")
-		return err
-	}
-	res, err = client.Do(req)
-	if err != nil {
-		logging.Warnf("S3 cloud sync failed uploading address list!")
-		return err
-	}
-	defer res.Body.Close()
-
-	logging.Infof("Address list sync'd to S3")
-	return nil
-}
-
 func SetStateFile(filePath string, curState State) error {
 	logging.Debugf("Now updating state file at path '%s' with current state of %d.", filePath, curState)
 	var b []byte
@@ -250,17 +188,7 @@ func RunStateMachine() error {
 				}
 			}
 		case EMIT_METRICS:
-			
-			// Push data to S3 (if opted in)
-			if config.GetCloudSyncOptIn() {
-				err := doCloudSync()
-				if err != nil {
-					logging.Warnf("Cloud sync failed!")
-				}
-			} else {
-				logging.Warnf("Cloud sync skipped; user not opted in")
-			}
-			os.Exit(0)
+			// Emit metrics
 		}
 
 		elapsed := time.Since(start)
@@ -281,5 +209,4 @@ func RunStateMachine() error {
 			return err
 		}
 	}
-	return nil
 }

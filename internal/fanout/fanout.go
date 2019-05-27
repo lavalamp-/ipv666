@@ -19,12 +19,12 @@ import (
   "time"
 )
 
-func FanOutSlash64s(bandwidth string) error {
+func Slash64s(bandwidth string) error {
   _, err := fanOut(bandwidth, true, false)
   return err
 }
 
-func FanOutNybbleAdjacent(bandwidth string) error {
+func NybbleAdjacent(bandwidth string) error {
   _, err := fanOut(bandwidth, false, true)
   return err
 }

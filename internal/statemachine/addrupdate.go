@@ -6,6 +6,7 @@ import (
 	"github.com/lavalamp-/ipv666/internal/config"
 	"github.com/lavalamp-/ipv666/internal/data"
 	"github.com/lavalamp-/ipv666/internal/logging"
+	"github.com/lavalamp-/ipv666/internal/sync"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 	"os"
@@ -51,5 +52,8 @@ func updateAddressFile() error {
 	addressUpdateTimer.Update(elapsed)
 	logging.Successf("%d new live IPv6 addresses were found.", len(cleanPings))
 	logging.Debugf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
+	if viper.GetBool("CloudSyncOptIn") {
+		sync.SyncIpAddresses(cleanPings)
+	}
 	return nil
 }

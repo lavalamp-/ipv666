@@ -29,8 +29,8 @@ func InitConfig() {
 	viper.BindEnv("BloomFilterDirectory")			// Subdirectory where the Bloom filter is kept
 	viper.BindEnv("StateFileName")					// The file name for the file that contains the current state
 	viper.BindEnv("TargetNetworkFileName")			// The file name for the file that contains the last network that was targeted
-	viper.BindEnv("CloudSyncOptInPath")			// Cloud sync opt-in status file path
-	viper.BindEnv("CloudSyncOptIn")			// Cloud sync opt-in status
+	viper.BindEnv("CloudSyncOptInPath")				// Cloud sync opt-in status file path
+	viper.BindEnv("CloudSyncOptIn")					// Cloud sync opt-in status
 
 	home, err := homedir.Dir()
 	if err != nil {
