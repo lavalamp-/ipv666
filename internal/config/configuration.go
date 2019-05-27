@@ -105,7 +105,7 @@ func InitConfig() {
 	viper.SetDefault("FanOutNetworkBlockSize", 1000)
 	viper.SetDefault("FanOutHostBlockSize", 500)
 	viper.SetDefault("FanOutMaxNetworks", 2000000)
-	viper.SetDefault("FanOutMaxHosts", 2000000)
+	viper.SetDefault("FanOutMaxHosts", 100000)
 
 	// Logging
 
@@ -206,10 +206,6 @@ func InitConfig() {
 
 func GetCloudSyncOptInPath() string {
 	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("CloudSyncOptInPath"))
-}
-
-func GetCloudSyncOptIn() bool {
-	return viper.GetBool("CloudSyncOptIn")
 }
 
 func SetCloudSyncOptIn(state bool) {

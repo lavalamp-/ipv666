@@ -321,7 +321,7 @@ func generateNeighboring64Networks(ips chan net.IPAddr, netIps map[*net.IP]struc
   // Generate neighboring /64 networks
   genIps := make(map[string]struct{})
   blockSize := viper.GetInt("FanOutNetworkBlockSize")
-  maxNetworks := viper.GetInt("FanOutMaxHosts")
+  maxNetworks := viper.GetInt("FanOutMaxNetworks")
   count := 0
   for k, _ := range netIps {
 
