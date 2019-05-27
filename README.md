@@ -4,6 +4,8 @@
 
 `ipv666` is a set of tools that enables the discovery of IPv6 addresses both in the global IPv6 address space and in more narrow IPv6 network ranges. These tools are designed to work out of the box with minimal knowledge of their workings.
 
+As of `v0.4` we have provided functionality into the tool set wherein you can choose to share any addresses you discover with us. All results uploaded by all parties can be queried [on our website](https://ipv6.exposed). The web site is bare bones right now but we have lots of plans for improvements!
+
 The tools included in this codebase are as follows:
 
 * [`scan discover`](#scan-discover) - Locates live hosts over IPv6 using statistical modeling and ICMP ping scans
@@ -40,6 +42,8 @@ go get github.com/lavalamp-/ipv666/ipv666
 Once this command completes you should have the `ipv666` binary on your path. If you don't, double check to make sure that `$GOPATH/bin` is in your `PATH`.
 
 **NOTE** - This software is only intended to be run on Linux-based operating systems. Support for other operating systems is not presently planned.
+
+**NOTE** - As of `v0.4` we have built in the ability for users of `ipv666` to upload the addresses they discover to our central service. You will be prompted on first use as to whether or not you would like to provide data to us. The addresses that are uploaded in this manner are made queryable on [our IPv666 web site](https://ipv6.exposed/). If you choose not to upload your discovered addresses, no worries! We will ask for your approval again once every seven days, just in case you change your mind.
 
 ## scan discover
 
@@ -322,6 +326,8 @@ We've given a few talks on `ipv666` and a few folks have had kind words to say a
 * [IPv666 - Address of the Beast Blog Post](https://l.avala.mp/?p=285)
 * [IPv666 - Address of the Beast @ ShmooCon 2019](https://www.youtube.com/watch?v=AayifEqLbhI)
 * [IPv666 - Address of the Beast @ Hack in the Box Dubai 2018](https://www.youtube.com/watch?v=bNp2nBvxkIQ)
+* [IPv666 - Address of the Beast @ Troopers 2019](https://www.youtube.com/watch?v=AayifEqLbhI)
+* [IPv666 Web Portal](https://ipv6.exposed/)
 
 ## License
 
