@@ -195,7 +195,7 @@ func InitConfig() {
 	viper.BindEnv("SyncFailureThreshold")			// The maximum number of upload failures to allow before backing off
 	viper.BindEnv("SyncBackoffSeconds")				// The amount of time, in seconds, to back off after too many sync failures
 
-	viper.SetDefault("SyncTimeout", 10)
+	viper.SetDefault("SyncTimeout", 30)
 	viper.SetDefault("SyncUrl", "https://ipv6.exposed/api/v1/get-upload-url")
 	viper.SetDefault("SyncUserAgent", "IPv666 Client v0.4")
 	viper.SetDefault("SyncFailureThreshold", 3)
