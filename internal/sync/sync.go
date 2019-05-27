@@ -63,7 +63,7 @@ func recordFailure() {
 
 func syncIpAddressesRoutine(toSync []*net.IP) error {
 
-	logging.Infof("Attempting to sync %d addresses to remote server.", len(toSync))
+	logging.Debugf("Attempting to sync %d addresses to remote server.", len(toSync))
 
 	client := http.Client {
 		Timeout: time.Duration(viper.GetInt("SyncTimeout")) * time.Second,
@@ -90,7 +90,7 @@ func syncIpAddressesRoutine(toSync []*net.IP) error {
 
 func putAddressesToUrl(toPut []*net.IP, url string, client *http.Client) error {
 
-	logging.Infof("Putting %d addresses to URL '%s'.", len(toPut), url)
+	logging.Debugf("Putting %d addresses to URL '%s'.", len(toPut), url)
 
 	stringContent := addressing.GetTextLinesFromIPs(toPut)
 
@@ -101,7 +101,7 @@ func putAddressesToUrl(toPut []*net.IP, url string, client *http.Client) error {
 
 	request.ContentLength = int64(len(stringContent))
 
-	logging.Info("Sending request...")
+	logging.Debug("Sending request...")
 
 	response, err := client.Do(request)
 	if err != nil {
@@ -113,14 +113,14 @@ func putAddressesToUrl(toPut []*net.IP, url string, client *http.Client) error {
 		return fmt.Errorf("did not get 200 response from upload URL push (got %d)", response.StatusCode)
 	}
 
-	logging.Infof("Successfully pushed %d addresses to URL '%s'.", len(toPut), url)
+	logging.Debugf("Successfully pushed %d addresses to URL '%s'.", len(toPut), url)
 	return nil
 
 }
 
 func fetchUploadUrl(client *http.Client) (string, error) {
 
-	logging.Info("Fetching upload URL from ipv666 server.")
+	logging.Debugf("Fetching upload URL from ipv666 server.")
 
 	req, err := http.NewRequest("GET", viper.GetString("SyncUrl"), nil)
 	if err != nil {
@@ -148,7 +148,7 @@ func fetchUploadUrl(client *http.Client) (string, error) {
 	if err != nil {
 		return "", err
 	} else {
-		logging.Infof("Successfully fetched upload URL of '%s'", urlContent.UploadUrl)
+		logging.Debugf("Successfully fetched upload URL of '%s'", urlContent.UploadUrl)
 		return urlContent.UploadUrl, nil
 	}
 
