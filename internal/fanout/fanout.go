@@ -19,12 +19,12 @@ import (
   "time"
 )
 
-func FanOutSlash64s(bandwidth string) error {
+func Slash64s(bandwidth string) error {
   _, err := fanOut(bandwidth, true, false)
   return err
 }
 
-func FanOutNybbleAdjacent(bandwidth string) error {
+func NybbleAdjacent(bandwidth string) error {
   _, err := fanOut(bandwidth, false, true)
   return err
 }
@@ -321,7 +321,7 @@ func generateNeighboring64Networks(ips chan net.IPAddr, netIps map[*net.IP]struc
   // Generate neighboring /64 networks
   genIps := make(map[string]struct{})
   blockSize := viper.GetInt("FanOutNetworkBlockSize")
-  maxNetworks := viper.GetInt("FanOutMaxHosts")
+  maxNetworks := viper.GetInt("FanOutMaxNetworks")
   count := 0
   for k, _ := range netIps {
 

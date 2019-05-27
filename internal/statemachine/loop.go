@@ -13,7 +13,7 @@ import (
 
 //noinspection GoSnakeCaseUsage
 const (
-	GEN_ADDRESSES	State = iota
+	GEN_ADDRESSES State = iota
 	PING_SCAN_ADDR
 	PING_SCAN_ALIAS_REMOVAL
 	FAN_OUT_NYBBLE_ADJACENT
@@ -188,7 +188,7 @@ func RunStateMachine() error {
 				}
 			}
 		case EMIT_METRICS:
-			// Push the metrics to wherever they need to go
+			// Emit metrics
 		}
 
 		elapsed := time.Since(start)
@@ -209,5 +209,4 @@ func RunStateMachine() error {
 			return err
 		}
 	}
-	return nil
 }

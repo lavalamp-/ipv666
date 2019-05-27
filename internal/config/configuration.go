@@ -29,6 +29,8 @@ func InitConfig() {
 	viper.BindEnv("BloomFilterDirectory")			// Subdirectory where the Bloom filter is kept
 	viper.BindEnv("StateFileName")					// The file name for the file that contains the current state
 	viper.BindEnv("TargetNetworkFileName")			// The file name for the file that contains the last network that was targeted
+	viper.BindEnv("CloudSyncOptInPath")				// Cloud sync opt-in status file path
+	viper.BindEnv("CloudSyncOptIn")					// Cloud sync opt-in status
 
 	home, err := homedir.Dir()
 	if err != nil {
@@ -48,6 +50,8 @@ func InitConfig() {
 	viper.SetDefault("BloomFilterDirectory", "bloom")
 	viper.SetDefault("StateFileName", "state.bin")
 	viper.SetDefault("TargetNetworkFileName", "network.bin")
+	viper.SetDefault("CloudSyncOptInPath", ".cloudsyncoptin")
+	viper.SetDefault("CloudSyncOptIn", false)
 
 	// Candidate address generation
 
@@ -101,7 +105,7 @@ func InitConfig() {
 	viper.SetDefault("FanOutNetworkBlockSize", 1000)
 	viper.SetDefault("FanOutHostBlockSize", 500)
 	viper.SetDefault("FanOutMaxNetworks", 2000000)
-	viper.SetDefault("FanOutMaxHosts", 2000000)
+	viper.SetDefault("FanOutMaxHosts", 100000)
 
 	// Logging
 
@@ -183,7 +187,29 @@ func InitConfig() {
 	viper.SetDefault("AliasLeftIndexStart", 0)
 	viper.SetDefault("AliasDuplicateScanCount", 3)
 
+	// Syncing
+
+	viper.BindEnv("SyncTimeout")						// Amount of time in seconds to wait for timeouts when syncing data
+	viper.BindEnv("SyncUrl")							// The URL to retrieve S3 put links from
+	viper.BindEnv("SyncUserAgent")					// The user agent to send when syncing data
+	viper.BindEnv("SyncFailureThreshold")			// The maximum number of upload failures to allow before backing off
+	viper.BindEnv("SyncBackoffSeconds")				// The amount of time, in seconds, to back off after too many sync failures
+
+	viper.SetDefault("SyncTimeout", 10)
+	viper.SetDefault("SyncUrl", "https://ipv6.exposed/api/v1/get-upload-url")
+	viper.SetDefault("SyncUserAgent", "IPv666 Client v0.4")
+	viper.SetDefault("SyncFailureThreshold", 3)
+	viper.SetDefault("SyncBackoffSeconds", 60 * 30)
+
 	viper.AutomaticEnv()
+}
+
+func GetCloudSyncOptInPath() string {
+	return filepath.Join(viper.GetString("BaseOutputDirectory"), viper.GetString("CloudSyncOptInPath"))
+}
+
+func SetCloudSyncOptIn(state bool) {
+	viper.Set("CloudSyncOptIn", state)
 }
 
 func GetOutputFilePath() string {
