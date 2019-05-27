@@ -88,7 +88,7 @@ func cloudSyncOptIn() error {
 	if optIn == 0 && now - lastAsk > 604800 /* 7 days in seconds */ {
 
 		// Prompt to opt-in to cloud sync
-		ok, err := shell.AskForApproval("Would you like to give back to the community and contribute the cloud-sourced IPv6 dataset @ ipv6.exposed? [y/N]:")
+		ok, err := shell.AskForApproval("Would you like to give back to the community and contribute to the cloud-sourced IPv6 dataset @ ipv6.exposed? [y/N]:")
 		if err != nil {
 			return err
 		}
