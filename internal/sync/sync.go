@@ -77,7 +77,7 @@ func syncIpAddressesRoutine(toSync []*net.IP) error {
 
 	err = putAddressesToUrl(toSync, uploadUrl, &client)
 	if err != nil {
-		logging.Warnf("Error thrown when pushing addresses to remote server: %e", err)
+		logging.Warnf("Error thrown when pushing addresses to remote server: %s", err)
 		return err
 	}
 
