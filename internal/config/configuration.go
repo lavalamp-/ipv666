@@ -187,6 +187,20 @@ func InitConfig() {
 	viper.SetDefault("AliasLeftIndexStart", 0)
 	viper.SetDefault("AliasDuplicateScanCount", 3)
 
+	// Syncing
+
+	viper.BindEnv("SyncTimeout")						// Amount of time in seconds to wait for timeouts when syncing data
+	viper.BindEnv("SyncUrl")							// The URL to retrieve S3 put links from
+	viper.BindEnv("SyncUserAgent")					// The user agent to send when syncing data
+	viper.BindEnv("SyncFailureThreshold")			// The maximum number of upload failures to allow before backing off
+	viper.BindEnv("SyncBackoffSeconds")				// The amount of time, in seconds, to back off after too many sync failures
+
+	viper.SetDefault("SyncTimeout", 10)
+	viper.SetDefault("SyncUrl", "https://ipv6.exposed/api/v1/get-upload-url")
+	viper.SetDefault("SyncUserAgent", "IPv666 Client v0.4")
+	viper.SetDefault("SyncFailureThreshold", 3)
+	viper.SetDefault("SyncBackoffSeconds", 60 * 30)
+
 	viper.AutomaticEnv()
 }
 
