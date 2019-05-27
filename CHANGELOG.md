@@ -48,6 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reliance on Zmapv6
 - Dependent on file structure in present working directory
 
-[0.4.0]: https://github.com/lavalamp-/ipv666/compare/f86fe91...77f2a59
+[0.4.0]: https://github.com/lavalamp-/ipv666/compare/77f2a59...ad0302a
 [0.3.0]: https://github.com/lavalamp-/ipv666/compare/f86fe91...77f2a59
 [0.2.0]: https://github.com/lavalamp-/ipv666/compare/20b731c...f86fe91
