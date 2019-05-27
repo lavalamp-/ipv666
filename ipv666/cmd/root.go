@@ -129,14 +129,13 @@ var rootCmd = &cobra.Command{
 			logging.ErrorF(err)
 		}
 
-		err := cloudSyncOptIn()
-		if err != nil {
-			logging.ErrorF(err)
-		}
-
 	},
 }
 
 func Execute() {
+	err := cloudSyncOptIn()
+	if err != nil {
+		logging.ErrorF(err)
+	}
 	rootCmd.Execute()
 }
