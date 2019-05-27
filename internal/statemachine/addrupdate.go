@@ -53,7 +53,7 @@ func updateAddressFile() error {
 	logging.Successf("%d new live IPv6 addresses were found.", len(cleanPings))
 	logging.Debugf("Finished writing %d addresses to '%s'.", len(cleanPings), outputPath)
 	if viper.GetBool("CloudSyncOptIn") {
-		sync.SyncIpAddresses(cleanPings)
+		sync.SyncIpAddresses(cleanPings, true)
 	}
 	return nil
 }

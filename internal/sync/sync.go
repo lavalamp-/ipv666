@@ -29,12 +29,12 @@ type urlResponse struct {
 	UploadUrl string `json:"upload_url"`
 }
 
-func SyncIpAddresses(toSync []*net.IP) {
+func SyncIpAddresses(toSync []*net.IP, concurrent bool) {
 	if !checkForSync() {
 		goodTime := syncFailures[0].Add(time.Duration(viper.GetFloat64("SyncBackoffSeconds")) * time.Second)
 		logging.Warnf("Not syncing IP addresses (%d failures seen in last %d seconds, waiting until %s).", len(syncFailures), viper.GetInt("SyncBackoffSeconds"), goodTime)
 	}
-	go func(addrs []*net.IP) {
+	var toRun = func(addrs []*net.IP) {
 		err := syncIpAddressesRoutine(addrs)
 		if err != nil {
 			recordFailure()
@@ -42,7 +42,12 @@ func SyncIpAddresses(toSync []*net.IP) {
 			syncIpCount.Inc(int64(len(toSync)))
 			syncIpSuccessCount.Inc(1)
 		}
-	}(toSync)
+	}
+	if concurrent {
+		toRun(toSync)
+	} else {
+		go toRun(toSync)
+	}
 }
 
 func checkForSync() bool {
